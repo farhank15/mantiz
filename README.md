@@ -13,8 +13,8 @@
 </p>
 
 <p align="center">
-  <a href="https://mantiz.vercel.app" target="_blank">
-    <img src="https://img.shields.io/badge/Live%20App-mantiz.vercel.app-58A6FF?style=flat-square&logo=vercel&logoColor=white" alt="Live App">
+  <a href="https://mantiz-wine.vercel.app" target="_blank">
+    <img src="https://img.shields.io/badge/Live%20App-mantiz-wine.vercel.app-58A6FF?style=flat-square&logo=vercel&logoColor=white" alt="Live App">
   </a>
   <a href="https://www.testsprite.com/hackathon-s3" target="_blank">
     <img src="https://img.shields.io/badge/TestSprite_S3-Hackathon-EE3124?style=flat-square" alt="Hackathon">
@@ -70,7 +70,7 @@ Agent Code → Mantiz Scan → TestSprite Test → Feedback → Fix
 
 ### 1. Visit the Live App
 
-**[🔗 mantiz.vercel.app](https://mantiz.vercel.app)**
+**[🔗 mantiz-wine.vercel.app](https://mantiz-wine.vercel.app)**
 
 Paste any GitHub-style diff and get instant results. No signup needed.
 
@@ -111,6 +111,19 @@ Mantiz is built specifically for the **TestSprite S3 Hackathon** loop paradigm:
 4. **Loop closes** — The agent fixes issues found by Mantiz + TestSprite
 
 This cycle repeats until all tests pass cleanly — with Mantiz ensuring the agent doesn't cut corners.
+
+### 📋 What the Loop Covers
+
+| Phase | What Happens | How Mantiz Checks |
+|-------|-------------|-------------------|
+| **Agent writes code** | AI generates a diff (new feature, bug fix, refactor) | `git diff` captured automatically |
+| **Mantiz scans diff** | 5 detectors analyze every changed line | Trust Score 0-100 + ranked findings |
+| **Agent reads feedback** | If score < 70, agent reads findings and fixes | Auto-generated `fix_instruction` |
+| **Mantiz re-scans** | Agent re-runs scan to verify the fix | Score must return to ≥ 90 |
+| **TestSprite tests** | Real E2E tests run against live app | TestSprite CLI in CI/CD |
+| **LOOP.md logged** | Every iteration logged to `LOOP.md` | One row per cycle — evidence for judges |
+
+> **Evidence:** See [LOOP.md](LOOP.md) for the complete iteration history.
 
 ---
 
@@ -184,7 +197,7 @@ MIT — see [LICENSE](LICENSE).
 </p>
 
 <p align="center">
-  <a href="https://mantiz.vercel.app">
+  <a href="https://mantiz-wine.vercel.app">
     <img src="https://img.shields.io/badge/Try_Mantiz_Now-58A6FF?style=for-the-badge" alt="Try Mantiz">
   </a>
   <a href="https://github.com/farhank15/mantiz">
