@@ -1,0 +1,919 @@
+import { useState } from 'react'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { motion } from 'framer-motion'
+import {
+  Ban,
+  Replace,
+  FlaskConical,
+  FileX,
+  VolumeX,
+  TrendingDown,
+  Trash2,
+  SkipForward,
+  Search,
+  Github,
+  Brain,
+  Shield,
+  ArrowRight,
+  Terminal,
+  CheckCircle2,
+  Zap,
+  GitBranch,
+  ScrollText,
+  Swords,
+  BugPlay,
+  FileCode,
+} from 'lucide-react'
+import RetroGrid from '#/components/magicui/retro-grid'
+import ShimmerButton from '#/components/magicui/shimmer-button'
+import Marquee from '#/components/magicui/marquee'
+import NumberTicker from '#/components/magicui/number-ticker'
+import AnimatedGradientText from '#/components/magicui/animated-gradient-text'
+import Meteors from '#/components/magicui/meteors'
+import Particles from '#/components/magicui/particles'
+import BeamNetwork from '#/components/magicui/beam-network'
+
+export const Route = createFileRoute('/')({ component: App })
+
+const detectionPatterns = [
+  {
+    name: 'Disabled Assertion',
+    severity: 'Critical',
+    color: 'severity-critical',
+    icon: Ban,
+    codeSample: `- // assert.equal(add(2,3), 5)  // commented out
++ assert.equal(add(2,3), 5)`,
+    longDesc: 'Test or assertion commented out, wrapped in if(false), or marked .skip() in the same diff that claims a fix.',
+  },
+  {
+    name: 'Assertion Tampering',
+    severity: 'Critical',
+    color: 'severity-critical',
+    icon: Replace,
+    codeSample: `- expect(result).toBe(42)       // original
++ expect(result).toBe(-1)       // tampered`,
+    longDesc: 'Expected value in a test changed to match broken output, with no corresponding spec change.',
+  },
+  {
+    name: 'Mock-to-Avoid-Failure',
+    severity: 'High',
+    color: 'severity-high',
+    icon: FlaskConical,
+    codeSample: `+ jest.mock('./api', () => ({  // NEW mock
++   fetchData: () => mockData
++ }))`,
+    longDesc: 'New mock introduced around a previously-failing real call path, with no coverage of the real path.',
+  },
+  {
+    name: 'Claim-Diff Mismatch',
+    severity: 'Medium',
+    color: 'severity-medium',
+    icon: FileX,
+    codeSample: `> fix(auth): resolve login timeout
+
+  src/styles.css  // only CSS changed
+  src/utils.ts    // no auth-related files`,
+    longDesc: 'Commit message claims to fix behavior X, but the diff contains zero changes to files related to X.',
+  },
+  {
+    name: 'Silent Catch-and-Pass',
+    severity: 'High',
+    color: 'severity-high',
+    icon: VolumeX,
+    codeSample: `+ try {
++   riskyOperation()
++ } catch (e) {  // empty — swallows error
++   // TODO
++ }`,
+    longDesc: 'Empty catch block newly added around code that previously threw and failed a test.',
+  },
+  {
+    name: 'Coverage Cliff Dropped',
+    severity: 'Info',
+    color: 'severity-info',
+    icon: TrendingDown,
+    codeSample: `- lines: 142/200  (71%)
++ lines: 98/200   (49%)  // -22%!`,
+    longDesc: 'Coverage percentage drops significantly in the diff, suggesting tests were removed or bypassed.',
+  },
+  {
+    name: 'Empty Try-Catch',
+    severity: 'High',
+    color: 'severity-high',
+    icon: Trash2,
+    codeSample: `+ try {
++   callExternalAPI()
++ } catch {}  // completely empty`,
+    longDesc: 'A try-catch block with an empty catch clause that silently swallows all exceptions.',
+  },
+  {
+    name: 'Skipped Test Suite',
+    severity: 'Critical',
+    color: 'severity-critical',
+    icon: SkipForward,
+    codeSample: `- describe('Payment flow', () => {
++ describe.skip('Payment flow', () => {`,
+    longDesc: 'Entire test suite marked with .skip() or removed from the test runner config.',
+  },
+]
+
+const severityFilters = ['All', 'Critical', 'High', 'Medium', 'Info'] as const
+
+function App() {
+  const [activeFilter, setActiveFilter] = useState<string>('All')
+  const filteredPatterns = activeFilter === 'All'
+    ? detectionPatterns
+    : detectionPatterns.filter(p => p.severity === activeFilter)
+  return (
+    <main>
+      {/* =============================================
+          1. HERO SECTION — Animated with Meteors + Particles + Beam
+           ============================================= */}
+      <section
+        className="relative flex min-h-[90vh] flex-col items-center justify-center overflow-hidden px-4 pb-24 pt-24"
+      >
+        {/* Layer 1: Static dot background */}
+        <RetroGrid className="z-0" glow={false} />
+
+        {/* Layer 2: Meteors (shooting stars) */}
+        <Meteors
+          number={30}
+          minDelay={0.3}
+          maxDelay={2}
+          minDuration={3}
+          maxDuration={8}
+          angle={210}
+          className="z-[1]"
+        />
+
+        {/* Layer 3: Interactive particles */}
+        <Particles
+          className="absolute inset-0 z-[2]"
+          quantity={80}
+          staticity={40}
+          color="#58A6FF"
+          size={0.5}
+        />
+
+        {/* Layer 4: Glow effects */}
+        <div className="pointer-events-none absolute -left-60 -top-60 z-[3] h-[600px] w-[600px] rounded-full bg-[radial-gradient(circle,rgba(238,49,36,0.12),transparent_60%)]" />
+        <div className="pointer-events-none absolute -right-60 -top-40 z-[3] h-[500px] w-[500px] rounded-full bg-[radial-gradient(circle,rgba(88,166,255,0.1),transparent_60%)]" />
+        <div className="pointer-events-none absolute bottom-0 left-1/2 z-[3] h-[300px] w-[800px] -translate-x-1/2 bg-[radial-gradient(ellipse,rgba(238,49,36,0.05),transparent_60%)]" />
+
+        {/* Content */}
+        <div className="relative z-10 mx-auto max-w-5xl text-center">
+          {/* Animated badge */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-severity-critical/25 bg-severity-critical/10 px-4 py-1.5 text-sm font-medium text-severity-critical"
+          >
+            <span className="live-dot" />
+            TestSprite S3 Hackathon Project
+          </motion.div>
+
+          {/* Main headline */}
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            className="mb-4 text-5xl font-extrabold tracking-tight sm:text-7xl lg:text-8xl"
+          >
+            <span className="text-ink">Mantiz </span>
+            <AnimatedGradientText className="ml-2 sm:ml-3">
+              Hunts
+            </AnimatedGradientText>
+          </motion.h1>
+
+          {/* Subtitle */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="mx-auto mb-10 max-w-2xl text-lg text-ink-muted sm:text-xl"
+          >
+            <strong className="text-ink">AI coding agent lie detector.</strong>
+            <br className="sm:hidden" />
+            {' '}Scans diffs and PRs for the patterns agents use to fake a passing test suite.
+            <br />
+            <span className="italic text-ink-subdued">Your agent cheats. Mantiz doesn't.</span>
+          </motion.p>
+
+          {/* CTAs */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            className="flex flex-wrap justify-center gap-4"
+          >
+            <Link to="/scan">
+              <ShimmerButton
+                shimmerColor="rgba(88,166,255,0.4)"
+                background="rgba(88,166,255,0.15)"
+                className="text-white"
+                as="span"
+              >
+                <BugPlay className="h-4 w-4" />
+                Scan a Diff
+              </ShimmerButton>
+            </Link>
+            <ShimmerButton
+              as="a"
+              href="https://github.com/farhank15/mantiz"
+              target="_blank"
+              rel="noopener noreferrer"
+              shimmerColor="rgba(255,255,255,0.1)"
+              background="rgba(33,38,45,0.9)"
+            >
+              <Github className="h-4 w-4" />
+              View on GitHub
+            </ShimmerButton>
+          </motion.div>
+        </div>
+
+        {/* Animated Beam Network — Multi-beam visualization */}
+        <div className="relative z-10 mt-12 w-full max-w-3xl px-4">
+          <BeamNetwork />
+        </div>
+
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.5, duration: 0.8 }}
+          className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2"
+        >
+          <div className="flex flex-col items-center gap-2 text-ink-subdued">
+            <span className="text-[10px] tracking-[0.2em] uppercase">Scroll</span>              <svg className="h-4 w-4 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* =============================================
+          2. STATS SECTION — Animated counters
+           ============================================= */}
+      <section className="page-wrap px-4 py-20">
+        <div className="mx-auto max-w-4xl">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {[
+              { label: 'Diffs Scanned', value: 142, suffix: '' },
+              { label: 'Cheats Flagged', value: 37, suffix: '' },
+              { label: 'Detection Patterns', value: 8, suffix: '' },
+              { label: 'False Positive Rate', value: 3, suffix: '%' },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="panel p-6 text-center transition hover:border-interactive/30"
+              >
+                <div className="text-3xl font-bold text-ink sm:text-4xl">
+                  <NumberTicker value={stat.value} suffix={stat.suffix} />
+                </div>
+                <div className="mt-2 text-sm text-ink-muted">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* =============================================
+          3. MARQUEE SECTION — Detection patterns
+           ============================================= */}
+      <section className="relative overflow-hidden py-16">
+        <div className="mb-8 px-4 text-center">
+          <h2 className="text-2xl font-bold text-ink">What Mantiz Detects</h2>
+          <p className="mt-2 text-sm text-ink-muted">
+            Patterns your AI agent might be using to fake a passing test suite
+          </p>
+        </div>
+
+        <div className="relative">
+          <Marquee pauseOnHover repeat={3} className="[--duration:40s]">
+            {detectionPatterns.map((pattern, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 rounded-full border border-border bg-surface-1 px-5 py-2.5"
+              >
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: `var(--${pattern.color})` }}
+                />
+                <span className="text-sm font-medium text-ink whitespace-nowrap">
+                  {pattern.name}
+                </span>
+                <span
+                  className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                  style={{
+                    backgroundColor: `var(--${pattern.color})20`,
+                    color: `var(--${pattern.color})`,
+                  }}
+                >
+                  {pattern.severity}
+                </span>
+              </div>
+            ))}
+          </Marquee>
+        </div>
+      </section>
+
+      {/* =============================================
+          4. HOW IT WORKS — Flow Pipeline Visual
+           ============================================= */}
+      <section className="page-wrap px-4 py-20">
+        <div className="mx-auto max-w-5xl">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="mb-14 text-center"
+          >
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-interactive/20 bg-interactive/8 px-4 py-1.5 text-xs font-semibold text-interactive">
+              <ScrollText className="h-3.5 w-3.5" />
+              3-Step Pipeline
+            </div>
+            <h2 className="text-3xl font-bold text-ink sm:text-4xl">
+              From Diff to{' '}
+              <AnimatedGradientText>Verdict</AnimatedGradientText>
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-ink-muted">
+              Paste any diff. Mantiz scans every line through 8 detection patterns.
+              <br />
+              <span className="text-ink-subdued text-sm">No signup needed. No GitHub required.</span>
+            </p>
+          </motion.div>
+
+          {/* Pipeline Steps — Desktop: horizontal, Mobile: vertical */}
+          <div className="relative flex flex-col items-center gap-6 md:flex-row md:items-start md:gap-0">
+            {/* Connecting line (desktop: horizontal, mobile: vertical) */}
+            <div className="absolute left-[18px] top-0 h-full w-px bg-gradient-to-b from-interactive/40 via-severity-medium/30 to-severity-critical/40 md:left-0 md:top-[50px] md:h-px md:w-full md:bg-gradient-to-r" />
+
+            {/* Step 1: Paste Diff */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: '-50px' }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="relative z-10 flex w-full flex-row gap-4 pl-10 md:w-1/3 md:flex-col md:pl-0 md:text-center"
+            >
+              {/* Step number badge */}
+              <div aria-hidden="true" className="absolute left-0 flex h-9 w-9 items-center justify-center rounded-full border-2 border-interactive bg-canvas text-sm font-bold text-interactive md:static md:mx-auto md:mb-4">
+                1
+              </div>
+              <div className="flex-1 md:px-3">
+                <div className="mb-2 flex items-center gap-2 md:justify-center">
+                  <Search className="hidden h-5 w-5 text-interactive md:block" />
+                  <h3 className="text-lg font-bold text-ink">Paste a Diff</h3>
+                </div>
+                <p className="mb-3 text-sm text-ink-muted">
+                  Paste any GitHub-style diff or PR link. Mantiz parses every changed line into structured hunks.
+                </p>
+                {/* Mini code preview */}
+                <div className="overflow-hidden rounded-lg border border-border bg-surface-2 text-xs">
+                  <div className="flex items-center gap-2 border-b border-border bg-surface-1 px-3 py-1.5 text-[10px] text-ink-subdued">
+                    <span className="h-2 w-2 rounded-full bg-severity-critical/60" />
+                    <span>diff --git a/test.js b/test.js</span>
+                  </div>
+                  <div className="space-y-[1px] px-3 py-2 font-mono text-[11px] leading-5">
+                    <span className="text-ink-subdued">@@ -10,7 +10,7 @@</span>
+                    <br />
+                    <span className="text-ink-subdued">  function testAdd() &#123;</span>
+                    <br />
+                    <span className="text-success">+  // assert.equal(add(2,3), 5)</span>
+                    <br />
+                    <span className="text-ink-subdued">  &#125;</span>
+                    <br />
+                    <span className="text-severity-critical">-  assert.equal(add(2,3), 5)</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Arrow connector (desktop) */}
+            <div className="hidden md:flex md:w-12 md:items-center md:justify-center md:pt-[50px]">
+              <motion.div
+                initial={{ opacity: 0, scaleX: 0 }}
+                whileInView={{ opacity: 1, scaleX: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: 0.4 }}
+                className="flex h-8 w-8 origin-center items-center justify-center"
+              >                  <ArrowRight className="h-5 w-5 text-interactive/60" />
+              </motion.div>
+            </div>
+
+            {/* Step 2: Analyze Patterns */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-50px' }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="relative z-10 flex w-full flex-row gap-4 pl-10 md:w-1/3 md:flex-col md:pl-0 md:text-center"
+            >
+              <div aria-hidden="true" className="absolute left-0 flex h-9 w-9 items-center justify-center rounded-full border-2 border-severity-medium bg-canvas text-sm font-bold text-severity-medium md:static md:mx-auto md:mb-4">
+                2
+              </div>
+              <div className="flex-1 md:px-3">
+                <div className="mb-2 flex items-center gap-2 md:justify-center">
+                  <Brain className="hidden h-5 w-5 text-severity-medium md:block" />
+                  <h3 className="text-lg font-bold text-ink">8 Detection Engines</h3>
+                </div>
+                <p className="mb-3 text-sm text-ink-muted">
+                  Each line is scanned against 8 patterns. Findings are ranked by confidence and severity.
+                </p>
+                {/* Detector badges */}
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: 'Disabled Assertion', color: 'severity-critical' },
+                    { label: 'Assertion Tampering', color: 'severity-critical' },
+                    { label: 'Mock Avoid Failure', color: 'severity-high' },
+                    { label: 'Claim-Diff Mismatch', color: 'severity-medium' },
+                    { label: 'Silent Catch-Pass', color: 'severity-high' },
+                    { label: 'Coverage Cliff', color: 'severity-info' },
+                    { label: 'Empty Try-Catch', color: 'severity-high' },
+                    { label: 'Skipped Suite', color: 'severity-critical' },
+                  ].map((d) => (
+                    <span
+                      key={d.label}
+                      className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-all duration-200 hover:scale-105"
+                      style={{
+                        borderColor: `var(--${d.color})30`,
+                        backgroundColor: `var(--${d.color})12`,
+                        color: `var(--${d.color})`,
+                      }}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: `var(--${d.color})` }} />
+                      {d.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Arrow connector (desktop) */}
+            <div className="hidden md:flex md:w-12 md:items-center md:justify-center md:pt-[50px]">
+              <motion.div
+                initial={{ opacity: 0, scaleX: 0 }}
+                whileInView={{ opacity: 1, scaleX: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: 0.6 }}
+                className="flex h-8 w-8 origin-center items-center justify-center"
+              >                  <ArrowRight className="h-5 w-5 text-severity-medium/60" />
+              </motion.div>
+            </div>
+
+            {/* Step 3: Get Verdict */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: '-50px' }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+              className="relative z-10 flex w-full flex-row gap-4 pl-10 md:w-1/3 md:flex-col md:pl-0 md:text-center"
+            >
+              <div aria-hidden="true" className="absolute left-0 flex h-9 w-9 items-center justify-center rounded-full border-2 border-severity-critical bg-canvas text-sm font-bold text-severity-critical md:static md:mx-auto md:mb-4">
+                3
+              </div>
+              <div className="flex-1 md:px-3">
+                <div className="mb-2 flex items-center gap-2 md:justify-center">
+                  <CheckCircle2 className="hidden h-5 w-5 text-severity-critical md:block" />
+                  <h3 className="text-lg font-bold text-ink">Get the Verdict</h3>
+                </div>
+                <p className="mb-3 text-sm text-ink-muted">
+                  Trust score (0-100) with ranked findings and evidence excerpts for every detection.
+                </p>
+                {/* Mini result preview */}
+                <div className="overflow-hidden rounded-lg border border-border bg-surface-2">
+                  {/* Score bar */}
+                  <div className="flex items-center justify-between border-b border-border bg-surface-1 px-3 py-2">
+                    <span className="text-[10px] font-semibold text-ink-subdued uppercase tracking-wider">Trust Score</span>
+                    <span className="text-sm font-bold text-severity-critical">42</span>
+                  </div>
+                  {/* Findings */}
+                  <div className="divide-y divide-border">
+                    {[
+                      { label: 'Disabled Assertion', severity: 'HIGH', color: 'severity-critical' },
+                      { label: 'Assertion Tampering', severity: 'HIGH', color: 'severity-critical' },
+                    ].map((f) => (
+                      <div key={f.label} className="flex items-center justify-between px-3 py-1.5">
+                        <span className="flex items-center gap-1.5 text-[11px] text-ink">
+                          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: `var(--${f.color})` }} />
+                          {f.label}
+                        </span>
+                        <span
+                          className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase"
+                          style={{
+                            backgroundColor: `var(--${f.color})20`,
+                            color: `var(--${f.color})`,
+                          }}
+                        >
+                          {f.severity}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Bottom CTA */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4, delay: 0.7 }}
+            className="mt-12 text-center"
+          >
+            <Link to="/scan">
+              <ShimmerButton
+                shimmerColor="rgba(88,166,255,0.4)"
+                background="rgba(88,166,255,0.12)"
+                className="text-white"
+                as="span"
+              >
+                <BugPlay className="h-4 w-4" />
+                Try It Now — No Signup
+              </ShimmerButton>
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* =============================================
+          5. DETECTION PATTERNS — Bento Grid + Filter + Code Preview
+           ============================================= */}
+      <section className="page-wrap px-4 py-20">
+        <div className="mx-auto max-w-5xl">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="mb-10 text-center"
+          >
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-severity-critical/20 bg-severity-critical/8 px-4 py-1.5 text-xs font-semibold text-severity-critical">
+              <Swords className="h-3.5 w-3.5" />
+              8 Detection Patterns
+            </div>
+            <h2 className="text-3xl font-bold text-ink sm:text-4xl">
+              What{' '}
+              <AnimatedGradientText>Mantiz Detects</AnimatedGradientText>
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm text-ink-muted">
+              Every pattern is backed by AST-level analysis. No regex tricks. No guesswork.
+            </p>
+          </motion.div>
+
+          {/* Filter Tabs */}
+          <div className="mb-8 flex flex-wrap justify-center gap-2">
+            {severityFilters.map((filter) => {
+              const isActive = activeFilter === filter
+              const filterColor = filter === 'Critical' ? 'severity-critical'
+                : filter === 'High' ? 'severity-high'
+                : filter === 'Medium' ? 'severity-medium'
+                : filter === 'Info' ? 'severity-info'
+                : 'interactive'
+              return (
+                <button
+                  key={filter}
+                  onClick={() => setActiveFilter(filter)}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+                    isActive
+                      ? 'text-white shadow-[0_0_12px_rgba(88,166,255,0.2)]'
+                      : 'text-ink-muted hover:text-ink'
+                  }`}
+                  style={{
+                    backgroundColor: isActive ? `var(--${filterColor})` : 'var(--surface-2)',
+                    border: `1px solid ${isActive ? 'transparent' : 'var(--border)'}`,
+                  }}
+                >
+                  {filter}
+                  {filter !== 'All' && (
+                    <span className="opacity-70">
+                      ({detectionPatterns.filter(p => p.severity === filter).length})
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Pattern Cards Grid */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {filteredPatterns.map((pattern, i) => {
+              const Icon = pattern.icon
+              return (
+                <motion.div
+                  key={pattern.name}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-30px' }}
+                  transition={{ duration: 0.4, delay: i * 0.05 }}
+                  className="group relative overflow-hidden rounded-xl border border-border bg-surface-1 transition-all duration-300 hover:border-interactive/30 hover:shadow-[0_0_20px_rgba(88,166,255,0.06)]"
+                >
+                  {/* Hover glow */}
+                  <div className="pointer-events-none absolute -inset-px rounded-xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                    style={{
+                      background: `radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(88,166,255,0.06), transparent 40%)`,
+                    }}
+                  />
+
+                  <div className="relative z-10 p-5">
+                    {/* Top row: Icon + Severity */}
+                    <div className="mb-3 flex items-start justify-between">
+                      <div
+                        className="flex h-10 w-10 items-center justify-center rounded-lg"
+                        style={{
+                          backgroundColor: `var(--${pattern.color})15`,
+                          color: `var(--${pattern.color})`,
+                        }}
+                      >
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <span
+                        className="rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                        style={{
+                          backgroundColor: `var(--${pattern.color})18`,
+                          color: `var(--${pattern.color})`,
+                          border: `1px solid var(--${pattern.color})25`,
+                        }}
+                      >
+                        {pattern.severity}
+                      </span>
+                    </div>
+
+                    {/* Pattern name */}
+                    <h3 className="mb-1.5 text-base font-bold text-ink">{pattern.name}</h3>
+
+                    {/* Description */}
+                    <p className="mb-4 text-sm leading-relaxed text-ink-muted">
+                      {pattern.longDesc}
+                    </p>
+
+                    {/* Code Sample */}
+                    <div className="overflow-hidden rounded-lg border border-border bg-surface-2">
+                      <div className="flex items-center gap-1.5 border-b border-border bg-surface-1 px-3 py-1.5">
+                        <FileCode className="h-3 w-3 text-ink-subdued" />
+                        <span className="text-[10px] font-medium text-ink-subdued">diff preview</span>
+                      </div>
+                      <div className="px-3 py-2 font-mono text-[11px] leading-5">
+                        {pattern.codeSample.split('\n').map((line, li) => {
+                          const isAdd = line.startsWith('+ ')
+                          const isRemove = line.startsWith('- ')
+                          const isMeta = line.startsWith('> ')
+                          return (
+                            <div
+                              key={li}
+                              className={`${
+                                isAdd ? 'text-success bg-success/5' :
+                                isRemove ? 'text-severity-critical bg-severity-critical/5' :
+                                isMeta ? 'text-interactive' :
+                                'text-ink-subdued'
+                              } ${isAdd || isRemove ? '-mx-3 px-3' : ''}`}
+                            >
+                              {line}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom accent bar */}
+                  <div
+                    className="h-0.5 w-full"
+                    style={{ backgroundColor: `var(--${pattern.color})` }}
+                  />
+                </motion.div>
+              )
+            })}
+          </div>
+
+          {/* Empty state */}
+          {filteredPatterns.length === 0 && (
+            <div className="py-16 text-center text-ink-muted">
+              No patterns match this filter.
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* =============================================
+          6. LOOP ARCHITECTURE — How Mantiz + TestSprite Work Together
+           ============================================= */}
+      <section className="page-wrap px-4 py-20">
+        <div className="mx-auto max-w-5xl">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="mb-14 text-center"
+          >
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-success/20 bg-success/8 px-4 py-1.5 text-xs font-semibold text-success">
+              <Zap className="h-3.5 w-3.5" />
+              The Loop
+            </div>
+            <h2 className="text-3xl font-bold text-ink sm:text-4xl">
+              Built for the{' '}
+              <AnimatedGradientText>TestSprite Loop</AnimatedGradientText>
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-ink-muted">
+              Mantiz is the <strong className="text-ink">checker</strong> in an AI coding loop: agent writes code,
+              {' '}Mantiz scans for cheating, TestSprite runs real tests, and the loop closes with fixes.
+            </p>
+          </motion.div>
+
+          {/* Loop Flow Diagram */}
+          <div className="relative flex flex-col items-center gap-8 md:flex-row md:items-start md:gap-0">
+            {/* Connecting line */}
+            <div className="absolute left-[18px] top-0 h-full w-px bg-gradient-to-b from-severity-critical/30 via-interactive/40 to-success/50 md:left-0 md:top-[60px] md:h-px md:w-full md:bg-gradient-to-r" />
+
+            {/* Step 1: Agent Writes Code */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: '-50px' }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="relative z-10 flex w-full flex-row gap-4 pl-10 md:w-1/4 md:flex-col md:pl-0 md:text-center"
+            >
+              <div className="absolute left-0 flex h-9 w-9 items-center justify-center rounded-full border-2 border-severity-critical bg-canvas text-sm font-bold text-severity-critical md:static md:mx-auto md:mb-4">
+                <GitBranch className="h-4 w-4" />
+              </div>
+              <div className="flex-1 md:px-3">
+                <h3 className="mb-1.5 text-base font-bold text-ink">Agent Writes Code</h3>
+                <p className="text-sm text-ink-muted">
+                  AI coding agent generates a diff to fix a test or implement a feature.
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Arrow */}
+            <div className="hidden md:flex md:w-8 md:items-center md:justify-center md:pt-[50px]">
+              <ArrowRight className="h-4 w-4 text-severity-critical/50" />
+            </div>
+
+            {/* Step 2: Mantiz Scans */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-50px' }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="relative z-10 flex w-full flex-row gap-4 pl-10 md:w-1/4 md:flex-col md:pl-0 md:text-center"
+            >
+              <div className="absolute left-0 flex h-9 w-9 items-center justify-center rounded-full border-2 border-interactive bg-canvas text-sm font-bold text-interactive md:static md:mx-auto md:mb-4">
+                <Shield className="h-4 w-4" />
+              </div>
+              <div className="flex-1 md:px-3">
+                <h3 className="mb-1.5 text-base font-bold text-ink">Mantiz Scans</h3>
+                <p className="text-sm text-ink-muted">
+                  8 detection patterns scan every line. Findings ranked by severity and confidence.
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Arrow */}
+            <div className="hidden md:flex md:w-8 md:items-center md:justify-center md:pt-[50px]">
+              <ArrowRight className="h-4 w-4 text-interactive/50" />
+            </div>
+
+            {/* Step 3: TestSprite Tests */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: '-50px' }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+              className="relative z-10 flex w-full flex-row gap-4 pl-10 md:w-1/4 md:flex-col md:pl-0 md:text-center"
+            >
+              <div className="absolute left-0 flex h-9 w-9 items-center justify-center rounded-full border-2 border-severity-medium bg-canvas text-sm font-bold text-severity-medium md:static md:mx-auto md:mb-4">
+                <Terminal className="h-4 w-4" />
+              </div>
+              <div className="flex-1 md:px-3">
+                <h3 className="mb-1.5 text-base font-bold text-ink">TestSprite Tests</h3>
+                <p className="text-sm text-ink-muted">
+                  Real tests run against the deployed app. Results determine if the agent passes or fails.
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Arrow */}
+            <div className="hidden md:flex md:w-8 md:items-center md:justify-center md:pt-[50px]">
+              <ArrowRight className="h-4 w-4 text-severity-medium/50" />
+            </div>
+
+            {/* Step 4: Loop Closes */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: '-50px' }}
+              transition={{ duration: 0.5, delay: 0.7 }}
+              className="relative z-10 flex w-full flex-row gap-4 pl-10 md:w-1/4 md:flex-col md:pl-0 md:text-center"
+            >
+              <div className="absolute left-0 flex h-9 w-9 items-center justify-center rounded-full border-2 border-success bg-canvas text-sm font-bold text-success md:static md:mx-auto md:mb-4">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+              <div className="flex-1 md:px-3">
+                <h3 className="mb-1.5 text-base font-bold text-ink">Verdict → Fix</h3>
+                <p className="text-sm text-ink-muted">
+                  Agent reads Mantiz + TestSprite results and fixes. The loop iterates until all tests pass.
+                </p>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Callout box */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4, delay: 0.8 }}
+            className="mx-auto mt-12 max-w-2xl rounded-xl border border-success/20 bg-success/5 p-5 text-center"
+          >
+            <p className="text-sm text-ink-muted">
+              <strong className="text-success">Why this matters:</strong> A loop without a real checker
+              doesn't fail loudly — it hallucinates progress. Mantiz is the{' '}
+              <strong className="text-ink">honesty detector</strong> for the entire pipeline.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* =============================================
+          7. FINAL CTA SECTION
+           ============================================= */}
+      <section className="relative overflow-hidden py-24">
+        {/* Background effect */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-severity-critical/3 blur-[100px]" />
+        </div>
+
+        <div className="page-wrap px-4 text-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="mx-auto max-w-2xl"
+          >
+            <AnimatedGradientText className="text-3xl font-bold sm:text-4xl">
+              Don't Trust Your Agent
+            </AnimatedGradientText>
+            <p className="mt-4 mb-8 text-ink-muted">
+              A loop without a real checker doesn't fail loudly. It hallucinates progress.
+              {' '}<strong className="text-ink">Mantiz is the checker for the checker.</strong>
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Link to="/scan">
+                <ShimmerButton
+                  shimmerColor="rgba(88,166,255,0.5)"
+                  background="rgba(88,166,255,0.15)"
+                  className="text-white"
+                  as="span"
+                >
+                  <BugPlay className="h-4 w-4" />
+                  Scan Your First Diff
+                </ShimmerButton>
+              </Link>
+              <ShimmerButton
+                as="a"
+                href="https://www.testsprite.com/hackathon-s3"
+                target="_blank"
+                rel="noopener noreferrer"
+                shimmerColor="rgba(255,255,255,0.1)"
+                background="rgba(33,38,45,0.9)"
+              >
+                <Zap className="h-4 w-4" />
+                Learn About the Loop
+              </ShimmerButton>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* =============================================
+          Footer note
+           ============================================= */}
+      <section className="border-t border-border px-4 py-8">
+        <div className="page-wrap text-center text-sm text-ink-subdued">
+          <p>
+            Built for{' '}
+            <a
+              href="https://www.testsprite.com/hackathon-s3"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-interactive underline underline-offset-2 hover:text-interactive-hover"
+            >
+              TestSprite Season 3
+            </a>
+            {' '}— a loop without a real checker doesn't fail loudly.
+          </p>
+        </div>
+      </section>
+    </main>
+  )
+}
