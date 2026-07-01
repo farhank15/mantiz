@@ -3,7 +3,7 @@ import { parseRawDiff } from './diff-parser'
 import { detectDisabledAssertions } from './disabled-assertion'
 import { detectAssertionTampering } from './assertion-tampering'
 import { detectMockToAvoid } from './mock-to-avoid'
-import { detectClaimDiffMismatch } from './claim-mismatch'
+import { detectClaimDiffMismatch, isNonFunctional } from './claim-mismatch'
 import { detectSilentCatch } from './silent-catch'
 
 export interface FixInstruction {
@@ -58,13 +58,15 @@ export function scanDiff(rawDiff: string): ScanResult {
     }
   }
 
+  const functionalFiles = files.filter(f => !isNonFunctional(f.newFile || f.oldFile || ''))
+
   // Run all 5 detectors
   const findings: Finding[] = [
-    ...detectDisabledAssertions(files),
-    ...detectAssertionTampering(files),
-    ...detectMockToAvoid(files),
-    ...detectClaimDiffMismatch(files),
-    ...detectSilentCatch(files),
+    ...detectDisabledAssertions(functionalFiles),
+    ...detectAssertionTampering(functionalFiles),
+    ...detectMockToAvoid(functionalFiles),
+    ...detectClaimDiffMismatch(files), // claim mismatch needs all files to know if only non-functional changed
+    ...detectSilentCatch(functionalFiles),
   ]
 
   // Calculate trust score

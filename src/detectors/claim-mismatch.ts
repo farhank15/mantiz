@@ -27,7 +27,7 @@ const SOURCE_FILE_PATTERN = /\.(ts|tsx|js|jsx|mjs|cjs)$/i
 /**
  * Check if a file path is non-functional (docs, config, styles, etc.)
  */
-function isNonFunctional(filePath: string): boolean {
+export function isNonFunctional(filePath: string): boolean {
   return NON_FUNCTIONAL_FILE_PATTERNS.some((p) => p.test(filePath))
 }
 

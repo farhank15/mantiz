@@ -35,3 +35,4 @@ Instructions for the AI agent:
 - Run TestSprite after Mantiz passes. Log the TestSprite result too.
 -->
 | 7 | Mantiz CLI | auto-scan | 70/100 | 1 findings (1 high) | PASSED | Manual review needed | 2026-07-01 |
+| 8 | Mantiz CLI | auto-scan | 85/100 | 1 findings (0 high) | PASSED | Manual review needed | 2026-07-01 |
