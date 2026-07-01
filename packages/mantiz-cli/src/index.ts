@@ -13,7 +13,7 @@
  */
 
 import { execSync } from 'node:child_process'
-import { scanDiff, type ScanResult } from '@farhan22/mantiz-core'
+import { scanDiff, type ScanResult } from '@farhank15/mantiz-core'
 
 const PASS_THRESHOLD = 70
 

@@ -8,7 +8,7 @@
 - **Project:** Mantiz — AI coding agent lie detector
 - **Live URL:** https://mantiz-wine.vercel.app
 - **Stack:** TanStack Start / Neon Postgres / Drizzle ORM / TestSprite CLI
-- **Total iterations:** 31
+- **Total iterations:** 32
 
 ---
 
@@ -47,6 +47,7 @@
 | 29 | Antigravity Agent | Restrict hallucination detector to test files. Ignore deleted files in all detectors. False positives on .skip string literals persist in UI components. | 10/100 | 9 findings (6 high) | FAILED | Restrict remaining test detectors to test files | 2026-07-01 |
 | 30 | Antigravity Agent | Restrict disabled assertions, assertion tampering, and mock detectors to test files. Silent catch warnings on UI files persist. | 10/100 | 4 findings (3 high) | FAILED | Ignore .tsx/.jsx files in silent catch detector | 2026-07-01 |
 | 31 | Antigravity Agent | Exclude React component files (.tsx, .jsx) from silent catch detector to resolve clipboard/localstorage swallow warnings. | 85/100 | 1 findings (0 high) | PASSED | Push changes and configure publish release action | 2026-07-01 |
+| 32 | Antigravity Agent | Rename packages to @farhank15 scope. Configure publish workflow for GitHub Packages registry. | 85/100 | 1 findings (0 high) | PASSED | Commit, tag v0.1.0, and push to remote | 2026-07-01 |
 
 ---
 

@@ -1,5 +1,5 @@
 {
-  "name": "@farhan22/mantiz-core",
+  "name": "@farhank15/mantiz-core",
   "version": "0.1.0",
   "description": "Mantiz detection engine — AI lie detector for coding agents",
   "type": "module",
@@ -28,7 +28,7 @@
     "vitest": "^4.1.5"
   },
   "publishConfig": {
-    "access": "public"
+    "registry": "https://npm.pkg.github.com"
   },
   "keywords": [
     "ai",
