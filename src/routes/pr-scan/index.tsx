@@ -12,6 +12,9 @@ import {
   ExternalLink,
   Loader2,
   GitPullRequest,
+  ChevronDown,
+  ChevronUp,
+  FileCode,
 } from 'lucide-react'
 import { scanPR } from '../../server/auth'
 import { useAuth } from '../../lib/auth-context'
@@ -37,6 +40,7 @@ interface PRScanResult {
       lineStart: number
       confidence: string
       explanation: string
+      evidenceExcerpt: string
     }>
   }
 }
@@ -48,6 +52,16 @@ function PRScanPage() {
   const [result, setResult] = useState<PRScanResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [expandedFindings, setExpandedFindings] = useState<Set<number>>(new Set())
+
+  const toggleFinding = (idx: number) => {
+    setExpandedFindings((prev) => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx)
+      else next.add(idx)
+      return next
+    })
+  }
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -271,23 +285,59 @@ function PRScanPage() {
                     </h3>
                   </div>
                   <div className="divide-y divide-border">
-                    {result.scan.findings.map((finding, idx) => (
-                      <div key={idx} className="flex items-center gap-3 px-4 py-3 transition hover:bg-surface-2/50">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${getConfidenceBadge(finding.confidence)}`}
-                        >
-                          {finding.confidence}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="truncate text-sm font-medium text-ink">
-                            {finding.explanation}
-                          </div>
-                          <div className="mt-0.5 text-xs text-ink-subdued">
-                            {finding.filePath}:{finding.lineStart}
-                          </div>
+                    {result.scan.findings.map((finding, idx) => {
+                      const isExpanded = expandedFindings.has(idx)
+                      return (
+                        <div key={idx} className="transition hover:bg-surface-2/50">
+                          <button
+                            onClick={() => toggleFinding(idx)}
+                            className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                          >
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${getConfidenceBadge(finding.confidence)}`}
+                            >
+                              {finding.confidence}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-ink truncate">
+                                {finding.explanation}
+                              </div>
+                              <div className="text-xs text-ink-subdued mt-0.5">
+                                {finding.filePath}:{finding.lineStart}
+                              </div>
+                            </div>
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4 flex-shrink-0 text-ink-muted" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 flex-shrink-0 text-ink-muted" />
+                            )}
+                          </button>
+                          <AnimatePresence>
+                            {isExpanded && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="border-t border-border px-4 py-3">
+                                  <div className="mb-1.5 flex items-center gap-1.5 text-xs text-ink-subdued">
+                                    <FileCode className="h-3 w-3" />
+                                    Evidence excerpt
+                                  </div>
+                                  <div className="overflow-hidden rounded-lg border border-border bg-surface-2">
+                                    <div className="px-3 py-2 font-mono text-[11px] leading-5 text-ink-muted">
+                                      {finding.evidenceExcerpt}
+                                    </div>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               ) : (

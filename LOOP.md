@@ -8,7 +8,7 @@
 - **Project:** Mantiz — AI coding agent lie detector
 - **Live URL:** https://mantiz-wine.vercel.app
 - **Stack:** TanStack Start / Neon Postgres / Drizzle ORM / TestSprite CLI
-- **Total iterations:** 17
+- **Total iterations:** 18
 
 ---
 
@@ -33,6 +33,7 @@
 | 15 | Antigravity Agent | Fix false positive on monorepos: expand TEST_FILE_PATTERN to match test fixture directories. | 85/100 | 1 findings (0 high) | PASSED | Redeploy and verify PR scans | 2026-07-01 |
 | 16 | Antigravity Agent | Fix false positive on comments: refine COMMENTED_ASSERTION regex to require programmatic symbols. | 85/100 | 1 findings (0 high) | PASSED | Redeploy and test on React PR 36867 | 2026-07-01 |
 | 17 | Antigravity Agent | Connect Drizzle ORM to Neon DB. Sync user info, save scans & findings, load real history. | 85/100 | 1 findings (0 high) | PASSED | Redeploy, verify OAuth & history page | 2026-07-01 |
+| 18 | Antigravity Agent | Implement interactive diff evidence preview with expand/collapse on PR Scan page. | 85/100 | 1 findings (0 high) | PASSED | TestSprite passed (Redirect & History tests) | 2026-07-01 |
 
 ---
 
