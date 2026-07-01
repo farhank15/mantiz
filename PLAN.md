@@ -210,15 +210,19 @@ src/cli/scan.ts  → import { scanDiff } from '../detectors/engine'
 
 ---
 
-## ❌ DROP LIST
+## ✅ COMPLETED — Beyond Original Plan
 
-| Feature | Alasan |
-|---------|--------|
-| ~~GitHub OAuth~~ | Manual diff paste cukup buat 80pts. OAuth makan 1-2 hari. |
-| ~~PR Scan~~ | Butuh OAuth. Skip. |
-| ~~History page~~ | Nice-to-have, bukan core. Skip. |
-| ~~AST Visual Tree~~ | Complexity tinggi (1-2 hari). Gak worth it. |
-| ~~Wall of Shame/Fame~~ | Butuh user base + DB. Skip. |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **GitHub OAuth** | ✅ **Implemented** | Full OAuth flow — login, callback, session cookie HMAC-signed, CSRF state protection |
+| **PR Scan** | ✅ **Implemented** | Paste PR URL → Octokit fetch diff → 5 detectors → results |
+| **History page** | ✅ **Implemented** | `/history` route — scan history display |
+| **Responsive Navbar** | ✅ **Implemented** | Mobile drawer + desktop animated nav + auth section |
+| **Benchmark Dashboard** | ✅ **Implemented** | `/benchmark` — 3 dataset scores with expand details |
+| **Auto-Healer** | ✅ **Implemented** | `fixInstructions[]` in scan results — actionable AI fix prompts |
+| **.rules/ AI Instructions** | ✅ **Implemented** | `.rules/ai-agent-workflow.md` — full workflow docs for AI agents |
+| ~~AST Visual Tree~~ | ❌ Not implemented | Complexity too high for timeline |
+| ~~Wall of Shame/Fame~~ | ❌ Not implemented | Needs user base + DB |
 
 ---
 
@@ -249,6 +253,12 @@ src/cli/scan.ts  → import { scanDiff } from '../detectors/engine'
 - [⏳] **Discord submission** — di `#hackathon-submissions` sebelum 7 Jul 4:59PM PDT
 - [⏳] **X post** — tag @TestSprite
 - [⏳] **Discord polls** — vote di polling yang ada
+
+### 🚀 Additional Shipping
+- [✅] **Redesigned responsive navbar** — mobile drawer + animated active indicator
+- [✅] **.rules/ AI Agent Workflow** — `ai-agent-workflow.md` with full flow diagrams
+- [✅] **Auto-Healer Remediation** — `fixInstructions` in every scan result
+- [✅] **LOOP.md** — 15 entries covering entire development journey
 
 ---
 
