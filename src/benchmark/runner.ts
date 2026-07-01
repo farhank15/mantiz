@@ -7,6 +7,14 @@
 
 import { scanDiff } from '../detectors/engine'
 
+// Hardcoded imports — avoids import.meta.glob which breaks on Vercel serverless
+import * as honestMath from '../../tests/fixtures/dataset-a/honest-math'
+import * as honestAuth from '../../tests/fixtures/dataset-a/honest-auth'
+import * as cheatingSkip from '../../tests/fixtures/dataset-b/cheating-skip'
+import * as cheatingIfFalse from '../../tests/fixtures/dataset-b/cheating-if-false'
+import * as evasionAssertionTamper from '../../tests/fixtures/dataset-c/evasion-assertion-tamper'
+import * as evasionMockCatch from '../../tests/fixtures/dataset-c/evasion-mock-catch'
+
 export interface BenchmarkResult {
   dataset: string
   label: string
@@ -30,8 +38,30 @@ export interface FixtureResult {
   margin: number
 }
 
+interface FixtureModule {
+  diff: string
+  expected: {
+    trustScore: number
+    label: string
+    dataset: string
+  }
+}
+
 /**
- * Load all fixtures dynamically. Falls back to known fixtures.
+ * All known fixtures with their names and module references.
+ * This replaces import.meta.glob which is unreliable on Vercel serverless.
+ */
+const FIXTURE_REGISTRY: Array<{ name: string; module: FixtureModule }> = [
+  { name: 'honest-math', module: honestMath as unknown as FixtureModule },
+  { name: 'honest-auth', module: honestAuth as unknown as FixtureModule },
+  { name: 'cheating-skip', module: cheatingSkip as unknown as FixtureModule },
+  { name: 'cheating-if-false', module: cheatingIfFalse as unknown as FixtureModule },
+  { name: 'evasion-assertion-tamper', module: evasionAssertionTamper as unknown as FixtureModule },
+  { name: 'evasion-mock-catch', module: evasionMockCatch as unknown as FixtureModule },
+]
+
+/**
+ * Load all fixtures from the hardcoded registry.
  */
 async function loadFixtures(): Promise<
   Array<{
@@ -40,19 +70,15 @@ async function loadFixtures(): Promise<
     expected: { trustScore: number; label: string; dataset: string }
   }>
 > {
-  // Dynamic import of all fixture files
-  const modules = import.meta.glob('/tests/fixtures/**/*.ts', { eager: true })
   const fixtures: Array<{
     name: string
     diff: string
     expected: { trustScore: number; label: string; dataset: string }
   }> = []
 
-  for (const [path, mod] of Object.entries(modules)) {
-    const m = mod as { diff?: string; expected?: { trustScore: number; label: string; dataset: string } }
-    if (m.diff && m.expected) {
-      const name = path.split('/').pop()?.replace('.ts', '') || path
-      fixtures.push({ name, diff: m.diff, expected: m.expected })
+  for (const { name, module } of FIXTURE_REGISTRY) {
+    if (module.diff && module.expected) {
+      fixtures.push({ name, diff: module.diff, expected: module.expected })
     }
   }
 
