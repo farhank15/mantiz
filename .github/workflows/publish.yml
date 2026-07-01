@@ -55,8 +55,10 @@ jobs:
         run: |
           sed -i 's/"name": "@farhank15\/mantiz-core"/"name": "@farhan22\/mantiz-core"/g' packages/mantiz-core/package.json
           sed -i 's/"name": "@farhank15\/mantiz-cli"/"name": "@farhan22\/mantiz-cli"/g' packages/mantiz-cli/package.json
-          sed -i 's/"@farhank15\/mantiz-core": "0.1.0"/"@farhan22\/mantiz-core": "0.1.0"/g' packages/mantiz-cli/package.json
+          sed -i 's/"@farhank15\/mantiz-core": "0.1.1"/"@farhan22\/mantiz-core": "0.1.1"/g' packages/mantiz-cli/package.json
           sed -i 's/@farhank15\/mantiz-core/@farhan22\/mantiz-core/g' packages/mantiz-cli/src/index.ts
+          sed -i '/"publishConfig": {/,/}/d' packages/mantiz-core/package.json
+          sed -i '/"publishConfig": {/,/}/d' packages/mantiz-cli/package.json
 
       - name: Install dependencies
         run: npm install
