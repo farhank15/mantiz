@@ -8,7 +8,7 @@
 - **Project:** Mantiz — AI coding agent lie detector
 - **Live URL:** https://mantiz-wine.vercel.app
 - **Stack:** TanStack Start / Neon Postgres / Drizzle ORM / TestSprite CLI
-- **Total iterations:** 35
+- **Total iterations:** 36
 
 ---
 
@@ -51,6 +51,7 @@
 | 33 | Antigravity Agent | Update publish workflow to support dual publishing to GPR and NPM registries simultaneously. | 70/100 | 1 findings (1 high) | PASSED | Push updates and re-release tag v0.1.0 | 2026-07-01 |
 | 34 | Antigravity Agent | Bump version to 0.1.1. Strip publishConfig in NPM job dynamically to prevent GPR auth conflict. | 70/100 | 1 findings (1 high) | PASSED | Push updates and release tag v0.1.1 | 2026-07-01 |
 | 35 | Antigravity Agent | Bump version to 0.1.2. Use unscoped names (mantiz-core/cli) on NPM to bypass scope rights issue. | 70/100 | 1 findings (1 high) | PASSED | Push updates and release tag v0.1.2 | 2026-07-01 |
+| 36 | Antigravity Agent | Restrict Flag 3 in claim-mismatch detector to run only when the PR title explicitly mentions tests. | 100/100 | None | PASSED | Push changes to main and re-run TestSprite test 3 | 2026-07-01 |
 
 ---
 

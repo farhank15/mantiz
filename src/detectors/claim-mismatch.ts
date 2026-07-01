@@ -177,7 +177,10 @@ function scanFiles(files: ParsedDiff[], prContext?: { title?: string; author?: s
     return TEST_FILE_PATTERN.test(path)
   })
 
-  if (hasSourceChanges && !hasTestChanges && functionalChanges.length > 0) {
+  const TEST_CLAIM_KEYWORDS = /\b(test|spec|assert|expect|check|coverage|validation|smoke)\b/i
+  const claimsTestMod = prContext?.title ? TEST_CLAIM_KEYWORDS.test(prContext.title) : false
+
+  if (hasSourceChanges && !hasTestChanges && functionalChanges.length > 0 && claimsTestMod) {
     const sourceFiles = functionalChanges
       .filter((f) => {
         const path = f.newFile || f.oldFile || ''
