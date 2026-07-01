@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Github,
@@ -18,7 +18,6 @@ import {
 } from 'lucide-react'
 import { scanPR } from '../../server/auth'
 import { useAuth } from '../../lib/auth-context'
-import { useEffect } from 'react'
 
 export const Route = createFileRoute('/pr-scan/')({ component: PRScanPage })
 

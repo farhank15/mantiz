@@ -12,7 +12,7 @@ interface ScanHistoryItem {
   sourceRef: string | null
   trustScore: number | null
   status: 'pending' | 'complete' | 'failed'
-  createdAt: string
+  createdAt: Date
   repoName: string | null
 }
 

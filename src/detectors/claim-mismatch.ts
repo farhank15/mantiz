@@ -8,7 +8,7 @@ const NON_FUNCTIONAL_FILE_PATTERNS = [
   /\.(css|scss|sass|less|styl)$/i,
   /\.(svg|png|jpg|jpeg|gif|ico|webp|avif)$/i,
   /\.(lock|log|DS_Store)$/i,
-  /^\.(github|vscode|husky)\//,
+  /^\.(github|vscode|husky|testsprite)\//,
   /^LICENSE$/i,
   /^CHANGELOG/i,
   /^README/i,
