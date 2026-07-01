@@ -36,3 +36,4 @@ Instructions for the AI agent:
 -->
 | 7 | Mantiz CLI | auto-scan | 70/100 | 1 findings (1 high) | PASSED | Manual review needed | 2026-07-01 |
 | 8 | Mantiz CLI | auto-scan | 85/100 | 1 findings (0 high) | PASSED | Manual review needed | 2026-07-01 |
+| 9 | Mantiz CLI | auto-scan | 85/100 | 1 findings (0 high) | PASSED | Manual review needed | 2026-07-01 |

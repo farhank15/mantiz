@@ -123,36 +123,64 @@ function scanForSilentCatches(hunkContent: string, baseLine: number): Finding[] 
     // Detect opening of a catch block on an added line
     if (line.startsWith('+') && /catch\s*(?:\([^)]*\))?\s*$/.test(line)) {
       // Check next few lines for empty/comment-only body
-      let contentLines = 0
+      let hasRealCode = false
+      let hasTodo = false
+      let hasConsole = false
+      let hasComments = false
+      let linesCollected: string[] = []
+
       for (let j = i + 1; j < Math.min(i + 10, lines.length); j++) {
         const nextLine = lines[j]
         if (nextLine.startsWith('+') || nextLine.startsWith(' ')) {
           const trimmed = nextLine.slice(1).trim()
           if (trimmed === '}') {
-            // Closing brace found — check if body was essentially empty
-            if (contentLines === 0) {
-              // Multi-line empty catch: opened on one line, closed on another with no content
-              // Only add if we haven't already flagged this exact line
+            if (!hasRealCode) {
               const alreadyFlagged = findings.some(
                 (f) => f.lineStart === baseLine + i && f.patternType === 'silent_catch_and_pass'
               )
               if (!alreadyFlagged) {
+                let confidence: Confidence = 'high'
+                let explanation = 'Multi-line empty catch block — opens and closes with no meaningful error handling.'
+
+                if (hasTodo) {
+                  confidence = 'medium'
+                  explanation = 'Multi-line catch block contains only a TODO comment — error handling is intentionally deferred.'
+                } else if (hasConsole) {
+                  confidence = 'medium'
+                  explanation = 'Multi-line catch block only logs to console — errors are printed but not handled. Tests may pass despite failures.'
+                } else if (hasComments) {
+                  confidence = 'medium'
+                  explanation = 'Multi-line catch block contains only comments — no actual error handling logic.'
+                }
+
                 findings.push({
                   patternType: 'silent_catch_and_pass',
                   filePath: '',
                   lineStart: baseLine + i,
                   lineEnd: baseLine + j,
-                  confidence: 'high',
-                  explanation: 'Multi-line empty catch block — opens and closes with no meaningful error handling.',
+                  confidence,
+                  explanation,
                   evidenceExcerpt: `${lines[i].slice(1).trim()} ... ${nextLine.slice(1).trim()}`,
                 })
               }
             }
             break
           }
-          const relevant = trimmed.replace(/^\/\/.*$/, '').trim()
-          if (relevant && relevant !== '{') {
-            contentLines++
+
+          const cleanLine = trimmed.replace(/^\s*\{\s*$/, '').trim()
+          if (cleanLine) {
+            linesCollected.push(cleanLine)
+            const isComment = /^\/\/|^\/\*/.test(cleanLine)
+            if (isComment) {
+              hasComments = true
+              if (/(TODO|FIXME|HACK)/i.test(cleanLine)) {
+                hasTodo = true
+              }
+            } else if (/^console\.\w+\s*\(/.test(cleanLine)) {
+              hasConsole = true
+            } else {
+              hasRealCode = true
+            }
           }
         }
       }
