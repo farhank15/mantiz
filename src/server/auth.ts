@@ -85,9 +85,9 @@ function clearSessionCookie(): void {
  */
 export const startLogin = createServerFn({ method: 'GET' }).handler(async () => {
   const state = crypto.randomBytes(32).toString('hex')
-  const baseUrl = process.env.VERCEL_URL
+  const baseUrl = process.env.APP_URL || (process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
-    : 'http://localhost:3000'
+    : 'http://localhost:3000')
   const redirectUri = `${baseUrl}/auth/github/callback`
 
   // Store state in cookie for CSRF verification (10 min expiry)
