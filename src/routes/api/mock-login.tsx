@@ -1,9 +1,3 @@
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/api/mock-login')({
-  component: () => null,
-})
-
 export async function GET({ request }: { request: Request }) {
   const url = new URL(request.url)
   const secret = url.searchParams.get('secret')
