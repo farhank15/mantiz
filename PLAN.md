@@ -17,20 +17,24 @@
 
 ---
 
-## ✅ STATUS REAL (1 Jul)
+## ✅ STATUS REAL (2 Jul)
 
 | Area | Status | Notes |
 |------|--------|-------|
 | **Deploy Vercel** | ✅ **Live** | [mantiz-wine.vercel.app](https://mantiz-wine.vercel.app) |
 | **Diff parser** | ✅ Selesai | `src/detectors/diff-parser.ts` |
 | **Detector 1 (disabled-assertion)** | ✅ Selesai | Regex: comment, `.skip()`, `if(false)` |
+| **Detector 2 (assertion-tampering)** | ✅ Selesai | Banding assertion values old vs new |
+| **Detector 3 (mock-to-avoid)** | ✅ Selesai | `jest.mock()` / `vi.mock()` deteksi |
+| **Detector 4 (claim-diff-mismatch)** | ✅ Selesai | File type vs change analysis |
+| **Detector 5 (silent-catch)** | ✅ Selesai | `catch {}` kosong deteksi |
 | **Scan page** | ✅ Selesai | Form + Trust Score + Findings list |
 | **Open source files** | ✅ Selesai | LICENSE, CONTRIBUTING, SECURITY, dll |
+| **TestSprite CLI** | ✅ Selesai | Setup + API key linked |
 | **PLAN.md** | ✅ Selesai | Final strategy documented |
-| **Detector 2-5** | ❌ Belum | PRIORITAS #1 |
-| **Mantiz CLI** | ❌ Belum | `npm run mantiz-scan` |
-| **LOOP.md** | ❌ Kosong | Auto-logging via CLI |
-| **GitHub Actions** | ❌ Belum | Fail build on score < 70 |
+| **Mantiz CLI** | 🟡 Day 4 | `npm run mantiz-scan` |
+| **LOOP.md auto-log** | 🟡 Day 4 | Auto-logging via CLI |
+| **GitHub Actions** | 🟡 Day 4 | Fail build on score < 70 |
 | **Benchmark** | ❌ Belum | 3 dataset + dashboard |
 
 ---
@@ -41,12 +45,12 @@
 
 | # | Task | Detail | Est. Time |
 |---|------|--------|-----------|
-| ⬜ | **3.1 Detector 2 (assertion-tampering)** | Bandingkan assertion value sebelum/sesudah diff. Deteksi `expect(X).toBe(Y)` → `expect(X).toBe(Z)` tanpa perubahan source logic. Pake regex + AST parsing. | 2-3 jam |
-| ⬜ | **3.2 Detector 3 (mock-to-avoid-failure)** | Deteksi `jest.mock()` / `vi.mock()` baru yang berlebihan. Ratio mock:real test. Smart Mock Sanitizer: cek mock imports vs actual function calls. | 2-3 jam |
-| ⬜ | **3.3 Detector 4 (claim-diff-mismatch)** | Bandingkan commit message intent dengan actual changes. "refactor: cleanup" tapi hapus 50 baris test = mismatch. | 1-2 jam |
-| ⬜ | **3.4 Detector 5 (silent-catch-and-pass)** | Deteksi `catch {}` kosong, `catch(e){}`, try-catch baru tanpa error handling. Juga deteksi `catch { /* TODO */ }`. | 1-2 jam |
-| ⬜ | **3.5 Integrate all 5 ke engine** | Engine `scanDiff()` jalankan 5 detector. Testing trust score weights. | 30m |
-| ⬜ | **3.6 Typecheck + push** | `npx tsc --noEmit` lalu push ke main. | 15m |
+| ✅ | **3.1 Detector 2 (assertion-tampering)** | Bandingkan assertion value sebelum/sesudah diff. Deteksi `expect(X).toBe(Y)` → `expect(X).toBe(Z)` tanpa perubahan source logic. Pake regex + AST parsing. | 2-3 jam |
+| ✅ | **3.2 Detector 3 (mock-to-avoid-failure)** | Deteksi `jest.mock()` / `vi.mock()` baru yang berlebihan. Ratio mock:real test. Smart Mock Sanitizer: cek mock imports vs actual function calls. | 2-3 jam |
+| ✅ | **3.3 Detector 4 (claim-diff-mismatch)** | Bandingkan commit message intent dengan actual changes. "refactor: cleanup" tapi hapus 50 baris test = mismatch. | 1-2 jam |
+| ✅ | **3.4 Detector 5 (silent-catch-and-pass)** | Deteksi `catch {}` kosong, `catch(e){}`, try-catch baru tanpa error handling. Juga deteksi `catch { /* TODO */ }`. | 1-2 jam |
+| ✅ | **3.5 Integrate all 5 ke engine** | Engine `scanDiff()` jalankan 5 detector. Testing trust score weights. | 30m |
+| ✅ | **3.6 Typecheck + push** | `npx tsc --noEmit` lalu push ke main. | 15m |
 
 **🎯 Day 3 done = 5 detectors functional. Trust score akurat.**
 

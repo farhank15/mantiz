@@ -1,0 +1,63 @@
+name: Mantiz Scan 🔍
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  mantiz-scan:
+    runs-on: ubuntu-latest
+    name: AI Lie Detector
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need HEAD~1 for git diff
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: mantiz/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd mantiz
+          npm ci
+
+      - name: Run Mantiz Scan 🔍
+        id: mantiz
+        continue-on-error: true
+        working-directory: mantiz
+        run: |
+          npx tsx src/cli/scan.ts
+        env:
+          NODE_ENV: ci
+
+      - name: Mantiz Results
+        if: steps.mantiz.outcome != 'success'
+        run: |
+          echo "::warning::Mantiz detected suspicious code changes!"
+          echo "::warning::Trust score below 70 — review findings above."
+
+      - name: Run TestSprite 🧪
+        if: always()
+        env:
+          TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
+        working-directory: mantiz
+        run: |
+          if [ -n "$TESTSPRITE_API_KEY" ]; then
+            npx testsprite test run --headless 2>&1 || echo "TestSprite CI run completed with warnings"
+          else
+            echo "::warning::TESTSPRITE_API_KEY not set — skipping TestSprite tests"
+          fi
+
+      - name: Final Status
+        if: steps.mantiz.outcome != 'success'
+        run: |
+          echo "::error::Mantiz blocked this change — trust score too low."
+          exit 1

@@ -54,9 +54,9 @@ src/
 │   ├── engine.ts    # Orchestrator — runs all detectors
 │   ├── disabled-assertion.ts
 │   ├── assertion-tampering.ts
-│   ├── mock-to-avoid-failure.ts
-│   ├── claim-diff-mismatch.ts
-│   └── silent-catch-and-pass.ts
+│   ├── mock-to-avoid.ts
+│   ├── claim-mismatch.ts
+│   └── silent-catch.ts
 ├── routes/          # TanStack file-based routes
 ├── components/      # Reusable UI components
 ├── schemas/         # Drizzle database schemas
@@ -96,7 +96,7 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 <type>(<scope>): <description>
 
-feat(detector): add mock-to-avoid-failure detection pattern
+feat(detector): add mock-to-avoid detection pattern
 fix(scan): handle empty diff edge case
 docs(readme): add benchmark results
 chore(deps): update react to 19.2
@@ -117,6 +117,25 @@ chore(deps): update react to 19.2
 - **Bug reports:** Include the diff that caused the issue, expected vs actual trust score
 - **Feature requests:** Describe the cheating pattern you want detected
 - **Security issues:** See [SECURITY.md](SECURITY.md) for responsible disclosure
+
+---
+
+## AI Agent System Rules
+
+If you're using an AI coding agent (Claude Code, Aider, etc.) to develop Mantiz, include these rules in your agent's instructions:
+
+> **System Rules for AI Coding Agent:**
+>
+> You are an AI Coding Agent building Mantiz — an AI lie detector for coding agents.
+> You MUST follow the TestSprite S3 "Build the Loop" workflow:
+>
+> 1. After EVERY code change, run `npm run mantiz-scan`
+> 2. Read the results — if trust score < 70, your code was flagged as suspicious
+> 3. Fix the code honestly (remove `.skip()`, fill empty catch blocks, fix assertions properly)
+> 4. Re-scan with `npm run mantiz-scan` until score >= 70
+> 5. Append results to LOOP.md (the CLI does this automatically)
+> 6. Never skip the scan step or fake the results
+> 7. Each iteration = one row in LOOP.md — aim for 10+ iterations
 
 ---
 
