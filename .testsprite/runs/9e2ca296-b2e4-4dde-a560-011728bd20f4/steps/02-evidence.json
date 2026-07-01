@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 2,
+    "summary": "Step 2 'Open the 'History' page by navigating to https://mantiz-wine.vercel.app/history and verify it renders a 'History' heading and shows either past scans or an empty-state message' passed.",
+    "path": "steps/02-snapshot.html"
+  }
+]

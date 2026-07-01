@@ -24,12 +24,6 @@ function HistoryPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      navigate({ to: '/login' })
-    }
-  }, [authLoading, isAuthenticated, navigate])
-
-  useEffect(() => {
     if (!isAuthenticated) return
 
     const loadHistory = async () => {
@@ -58,7 +52,28 @@ function HistoryPage() {
     )
   }
 
-  if (!isAuthenticated) return null
+  if (!isAuthenticated) {
+    return (
+      <main className="page-wrap px-4 pb-16 pt-10">
+        <div className="mx-auto max-w-4xl text-center">
+          <h1 className="text-3xl font-bold text-ink">Scan History</h1>
+          <p className="text-ink-muted mt-2 mb-8">
+            Track honesty trends and review past scan findings.
+          </p>
+          <div className="rounded-xl border border-dashed border-border bg-surface-1 p-16 max-w-md mx-auto">
+            <Laptop className="mx-auto mb-4 h-12 w-12 text-ink-subdued" />
+            <h3 className="text-lg font-bold text-ink">Sign In Required</h3>
+            <p className="mt-1 mb-6 text-sm text-ink-muted">
+              Please sign in with GitHub to view your personal scan history.
+            </p>
+            <button onClick={() => navigate({ to: '/login' })} className="btn btn-primary w-full">
+              Sign In to Continue
+            </button>
+          </div>
+        </div>
+      </main>
+    )
+  }
 
   const getScoreColor = (score: number | null) => {
     if (score === null) return 'text-ink-subdued'

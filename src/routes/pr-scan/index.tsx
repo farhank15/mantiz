@@ -63,12 +63,6 @@ function PRScanPage() {
     })
   }
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      navigate({ to: '/login' })
-    }
-  }, [authLoading, isAuthenticated, navigate])
-
   if (authLoading) {
     return (
       <div className="page-wrap flex min-h-[50vh] items-center justify-center">
@@ -77,7 +71,28 @@ function PRScanPage() {
     )
   }
 
-  if (!isAuthenticated) return null
+  if (!isAuthenticated) {
+    return (
+      <main className="page-wrap px-4 pb-16 pt-10">
+        <div className="mx-auto max-w-2xl text-center">
+          <h1 className="text-3xl font-bold text-ink">PR Scan</h1>
+          <p className="text-ink-muted mt-2 mb-8">
+            Analyze pull requests at the AST level to catch cheats and bypasses.
+          </p>
+          <div className="rounded-xl border border-dashed border-border bg-surface-1 p-16 max-w-md mx-auto">
+            <GitPullRequest className="mx-auto mb-4 h-12 w-12 text-ink-subdued" />
+            <h3 className="text-lg font-bold text-ink">Sign In Required</h3>
+            <p className="mt-1 mb-6 text-sm text-ink-muted">
+              Please sign in with GitHub to run automated scans on pull requests.
+            </p>
+            <button onClick={() => navigate({ to: '/login' })} className="btn btn-primary w-full">
+              Sign In to Continue
+            </button>
+          </div>
+        </div>
+      </main>
+    )
+  }
 
   const handleScan = async () => {
     if (!prUrl.trim()) return
