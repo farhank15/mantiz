@@ -1,0 +1,18 @@
+{
+  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
+  "type": "frontend",
+  "name": "Landing page renders hero section and CTA button",
+  "description": "When a user navigates to the Mantiz landing page, the hero section is visible with a headline describing the product, and a Scan a Diff call-to-action button is present.",
+  "priority": "p1",
+  "planSteps": [
+    { "type": "action", "description": "Navigate to https://mantiz-wine.vercel.app" },
+    {
+      "type": "assertion",
+      "description": "The hero section is visible and contains a headline with the words 'AI' and either 'lie detector', 'trust score', or 'fake' describing Mantiz as a tool that scans code diffs for cheating patterns"
+    },
+    {
+      "type": "assertion",
+      "description": "A 'Scan a Diff' button is visible in the hero area"
+    }
+  ]
+}
