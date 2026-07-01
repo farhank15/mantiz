@@ -3,7 +3,7 @@ import type { Finding, ParsedDiff, Confidence } from './types'
 /**
  * Patterns that indicate a disabled assertion.
  */
-const COMMENTED_ASSERTION = /\/\/\s*(assert|expect|should|\.toBe|\.toEqual|\.toMatch|\.toContain|\.toThrow|\.resolves|\.rejects)/i
+const COMMENTED_ASSERTION = /\/\/\s*(assert\s*\(|assert\.|expect\s*\(|should\s*\(|should\.|\.should\b|\.toBe|\.toEqual|\.toMatch|\.toContain|\.toThrow|\.resolves|\.rejects)/i
 const SKIP_PATTERN = /\.skip\s*\(/
 const IF_FALSE_PATTERN = /if\s*\(\s*(?:false|0)\s*\)\s*\{/
 const COMMENTED_TEST = /\/\/\s*(?:it|test|describe)\s*\(/

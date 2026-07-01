@@ -8,7 +8,7 @@
 - **Project:** Mantiz — AI coding agent lie detector
 - **Live URL:** https://mantiz-wine.vercel.app
 - **Stack:** TanStack Start / Neon Postgres / Drizzle ORM / TestSprite CLI
-- **Total iterations:** 15
+- **Total iterations:** 16
 
 ---
 
@@ -31,6 +31,7 @@
 | 13 | Antigravity Agent | Run final scan on updated test + engine code. All tests passed, zero bypasses found. | 100/100 | None | PASSED | Project is fully clean & verified green | 2026-07-01 |
 | 14 | Antigravity Agent | Fix Vercel preview domain mismatch on OAuth callback. Add APP_URL env support in auth.ts. | 85/100 | 1 findings (0 high) | PASSED | Redeploy and test OAuth on Vercel | 2026-07-01 |
 | 15 | Antigravity Agent | Fix false positive on monorepos: expand TEST_FILE_PATTERN to match test fixture directories. | 85/100 | 1 findings (0 high) | PASSED | Redeploy and verify PR scans | 2026-07-01 |
+| 16 | Antigravity Agent | Fix false positive on comments: refine COMMENTED_ASSERTION regex to require programmatic symbols. | 85/100 | 1 findings (0 high) | PASSED | Redeploy and test on React PR 36867 | 2026-07-01 |
 
 ---
 
