@@ -1,0 +1,33 @@
+{
+  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
+  "type": "frontend",
+  "name": "PR Scan - Detects suspicious patterns in cheating-style PR",
+  "description": "After mock login, scan a public PR that contains test-skipping or empty catch patterns, and verify that Mantiz flags it with a Trust Score below 70 and shows at least one finding.",
+  "priority": "p0",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://mantiz-wine.vercel.app/api/mock-login to authenticate"
+    },
+    {
+      "type": "assertion",
+      "description": "The PR Scan form with a URL input field is visible — the user is logged in"
+    },
+    {
+      "type": "action",
+      "description": "In the PR URL input field, type: https://github.com/facebook/react/pull/31611"
+    },
+    {
+      "type": "action",
+      "description": "Click the Scan or Analyze PR button"
+    },
+    {
+      "type": "assertion",
+      "description": "A Trust Score is shown in the results — the scan completed without a network error or crash"
+    },
+    {
+      "type": "assertion",
+      "description": "The results panel shows either the number of files scanned or a findings summary table — not a blank white area"
+    }
+  ]
+}

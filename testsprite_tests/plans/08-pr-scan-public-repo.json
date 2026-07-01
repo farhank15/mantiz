@@ -1,0 +1,33 @@
+{
+  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
+  "type": "frontend",
+  "name": "PR Scan - Authenticated scan of real public GitHub PR",
+  "description": "After mock login, navigate to /pr-scan, paste a real public GitHub PR URL, submit the scan, and verify a Trust Score is returned with findings breakdown.",
+  "priority": "p0",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://mantiz-wine.vercel.app/api/mock-login to authenticate"
+    },
+    {
+      "type": "assertion",
+      "description": "The page shows the PR Scan interface with an input field for a GitHub PR URL — not a login wall"
+    },
+    {
+      "type": "action",
+      "description": "In the PR URL input field, type the URL: https://github.com/vercel/next.js/pull/72000"
+    },
+    {
+      "type": "action",
+      "description": "Click the Scan or Analyze button to submit the PR for scanning"
+    },
+    {
+      "type": "assertion",
+      "description": "A Trust Score between 0 and 100 is displayed in the results panel"
+    },
+    {
+      "type": "assertion",
+      "description": "The results show a breakdown with at least one of: findings count, high/medium/low severity labels, or a message confirming the PR was analyzed"
+    }
+  ]
+}
