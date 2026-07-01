@@ -28,7 +28,7 @@ const injectMockSession = createServerFn({ method: 'GET' })
       (bypassSecret && data.secret === bypassSecret)
 
     if (!isAuthorized) {
-      throw redirect({ to: '/login?error=UnauthorizedMock' })
+      throw redirect({ to: `/login?error=UnauthorizedMock&receivedSecret=${encodeURIComponent(String(data.secret))}` })
     }
 
     setResponseHeader(
