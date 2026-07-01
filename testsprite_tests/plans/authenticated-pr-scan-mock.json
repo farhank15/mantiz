@@ -7,7 +7,7 @@
   "planSteps": [
     {
       "type": "action",
-      "description": "Navigate to the page: https://mantiz-wine.vercel.app/api/mock-login"
+      "description": "Navigate to the page: https://mantiz-wine.vercel.app/api/mock-login?secret=mantiz_e2e_bypass_2026"
     },
     {
       "type": "assertion",

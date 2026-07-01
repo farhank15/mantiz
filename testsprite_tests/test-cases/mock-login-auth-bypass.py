@@ -28,7 +28,7 @@ async def run_test():
 
         # Step 1: Navigate to mock-login — sets HttpOnly session cookie server-side
         # and redirects to /pr-scan in an authenticated state.
-        await page.goto("https://mantiz-wine.vercel.app/api/mock-login")
+        await page.goto("https://mantiz-wine.vercel.app/api/mock-login?secret=mantiz_e2e_bypass_2026")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=8000)
         except Exception:

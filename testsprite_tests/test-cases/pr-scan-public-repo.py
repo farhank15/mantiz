@@ -27,7 +27,7 @@ async def run_test():
         page = await context.new_page()
 
         # Step 1: Authenticate via mock-login
-        await page.goto("https://mantiz-wine.vercel.app/api/mock-login")
+        await page.goto("https://mantiz-wine.vercel.app/api/mock-login?secret=mantiz_e2e_bypass_2026")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=8000)
         except Exception:
