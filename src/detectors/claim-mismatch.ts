@@ -21,7 +21,7 @@ const NON_FUNCTIONAL_FILE_PATTERNS = [
 /**
  * Test-related file patterns.
  */
-const TEST_FILE_PATTERN = /\.(test|spec)\.(ts|tsx|js|jsx)$/i
+const TEST_FILE_PATTERN = /(\.(test|spec)\.(ts|tsx|js|jsx)$)|(\/(?:__tests__|tests?|fixtures)\/)/i
 const SOURCE_FILE_PATTERN = /\.(ts|tsx|js|jsx|mjs|cjs)$/i
 
 /**
