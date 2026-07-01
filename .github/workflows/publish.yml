@@ -1,11 +1,12 @@
-name: Publish to GitHub Packages 🚀
+name: Publish to GPR and NPM 🚀
 
 on:
   release:
     types: [published]
 
 jobs:
-  publish:
+  publish-gpr:
+    name: Publish to GitHub Packages
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -36,3 +37,39 @@ jobs:
         run: npm publish -w packages/mantiz-cli
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-npm:
+    name: Publish to NPM Registry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org/'
+
+      - name: Rewrite package scopes to @farhan22
+        run: |
+          sed -i 's/"name": "@farhank15\/mantiz-core"/"name": "@farhan22\/mantiz-core"/g' packages/mantiz-core/package.json
+          sed -i 's/"name": "@farhank15\/mantiz-cli"/"name": "@farhan22\/mantiz-cli"/g' packages/mantiz-cli/package.json
+          sed -i 's/"@farhank15\/mantiz-core": "0.1.0"/"@farhan22\/mantiz-core": "0.1.0"/g' packages/mantiz-cli/package.json
+          sed -i 's/@farhank15\/mantiz-core/@farhan22\/mantiz-core/g' packages/mantiz-cli/src/index.ts
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build packages
+        run: npm run build --if-present
+
+      - name: Publish @farhan22/mantiz-core to NPM
+        run: npm publish -w packages/mantiz-core --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @farhan22/mantiz-cli to NPM
+        run: npm publish -w packages/mantiz-cli --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
