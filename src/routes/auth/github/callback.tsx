@@ -39,8 +39,9 @@ function CallbackPage() {
         // Store session in sessionStorage as fallback
         sessionStorage.setItem('mantiz_auth', JSON.stringify(session))
         setStatus('success')
-        // Redirect to home after a brief delay
-        timer = setTimeout(() => navigate({ to: '/' }), 1500)
+        timer = setTimeout(() => {
+          window.location.href = '/'
+        }, 1000)
       } catch (err) {
         setStatus('error')
         setErrorMsg(err instanceof Error ? err.message : 'Authentication failed. Please try again.')

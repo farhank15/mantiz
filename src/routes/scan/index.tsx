@@ -4,10 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { BugPlay, Shield, AlertTriangle, CheckCircle2, FileCode, ArrowLeft, Code2, Search, Terminal, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { scanDiff } from '../../detectors/engine'
 import type { ScanResult } from '../../detectors/engine'
+import { useAuth } from '../../lib/auth-context'
+import { saveManualScan } from '../../server/auth'
 
 export const Route = createFileRoute('/scan/')({ component: ScanPage })
 
 function ScanPage() {
+  const { isAuthenticated } = useAuth()
   const [diffInput, setDiffInput] = useState('')
   const [scanResult, setScanResult] = useState<ScanResult | null>(null)
   const [isScanning, setIsScanning] = useState(false)
@@ -22,6 +25,24 @@ function ScanPage() {
       const result = scanDiff(diffInput)
       setScanResult(result)
       setIsScanning(false)
+
+      if (isAuthenticated) {
+        saveManualScan({
+          data: {
+            rawDiff: diffInput,
+            trustScore: result.trustScore,
+            findings: result.findings.map((f) => ({
+              patternType: f.patternType,
+              filePath: f.filePath,
+              lineStart: f.lineStart,
+              lineEnd: f.lineEnd,
+              confidence: f.confidence,
+              explanation: f.explanation,
+              evidenceExcerpt: f.evidenceExcerpt,
+            })),
+          },
+        }).catch((err) => console.error('Failed to save manual scan:', err))
+      }
     }, 400)
   }
 

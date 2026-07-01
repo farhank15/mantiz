@@ -14,6 +14,8 @@ import {
   GitPullRequest,
 } from 'lucide-react'
 import { scanPR } from '../../server/auth'
+import { useAuth } from '../../lib/auth-context'
+import { useEffect } from 'react'
 
 export const Route = createFileRoute('/pr-scan/')({ component: PRScanPage })
 
@@ -40,10 +42,28 @@ interface PRScanResult {
 }
 
 function PRScanPage() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const navigate = useNavigate()
   const [prUrl, setPrUrl] = useState('')
   const [result, setResult] = useState<PRScanResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate({ to: '/login' })
+    }
+  }, [authLoading, isAuthenticated, navigate])
+
+  if (authLoading) {
+    return (
+      <div className="page-wrap flex min-h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-interactive" />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) return null
 
   const handleScan = async () => {
     if (!prUrl.trim()) return

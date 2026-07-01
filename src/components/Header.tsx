@@ -185,6 +185,14 @@ function AuthButton({ variant = 'default' }: { variant?: 'default' | 'mobile' })
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
+  const { isAuthenticated } = useAuth()
+
+  const visibleLinks = NAV_LINKS.filter((link) => {
+    if (link.to === '/pr-scan' || link.to === '/history') {
+      return isAuthenticated
+    }
+    return true
+  })
 
   // Close mobile menu on route change
   const closeMobileMenu = useCallback(() => setIsMobileMenuOpen(false), [])
@@ -223,7 +231,7 @@ export default function Header() {
         {/* Desktop Navigation */}
         <div className="hidden md:flex md:items-center md:gap-1 flex-1">
           <LayoutGroup>
-            {NAV_LINKS.map((link) => (
+            {visibleLinks.map((link) => (
               <NavLinkItem key={link.to} link={link} />
             ))}
           </LayoutGroup>
@@ -314,7 +322,7 @@ export default function Header() {
                     <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-widest text-ink-subdued">
                       Navigation
                     </p>
-                    {NAV_LINKS.map((link) => (
+                    {visibleLinks.map((link) => (
                       <Link
                         key={link.to}
                         to={link.to as any}

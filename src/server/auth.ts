@@ -10,6 +10,10 @@ import { setResponseHeader, getCookie } from '@tanstack/react-start/server'
 import { Octokit } from '@octokit/rest'
 import crypto from 'node:crypto'
 
+import { db } from '../lib/db'
+import { users, repos, scans, findings } from '../schemas/index'
+import { eq, desc } from 'drizzle-orm'
+
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID!
 const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET!
 const SESSION_SECRET = process.env.SESSION_SECRET!
@@ -21,6 +25,7 @@ const OAUTH_STATE_COOKIE = 'oauth_state'
 
 interface SessionData {
   userId: number
+  dbUserId: string
   login: string
   avatar: string
   name: string
@@ -163,9 +168,29 @@ export const handleCallback = createServerFn({ method: 'POST' })
     const octokit = new Octokit({ auth: tokenData.access_token })
     const { data: user } = await octokit.users.getAuthenticated()
 
+    // ─── Database Sync ──────────────────────────────────────────────
+    let dbUser = await db.query.users.findFirst({
+      where: eq(users.githubId, String(user.id)),
+    })
+
+    if (!dbUser) {
+      const [inserted] = await db.insert(users).values({
+        githubId: String(user.id),
+        username: user.login,
+        avatarUrl: user.avatar_url,
+      }).returning()
+      dbUser = inserted
+    } else {
+      await db.update(users).set({
+        username: user.login,
+        avatarUrl: user.avatar_url,
+      }).where(eq(users.id, dbUser.id))
+    }
+
     // Create session data
     const session: SessionData = {
       userId: user.id,
+      dbUserId: dbUser.id,
       login: user.login,
       avatar: user.avatar_url,
       name: user.name || user.login,
@@ -180,6 +205,7 @@ export const handleCallback = createServerFn({ method: 'POST' })
       avatar: session.avatar,
       name: session.name,
       userId: session.userId,
+      dbUserId: session.dbUserId,
     }
   }
 )
@@ -200,6 +226,7 @@ export const getSession = createServerFn({ method: 'POST' }).handler(async () =>
     avatar: session.avatar,
     name: session.name,
     userId: session.userId,
+    dbUserId: session.dbUserId,
   }
 })
 
@@ -270,6 +297,53 @@ export const scanPR = createServerFn({ method: 'POST' })
     const { scanDiff } = await import('../detectors/engine')
     const result = scanDiff(diffText)
 
+    // ─── Database Sync ──────────────────────────────────────────────
+    try {
+      const repoFullName = `${owner}/${repo}`.toLowerCase()
+      let repoRecord = await db.query.repos.findFirst({
+        where: eq(repos.fullName, repoFullName),
+      })
+
+      if (!repoRecord) {
+        const [insertedRepo] = await db.insert(repos).values({
+          userId: session.dbUserId,
+          fullName: repoFullName,
+          githubRepoId: prData.base.repo.id,
+        }).returning()
+        repoRecord = insertedRepo
+      }
+
+      // Insert scan
+      const [scanRecord] = await db.insert(scans).values({
+        userId: session.dbUserId,
+        repoId: repoRecord.id,
+        sourceType: 'github_pr',
+        sourceRef: data.prUrl,
+        rawDiff: diffText,
+        trustScore: result.trustScore,
+        status: 'complete',
+        completedAt: new Date(),
+      }).returning()
+
+      // Insert findings
+      if (result.findings.length > 0) {
+        await db.insert(findings).values(
+          result.findings.map((f) => ({
+            scanId: scanRecord.id,
+            patternType: f.patternType,
+            filePath: f.filePath,
+            lineStart: f.lineStart,
+            lineEnd: f.lineEnd,
+            confidence: f.confidence,
+            explanation: f.explanation,
+            evidenceExcerpt: f.evidenceExcerpt,
+          }))
+        )
+      }
+    } catch (dbErr) {
+      console.error('Failed to save PR scan to database:', dbErr)
+    }
+
     return {
       pr: {
         number: prData.number,
@@ -287,3 +361,81 @@ export const scanPR = createServerFn({ method: 'POST' })
     }
   }
 )
+
+/**
+ * Save a manual diff scan to the database. Requires valid session.
+ */
+export const saveManualScan = createServerFn({ method: 'POST' })
+  .validator((input: unknown) => input as { rawDiff: string; trustScore: number; findings: any[] })
+  .handler(async ({ data }) => {
+    const cookie = getCookie(SESSION_COOKIE)
+    if (!cookie) return null // optional save: only if logged in
+
+    const session = decodeSession(cookie)
+    if (!session) return null
+
+    try {
+      // Insert scan
+      const [scanRecord] = await db.insert(scans).values({
+        userId: session.dbUserId,
+        sourceType: 'manual',
+        rawDiff: data.rawDiff,
+        trustScore: data.trustScore,
+        status: 'complete',
+        completedAt: new Date(),
+      }).returning()
+
+      // Insert findings
+      if (data.findings.length > 0) {
+        await db.insert(findings).values(
+          data.findings.map((f) => ({
+            scanId: scanRecord.id,
+            patternType: f.patternType,
+            filePath: f.filePath,
+            lineStart: f.lineStart,
+            lineEnd: f.lineEnd,
+            confidence: f.confidence,
+            explanation: f.explanation,
+            evidenceExcerpt: f.evidenceExcerpt,
+          }))
+        )
+      }
+
+      return { success: true, scanId: scanRecord.id }
+    } catch (dbErr) {
+      console.error('Failed to save manual scan to database:', dbErr)
+      return { success: false, error: 'Database save failed' }
+    }
+  })
+
+/**
+ * Fetch scan history for the current user. Requires valid session.
+ */
+export const getScanHistory = createServerFn({ method: 'POST' }).handler(async () => {
+  const cookie = getCookie(SESSION_COOKIE)
+  if (!cookie) {
+    throw new Error('Not authenticated')
+  }
+
+  const session = decodeSession(cookie)
+  if (!session) {
+    throw new Error('Session expired')
+  }
+
+  // Fetch scans with repo name if it exists, sorted by newest first
+  const history = await db.select({
+    id: scans.id,
+    sourceType: scans.sourceType,
+    sourceRef: scans.sourceRef,
+    trustScore: scans.trustScore,
+    status: scans.status,
+    createdAt: scans.createdAt,
+    repoName: repos.fullName,
+  })
+  .from(scans)
+  .leftJoin(repos, eq(scans.repoId, repos.id))
+  .where(eq(scans.userId, session.dbUserId))
+  .orderBy(desc(scans.createdAt))
+
+  return history
+})
