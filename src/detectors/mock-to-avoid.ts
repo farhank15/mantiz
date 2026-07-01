@@ -71,9 +71,16 @@ function scanForMocks(hunkContent: string, baseLine: number, filePath: string): 
  */
 export function detectMockToAvoid(files: ParsedDiff[]): Finding[] {
   const findings: Finding[] = []
+  const TEST_FILE_PATTERN = /(\.(test|spec)\.(ts|tsx|js|jsx)$)|(\/(?:__tests__|tests?|fixtures)\/)/i
 
   for (const file of files) {
     const filePath = file.newFile || file.oldFile || 'unknown'
+
+    // Ignore deleted files
+    if (file.newFile === '/dev/null') continue
+
+    // Only scan test files
+    if (!TEST_FILE_PATTERN.test(filePath)) continue
 
     for (const hunk of file.hunks) {
       const hunkFindings = scanForMocks(hunk.content, hunk.newStart, filePath)

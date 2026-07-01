@@ -104,9 +104,16 @@ function findTamperedAssertions(hunkContent: string, baseLine: number): Finding[
  */
 export function detectAssertionTampering(files: ParsedDiff[]): Finding[] {
   const findings: Finding[] = []
+  const TEST_FILE_PATTERN = /(\.(test|spec)\.(ts|tsx|js|jsx)$)|(\/(?:__tests__|tests?|fixtures)\/)/i
 
   for (const file of files) {
     const filePath = file.newFile || file.oldFile || 'unknown'
+
+    // Ignore deleted files
+    if (file.newFile === '/dev/null') continue
+
+    // Only scan test files
+    if (!TEST_FILE_PATTERN.test(filePath)) continue
 
     for (const hunk of file.hunks) {
       const hunkFindings = findTamperedAssertions(hunk.content, hunk.newStart)

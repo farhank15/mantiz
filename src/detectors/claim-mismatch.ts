@@ -25,6 +25,63 @@ const TEST_FILE_PATTERN = /(\.(test|spec)\.(ts|tsx|js|jsx)$)|(\/(?:__tests__|tes
 const SOURCE_FILE_PATTERN = /\.(ts|tsx|js|jsx|mjs|cjs)$/i
 
 /**
+ * Known bot authors whose PRs typically only touch non-functional files 
+ * (dependencies, config, translations, formatting, releases).
+ * When such a bot opens a PR where all changes are non-functional, 
+ * Mantiz downgrades the claim-diff mismatch severity from HIGH → LOW.
+ */
+const KNOWN_BOTS = new Set([
+  // Dependency update bots
+  'renovate[bot]',
+  'dependabot[bot]',
+  'dependabot',
+  'greenkeeper[bot]',
+  'snyk-bot',
+  'snyk[bot]',
+  'pyup-bot',
+  'scala-steward',
+  // Platform automation bots
+  'angular-robot',
+  'github-actions[bot]',
+  'github-actions',
+  // Translation / localization
+  'crowdin[bot]',
+  'weblate[bot]',
+  'gitlocalize[bot]',
+  // Release & versioning
+  'changesets[bot]',
+  'semantic-release-bot',
+  'release-drafter[bot]',
+  // Documentation & contribution
+  'allcontributors[bot]',
+  // Code quality & publishing
+  'deepsource-autofix[bot]',
+  'pre-commit-ci[bot]',
+  'pkg-pr-new[bot]',
+  // Asset optimization
+  'imgbot[bot]',
+])
+
+/**
+ * PR title patterns that honestly describe dependency/configuration updates.
+ */
+const HONEST_DEP_TITLE_PATTERN = /^(build|chore|ci|fix|refactor)\s*:.*(depend|update|bump|upgrade|pin|roll|lock|unlock|migrate)/i
+
+/**
+ * Check if a PR context suggests a legitimate dependency update.
+ * Only called when ALL files are already confirmed non-functional (Flag 1 context),
+ * so no need to re-check files — just check author + title signals.
+ */
+function isLegitimateDepUpdate(
+  prContext: { title?: string; author?: string } | undefined,
+): boolean {
+  if (!prContext) return false
+  const isBot = prContext.author ? KNOWN_BOTS.has(prContext.author) : false
+  const isHonestTitle = prContext.title ? HONEST_DEP_TITLE_PATTERN.test(prContext.title) : false
+  return isBot || isHonestTitle
+}
+
+/**
  * Check if a file path is non-functional (docs, config, styles, etc.)
  */
 export function isNonFunctional(filePath: string): boolean {
@@ -52,7 +109,7 @@ function hasMeaningfulChanges(hunkContent: string): boolean {
 /**
  * Scan files for claim-diff mismatch: non-functional changes or missing test/behavior changes.
  */
-function scanFiles(files: ParsedDiff[]): Finding[] {
+function scanFiles(files: ParsedDiff[], prContext?: { title?: string; author?: string }): Finding[] {
   const findings: Finding[] = []
 
   // Categorize files
@@ -72,13 +129,19 @@ function scanFiles(files: ParsedDiff[]): Finding[] {
       .map((f) => f.newFile || f.oldFile)
       .filter(Boolean)
       .join(', ')
+
+    // Check if this is a legitimate dependency update (bot author or honest title)
+    const isLegitDep = isLegitimateDepUpdate(prContext)
+
     findings.push({
       patternType: 'claim_diff_mismatch',
       filePath: paths,
       lineStart: 0,
       lineEnd: 0,
-      confidence: 'high',
-      explanation: `All changes are in non-functional files (${paths}). No test or source code was modified.`,
+      confidence: isLegitDep ? 'low' : 'high',
+      explanation: isLegitDep
+        ? `All changes are in non-functional files (${paths}) — likely a legitimate dependency update.`
+        : `All changes are in non-functional files (${paths}). No test or source code was modified.`,
       evidenceExcerpt: `Non-functional files: ${paths}`,
     })
   }
@@ -140,7 +203,11 @@ function scanFiles(files: ParsedDiff[]): Finding[] {
 
 /**
  * Run the claim-diff-mismatch detector across all parsed files.
+ * Pass prContext (title, author) to reduce noise on legitimate bot/dep PRs.
  */
-export function detectClaimDiffMismatch(files: ParsedDiff[]): Finding[] {
-  return scanFiles(files)
+export function detectClaimDiffMismatch(
+  files: ParsedDiff[],
+  prContext?: { title?: string; author?: string },
+): Finding[] {
+  return scanFiles(files, prContext)
 }

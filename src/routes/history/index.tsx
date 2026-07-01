@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../../lib/auth-context";
 import { getScanHistory, getScanDetails } from "../../server/auth";
+import { createShareLink } from "../../server/share";
+import PageHeader from "../../components/PageHeader";
 import {
   Loader2,
   GitPullRequest,
@@ -14,8 +16,14 @@ import {
   ChevronUp,
   ChevronDown,
   FileCode,
+  ChevronsDown,
+  Share2,
+  Check,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import DiffViewer from "../../components/DiffViewer";
+import AiEvidenceCard from "../../components/AiEvidenceCard";
+import StatCard from "../../components/StatCard";
 
 export const Route = createFileRoute("/history/")({ component: HistoryPage });
 
@@ -29,11 +37,23 @@ interface ScanHistoryItem {
   repoName: string | null;
 }
 
+interface HistoryResponse {
+  scans: ScanHistoryItem[];
+  hasMore: boolean;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 function HistoryPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [history, setHistory] = useState<ScanHistoryItem[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalScans, setTotalScans] = useState(0);
+  const [offset, setOffset] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Details Modal States
@@ -47,6 +67,8 @@ function HistoryPage() {
     new Set(),
   );
   const [showRawDiff, setShowRawDiff] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   const toggleModalFinding = (idx: number) => {
     setExpandedFindings((prev) => {
@@ -79,25 +101,41 @@ function HistoryPage() {
     if (selectedScanId) {
       loadScanDetails(selectedScanId);
     }
+    // Reset share states when opening a different scan
+    setShareUrl(null);
+    setCopySuccess(false);
   }, [selectedScanId]);
+
+  const loadHistory = useCallback(async (pageOffset: number, append = false) => {
+    try {
+      const data = await getScanHistory({ data: { limit: 15, offset: pageOffset } }) as unknown as HistoryResponse;
+      if (append) {
+        setHistory((prev) => [...prev, ...data.scans]);
+      } else {
+        setHistory(data.scans);
+      }
+      setHasMore(data.hasMore);
+      setTotalScans(data.total);
+      setOffset(pageOffset);
+    } catch (err) {
+      setError("Failed to load scan history");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  }, []);
+
+  const handleLoadMore = () => {
+    setIsLoadingMore(true);
+    loadHistory(offset + 15, true);
+  };
 
   useEffect(() => {
     if (!isAuthenticated) return;
-
-    const loadHistory = async () => {
-      try {
-        const data = await getScanHistory();
-        setHistory(data as ScanHistoryItem[]);
-      } catch (err) {
-        setError("Failed to load scan history");
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadHistory();
-  }, [isAuthenticated]);
+    setIsLoading(true);
+    loadHistory(0, false);
+  }, [isAuthenticated, loadHistory]);
 
   if (authLoading || (isAuthenticated && isLoading)) {
     return (
@@ -113,7 +151,7 @@ function HistoryPage() {
   if (!isAuthenticated) {
     return (
       <main className="page-wrap px-4 pb-16 pt-10">
-        <div className="mx-auto max-w-4xl text-center">
+        <div className="mx-auto text-center">
           <h1 className="text-3xl font-bold text-ink">Scan History</h1>
           <p className="text-ink-muted mt-2 mb-8">
             Track honesty trends and review past scan findings.
@@ -139,27 +177,31 @@ function HistoryPage() {
   const getScoreColor = (score: number | null) => {
     if (score === null) return "text-ink-subdued";
     if (score >= 80) return "text-success";
-    if (score >= 70) return "text-severity-medium";
+    if (score >= 50) return "text-severity-medium";
     return "text-severity-critical";
   };
 
   const getScoreBg = (score: number | null) => {
     if (score === null) return "bg-surface-2 border-border";
     if (score >= 80) return "bg-success/10 border-success/20";
-    if (score >= 70) return "bg-severity-medium/10 border-severity-medium/20";
+    if (score >= 50) return "bg-severity-medium/10 border-severity-medium/20";
     return "bg-severity-critical/10 border-severity-critical/20";
   };
 
   return (
     <main className="page-wrap px-4 pb-16 pt-10">
-      <div className="mx-auto max-w-4xl">
-        {/* Page header */}
-        <div className="mb-8 text-center sm:text-left">
-          <h1 className="text-3xl font-bold text-ink">Scan History</h1>
-          <p className="text-ink-muted mt-2">
-            Track honesty trends and review past scan findings.
-          </p>
-        </div>
+      <div className="mx-auto">
+        <PageHeader
+          icon={Laptop}
+          title="Scan History"
+          description="Track honesty trends and review past scan findings."
+          breadcrumbs={[{ label: "Home", to: "/" }, { label: "Scan History" }]}
+          badge={
+            history.length > 0
+              ? { label: `${totalScans} scans`, color: "interactive" }
+              : undefined
+          }
+        />
 
         {error ? (
           <div className="rounded-xl border border-severity-critical/25 bg-severity-critical/5 p-6 text-center">
@@ -190,7 +232,7 @@ function HistoryPage() {
                 <tbody className="divide-y divide-border">
                   {history.map((item) => {
                     const score = item.trustScore;
-                    const isPassed = score !== null && score >= 70;
+                    const isPassed = score !== null && score >= 80;
                     const formattedDate = new Date(
                       item.createdAt,
                     ).toLocaleDateString("en-US", {
@@ -281,6 +323,29 @@ function HistoryPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Load More */}
+            {hasMore && (
+              <div className="border-t border-border px-5 py-4 text-center">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-5 py-2.5 text-xs font-medium text-ink-muted transition hover:border-interactive/30 hover:text-ink"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ink-muted/30 border-t-ink-muted" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <ChevronsDown className="h-3.5 w-3.5" />
+                      Load More ({Math.max(0, totalScans - offset - 15)} remaining)
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -363,7 +428,7 @@ function HistoryPage() {
                       className={`rounded-xl border p-6 text-center ${
                         selectedScanDetails.scan.trustScore >= 80
                           ? "bg-success/5 border-success/15"
-                          : selectedScanDetails.scan.trustScore >= 70
+                          : selectedScanDetails.scan.trustScore >= 50
                             ? "bg-severity-medium/5 border-severity-medium/15"
                             : "bg-severity-critical/5 border-severity-critical/15"
                       }`}
@@ -371,7 +436,7 @@ function HistoryPage() {
                       <div className="mb-2 flex items-center justify-center gap-2">
                         {selectedScanDetails.scan.trustScore >= 80 ? (
                           <CheckCircle2 className="h-6 w-6 text-success" />
-                        ) : selectedScanDetails.scan.trustScore >= 70 ? (
+                        ) : selectedScanDetails.scan.trustScore >= 50 ? (
                           <AlertTriangle className="h-6 w-6 text-severity-medium" />
                         ) : (
                           <ShieldAlert className="h-6 w-6 text-severity-critical" />
@@ -380,7 +445,7 @@ function HistoryPage() {
                           className={`text-3xl font-bold ${
                             selectedScanDetails.scan.trustScore >= 80
                               ? "text-success"
-                              : selectedScanDetails.scan.trustScore >= 70
+                              : selectedScanDetails.scan.trustScore >= 50
                                 ? "text-severity-medium"
                                 : "text-severity-critical"
                           }`}
@@ -392,7 +457,7 @@ function HistoryPage() {
                         className={`text-sm font-semibold ${
                           selectedScanDetails.scan.trustScore >= 80
                             ? "text-success"
-                            : selectedScanDetails.scan.trustScore >= 70
+                            : selectedScanDetails.scan.trustScore >= 50
                               ? "text-severity-medium"
                               : "text-severity-critical"
                         }`}
@@ -411,7 +476,7 @@ function HistoryPage() {
                           className={`h-full rounded-full transition-all duration-500 ${
                             selectedScanDetails.scan.trustScore >= 80
                               ? "bg-success"
-                              : selectedScanDetails.scan.trustScore >= 70
+                              : selectedScanDetails.scan.trustScore >= 50
                                 ? "bg-severity-medium"
                                 : "bg-severity-critical"
                           }`}
@@ -420,56 +485,15 @@ function HistoryPage() {
                     </div>
 
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {[
-                        {
-                          label: "Findings",
-                          value: selectedScanDetails.findings.length,
-                          color:
-                            selectedScanDetails.findings.length > 0
-                              ? "text-severity-critical"
-                              : "text-success",
-                        },
-                        {
-                          label: "High Severity",
-                          value: selectedScanDetails.findings.filter(
-                            (f: any) => f.confidence === "high",
-                          ).length,
-                          color:
-                            selectedScanDetails.findings.filter(
-                              (f: any) => f.confidence === "high",
-                            ).length > 0
-                              ? "text-severity-critical"
-                              : "text-ink-muted",
-                        },
-                        {
-                          label: "Medium Severity",
-                          value: selectedScanDetails.findings.filter(
-                            (f: any) => f.confidence === "medium",
-                          ).length,
-                          color: "text-severity-medium",
-                        },
-                        {
-                          label: "Low Severity",
-                          value: selectedScanDetails.findings.filter(
-                            (f: any) => f.confidence === "low",
-                          ).length,
-                          color: "text-severity-info",
-                        },
-                      ].map((stat) => (
-                        <div
-                          key={stat.label}
-                          className="rounded-lg border border-border bg-surface-2 p-3 text-center"
-                        >
-                          <div className={`text-xl font-bold ${stat.color}`}>
-                            {stat.value}
-                          </div>
-                          <div className="text-[10px] uppercase tracking-wider text-ink-subdued mt-0.5">
-                            {stat.label}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <StatCard
+                      stats={[
+                        { label: "Findings", value: selectedScanDetails.findings.length, color: selectedScanDetails.findings.length > 0 ? "text-severity-critical" : "text-success" },
+                        { label: "Files Scanned", value: selectedScanDetails.scan.filesScanned ?? 0, color: "text-interactive" },
+                        { label: "High", value: selectedScanDetails.findings.filter((f: any) => f.confidence === "high").length, color: selectedScanDetails.findings.filter((f: any) => f.confidence === "high").length > 0 ? "text-severity-critical" : "text-ink-muted" },
+                        { label: "Medium", value: selectedScanDetails.findings.filter((f: any) => f.confidence === "medium").length, color: "text-severity-medium" },
+                        { label: "Low", value: selectedScanDetails.findings.filter((f: any) => f.confidence === "low").length, color: "text-severity-info" },
+                      ]}
+                    />
 
                     {/* Findings list */}
                     <div className="space-y-3">
@@ -525,55 +549,20 @@ function HistoryPage() {
                                         exit={{ height: 0, opacity: 0 }}
                                         transition={{ duration: 0.2 }}
                                         className="overflow-hidden"
-                                      >
-                                        <div className="border-t border-border px-4 py-3 bg-surface-2/50">
+                                      >                                          <div className="border-t border-border px-4 py-3 bg-surface-2/50">
                                           <div className="mb-1.5 flex items-center gap-1.5 text-xs text-ink-subdued">
                                             <FileCode className="h-3 w-3" />
-                                            Evidence excerpt
+                                            {finding.patternType === 'ai_assisted_detection' ? 'AI analysis' : 'Evidence excerpt'}
                                           </div>
-                                          <div className="overflow-hidden rounded-lg border border-border bg-surface-2">
-                                            <div className="px-3 py-2 font-mono text-[11px] leading-5">
-                                              {finding.evidenceExcerpt
-                                                .split("\n")
-                                                .map(
-                                                  (
-                                                    line: string,
-                                                    li: number,
-                                                  ) => {
-                                                    const isAdd =
-                                                      line.startsWith("+") &&
-                                                      !line.startsWith("+++");
-                                                    const isRemove =
-                                                      line.startsWith("-") &&
-                                                      !line.startsWith("---");
-                                                    const isMeta =
-                                                      line.startsWith("@@") ||
-                                                      line.startsWith(
-                                                        "Index:",
-                                                      ) ||
-                                                      line.startsWith(
-                                                        "diff --git",
-                                                      );
-                                                    return (
-                                                      <div
-                                                        key={li}
-                                                        className={`${
-                                                          isAdd
-                                                            ? "text-success bg-success/5"
-                                                            : isRemove
-                                                              ? "text-severity-critical bg-severity-critical/5"
-                                                              : isMeta
-                                                                ? "text-interactive"
-                                                                : "text-ink-muted"
-                                                        } ${isAdd || isRemove ? "-mx-3 px-3" : ""}`}
-                                                      >
-                                                        {line}
-                                                      </div>
-                                                    );
-                                                  },
-                                                )}
-                                            </div>
-                                          </div>
+                                          {finding.patternType === 'ai_assisted_detection' ? (
+                                            <AiEvidenceCard content={finding.evidenceExcerpt} />
+                                          ) : (
+                                            <DiffViewer
+                                              content={finding.evidenceExcerpt}
+                                              maxHeight="200px"
+                                              showHeader={false}
+                                            />
+                                          )}
                                         </div>
                                       </motion.div>
                                     )}
@@ -595,6 +584,63 @@ function HistoryPage() {
                           </p>
                         </div>
                       )}
+                    </div>
+
+                    {/* Share button */}
+                    <div className="text-center">
+                      <button
+                        onClick={async () => {
+                          if (shareUrl) {
+                            try {
+                              await navigator.clipboard.writeText(shareUrl);
+                              setCopySuccess(true);
+                              setTimeout(() => setCopySuccess(false), 2000);
+                            } catch {}
+                            return;
+                          }
+                          try {
+                            const findings = selectedScanDetails.findings.map((f: any) => ({
+                              patternType: f.patternType,
+                              filePath: f.filePath,
+                              lineStart: f.lineStart,
+                              lineEnd: f.lineEnd,
+                              confidence: f.confidence,
+                              explanation: f.explanation,
+                              evidenceExcerpt: f.evidenceExcerpt,
+                            }));
+                            const result = await createShareLink({ data: {
+                              sourceType: selectedScanDetails.scan.sourceType || "manual",
+                              sourceRef: selectedScanDetails.scan.sourceRef,
+                              scanData: {
+                                trustScore: selectedScanDetails.scan.trustScore,
+                                totalFindings: findings.length,
+                                highCount: findings.filter((f: any) => f.confidence === "high").length,
+                                mediumCount: findings.filter((f: any) => f.confidence === "medium").length,
+                                lowCount: findings.filter((f: any) => f.confidence === "low").length,
+                                filesScanned: selectedScanDetails.scan.filesScanned ?? 0,
+                                files: selectedScanDetails.scan.filesScanned ?? 0,
+                                findings,
+                              },
+                            }});
+                            setShareUrl(result.url);
+                            try {
+                              await navigator.clipboard.writeText(result.url);
+                              setCopySuccess(true);
+                              setTimeout(() => setCopySuccess(false), 2000);
+                            } catch {}
+                          } catch (err) {
+                            console.error("Failed to share:", err);
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-4 py-2.5 text-xs font-medium text-ink-muted transition hover:border-interactive/30 hover:text-ink"
+                      >
+                        {copySuccess ? (
+                          <Check className="h-3.5 w-3.5 text-success" />
+                        ) : (
+                          <Share2 className="h-3.5 w-3.5" />
+                        )}
+                        {copySuccess ? "Link Copied!" : shareUrl ? "Copy Link" : "Share Results"}
+                      </button>
                     </div>
 
                     {/* Raw Diff Accordion */}
@@ -629,9 +675,12 @@ function HistoryPage() {
                               className="overflow-hidden"
                             >
                               <div className="border-t border-border p-4 bg-surface-1">
-                                <pre className="font-mono text-[10px] text-ink-muted bg-surface-2 p-3 rounded-lg border border-border overflow-x-auto max-h-75">
-                                  {selectedScanDetails.scan.rawDiff}
-                                </pre>
+                                <DiffViewer
+                                  content={selectedScanDetails.scan.rawDiff}
+                                  maxHeight="400px"
+                                  showHeader={true}
+                                  filename="raw-diff.diff"
+                                />
                               </div>
                             </motion.div>
                           )}

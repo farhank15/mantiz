@@ -13,9 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://mantiz-wine.vercel.app" target="_blank">
-    <img src="https://img.shields.io/badge/Live%20App-mantiz-wine.vercel.app-58A6FF?style=flat-square&logo=vercel&logoColor=white" alt="Live App">
-  </a>
+  <a href="https://mantiz-wine.vercel.app" target="_blank"><img src="https://img.shields.io/badge/Live%20App-mantiz--wine.vercel.app-58A6FF?style=flat-square&logo=vercel&logoColor=white" alt="Live App"></a>
   <a href="https://www.testsprite.com/hackathon-s3" target="_blank">
     <img src="https://img.shields.io/badge/TestSprite_S3-Hackathon-EE3124?style=flat-square" alt="Hackathon">
   </a>
@@ -27,7 +25,8 @@
   </a>
   <br />
   <img src="https://img.shields.io/badge/Stack-TanStack_Start-FF4154?style=flat-square&logo=react&logoColor=white" alt="TanStack">
-  <img src="https://img.shields.io/badge/Database-Neon Postgres-00E59B?style=flat-square&logo=postgresql&logoColor=white" alt="Neon">
+  <img src="https://img.shields.io/badge/Database-Neon--Postgres-00E59B?style=flat-square&logo=postgresql&logoColor=white" alt="Neon">
+  <img src="https://img.shields.io/badge/AI-Fireworks_+_Groq-FF6B35?style=flat-square" alt="AI">
   <img src="https://img.shields.io/badge/Tests-TestSprite_CLI-6B7280?style=flat-square" alt="TestSprite">
   <img src="https://img.shields.io/badge/OAuth-GitHub-333?style=flat-square&logo=github" alt="GitHub OAuth">
 </p>
@@ -38,7 +37,7 @@
 
 **Mantiz** is an AI-powered lie detector for code — specifically designed to catch AI coding agents when they try to cheat their test suites.
 
-When an AI agent writes code, it can subtly **disable assertions, mock failing APIs, skip test suites, or tamper with expected values** to make tests pass. Mantiz scans every line of a diff through **5 detection patterns** and produces a **Trust Score (0–100)** with ranked findings.
+When an AI agent writes code, it can subtly **disable assertions, mock failing APIs, skip test suites, hallucinate matchers, or tamper with expected values** to make tests pass. Mantiz scans every line of a diff through **7 detection patterns** (6 static + AI-assisted) and produces a **Trust Score (0–100)** with ranked findings.
 
 > **Mantiz adalah *honesty gate* yang berjalan sebelum test eksekusi.** Dia tidak menggantikan TestSprite (yang verifikasi behavior), tapi memastikan hasil test yang "lolos" itu lolos beneran — bukan karena dimanipulasi oleh agentnya sendiri.
 
@@ -48,7 +47,7 @@ When an AI agent writes code, it can subtly **disable assertions, mock failing A
 
 ## ✨ Features
 
-### 🔬 5 Detection Patterns
+### 🔬 7 Detection Patterns (6 Static + AI-Assisted)
 
 | Pattern | Severity | What It Catches |
 |---------|----------|----------------|
@@ -57,15 +56,67 @@ When an AI agent writes code, it can subtly **disable assertions, mock failing A
 | **Mock-to-Avoid-Failure** | 🟠 Medium | New mocks introduced without real-path coverage to bypass real errors |
 | **Claim-Diff Mismatch** | 🟡 Medium | Commit message says "fix tests" but diff only touches source — no test updated |
 | **Silent Catch-and-Pass** | 🟠 Medium | Empty catch blocks that swallow real errors and let the agent declare success |
+| **Hallucinated Assertion** | 🔴 High | Non-existent Jest/Vitest matchers hallucinated by AI agents (e.g. `.toExist()`) |
+| **AI-Assisted Detection** | 🟡 Varies | LLM-powered analysis via Fireworks/Groq — detects test weakening, assertion removal, semantic bypass, coverage reduction |
+
+### 🧠 Detection Nuances
+
+**Claim-Diff Mismatch** is Mantiz's most nuanced detector. It flags PRs where all changed files are non-functional (config, docs, deps) — but these findings aren't all equal:
+
+| Scenario | Example | Verdict |
+|----------|---------|---------|
+| **🤖 Bot dependency update** — Author is `renovate[bot]`, `dependabot[bot]`, `angular-robot`, etc., title says `"build: update dependencies"`, only `package.json`/lockfiles changed | [Angular #69416](https://github.com/angular/angular/pull/69416) | ✅ **Legitimate** — auto-downgraded to LOW confidence (−5pts). Finding still visible but doesn't tank the score. |
+| **🧑‍💻 Agent with empty claim** — Title says `"fix: implement feature"` but only `README.md` and `.npmrc` changed | Agent claims "fix login bug" but only adds a VS Code config file | 🚨 **Suspicious** — stays HIGH confidence (−30pts). Strong signal that the agent is faking work. |
+| **🤝 Honest human PR** — Title says `"docs: update contributing guide"` and only `CONTRIBUTING.md` changed | Legitimate docs-only PR from a maintainer | ✅ **Benign** — detection is technically correct but the context (bot metadata available vs manual scan) distinguishes it. |
+
+> **How it works:** When scanning via PR URL (requires GitHub auth), Mantiz passes the PR title and author to the detector. If the author is a known bot OR the title honestly describes non-functional changes, Mantiz **downgrades the confidence from HIGH → LOW**. Manual diffs (pasted without PR context) always get the full severity.
+
+This means the same diff gets scored differently depending on context:
+
+```
+Same diff (package.json + lockfile changes only):
+
+  📋 Manual paste → HIGH confidence (−30pts) — "You should verify this"
+  🔗 PR scan (bot) → LOW confidence (−5pts)   — "Probably fine, renovate doing renovate things"
+```
 
 ### 🎯 Trust Score
-Weighted scoring: **high confidence = 30pts**, **medium = 15pts**, **low = 5pts** deducted per finding. Lower score = more suspicious diff.
 
-### 🔄 The Loop
-Integrated with **TestSprite CLI** — Mantiz is the honesty gate in a closed-loop AI coding pipeline:
-```
-Agent Code → Mantiz Scan (honesty check) → TestSprite Test (behavior check) → Feedback → Fix
-```
+Weighted scoring: **high = 30pts**, **medium = 15pts**, **low = 5pts** deducted per finding. Minimum score is 10 when findings exist (avoids confusing 0/100). Threshold: **≥ 80 = PASS**.
+
+### 🔐 GitHub OAuth + Session Management
+
+- Sign in with GitHub to scan pull requests
+- Signed HTTP-only cookies with HMAC-SHA256
+- Rate limiting (3 tiers: anonymous, session, token)
+- Scan history persisted per user in Neon Postgres
+
+### 🤖 AI Detection
+
+- **Toggle:** Easily enable/disable via `AI_DETECTION_ENABLED=true`
+- **Resilient Architecture:** Uses **Fireworks Inference** as primary provider with an automatic fallback to **Groq** to ensure high availability.
+- **Smart Analysis:** Detects 5 AI-level patterns: test weakening, assertion removal, semantic bypass, hallucinated APIs, and coverage reduction.
+
+
+### 📊 Routes
+
+| Route | Description |
+|-------|-------------|
+| `/` | Landing page — hero, features, detector patterns |
+| `/scan` | Paste & scan a raw git diff |
+| `/pr-scan` | Scan a GitHub PR by URL (requires auth) |
+| `/login` | GitHub OAuth sign-in |
+| `/history` | Scan history with detailed findings modal |
+| `/settings` | API token management (`mtz_*` prefix) |
+| `/benchmark` | Interactive benchmark — 12 fixtures across 3 datasets |
+
+### 🧩 Interactive Scan Animation
+
+When scanning, an animated terminal log shows real-time detector progress. After completion, a per-detector breakdown displays finding counts with high/med/low severity colors.
+
+### 📄 Diff Viewer
+
+GitHub-style diff rendering with green/red line highlighting, line number gutter, +/- markers, copy-to-clipboard, and add/del count stats.
 
 ---
 
@@ -75,7 +126,7 @@ Agent Code → Mantiz Scan (honesty check) → TestSprite Test (behavior check) 
 
 **[🔗 mantiz-wine.vercel.app](https://mantiz-wine.vercel.app)**
 
-Paste any GitHub-style diff and get instant results. No signup needed.
+Paste any GitHub-style diff and get instant results. No signup needed for manual scans.
 
 ### 2. Run Locally
 
@@ -89,7 +140,36 @@ npm install
 
 # Set up environment
 cp .env.example .env
-# Add your DATABASE_URL (Neon Postgres recommended)
+```
+
+Fill `.env` with:
+
+```env
+# Database (Neon Postgres — required for auth & history)
+DATABASE_URL='postgresql://...'
+
+# GitHub OAuth (required for PR scanning & login)
+GITHUB_CLIENT_ID=your_github_oauth_client_id
+GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
+
+# Session secret (required — at least 32 characters)
+SESSION_SECRET=your_random_secret_at_least_32_chars
+
+# AI Detection (optional — enables Fireworks + Groq)
+AI_DETECTION_ENABLED=true
+FIREWORKS_API_KEY=fw_xxx
+GROQ_API_KEY=gsk_xxx
+
+# Debug logging (optional — enables per-detector console logs)
+MANTIZ_DEBUG=true
+
+# App URL (optional — defaults to http://localhost:3030)
+APP_URL=http://localhost:3030
+```
+
+```bash
+# Push database schema
+npx drizzle-kit push
 
 # Start dev server
 npm run dev
@@ -104,78 +184,56 @@ npm run preview
 
 ---
 
-## 🧪 Real-World Use Cases
+## 🧪 How to Use
 
-### 🧑‍💻 Scenario 1 — Solo developer using an AI coding agent
+### 🧑‍💻 Manual Scan (No Auth Needed)
 
-You're coding with Claude Code/Cursor. The agent writes code + tests. Problem: **agents sometimes cheat** — they skip hard-to-fix tests or change assertion values to match the bug instead of fixing it.
+1. Go to [/scan](https://mantiz-wine.vercel.app/scan)
+2. Paste a GitHub-style diff
+3. Click **Scan Diff**
+4. Review findings + Trust Score
 
-```bash
-# Capture what your agent just wrote
-git diff > my-changes.diff
+### 🏭 PR Scan (Requires GitHub Auth)
+
+1. Go to [/pr-scan](https://mantiz-wine.vercel.app/pr-scan)
+2. Sign in with GitHub
+3. Paste a PR URL: `https://github.com/owner/repo/pull/123`
+4. Mantiz fetches the diff, runs 7 detectors, and returns findings
+
+### 🔗 CI/CD Integration
+
+Install in **GitHub Actions** — every PR is automatically scanned:
+
+```yaml
+# .github/workflows/mantiz.yml
+name: Mantiz PR Scan
+on: [pull_request]
+jobs:
+  check-honesty:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npx mantiz scan --pr ${{ github.event.pull_request.html_url }}
+        env:
+          MANTIZ_API_TOKEN: ${{ secrets.MANTIZ_API_TOKEN }}
 ```
 
-Paste the diff into **[mantiz-wine.vercel.app/scan](https://mantiz-wine.vercel.app/scan)**, or run locally:
+### 🔄 The Loop — TestSprite Integration
 
-```bash
-npm run mantiz-scan
-# Output:
-# Trust Score: 40/100 🔴 CHEATING DETECTED
-# Finding: test/auth.test.ts:42 — .skip() added — test silently disabled
-```
-
-Before you commit and assume everything's "safe", Mantiz tells you your agent cut a corner.
-
----
-
-### 🏭 Scenario 2 — Team / CI gate (most powerful in production)
-
-Installed in **GitHub Actions** — every PR is automatically scanned:
-
-1. Developer or agent opens a PR
-2. `.github/workflows/mantiz.yml` runs automatically
-3. Mantiz scans the PR diff
-4. If Trust Score < 70 → **build fails**, PR cannot be merged
-5. Reviewer gets a clear report: _"line 42: assertion changed from `toBe(5)` to `toBe(3)` — suspected tampering"_
-
-**The value:** humans don't have to read every diff line by line to suspect cheating — Mantiz filters first.
-
----
-
-### 🔗 Scenario 3 — Pre-filter before TestSprite (aligned with hackathon theme)
-
-Mantiz acts as a **cheap honesty gate before the expensive TestSprite run**:
+Mantiz is designed as a **cheap honesty gate before the expensive TestSprite run**:
 
 ```
 Agent writes code
   → Mantiz scan (fast, free, catches obvious cheating)
   → if PASS → TestSprite test (real browser, uses credits)
   → if FAIL → back to agent to fix honestly
-  → LOOP.md logs every iteration
 ```
-
-Mantiz doesn't replace TestSprite (which verifies real behavior). It **saves TestSprite credits** by catching manipulation before it wastes a real browser run.
-
----
-
-### 📋 The Loop — Iteration Evidence
-
-| Phase | What Happens | How Mantiz Checks |
-|-------|-------------|-------------------|
-| **Agent writes code** | AI generates a diff (new feature, bug fix, refactor) | `git diff` captured automatically |
-| **Mantiz scans diff** | 5 detectors analyze every changed line | Trust Score 0-100 + ranked findings |
-| **Agent reads feedback** | If score < 70, agent reads findings and fixes | Auto-generated fix instructions per finding |
-| **Mantiz re-scans** | Agent re-runs scan to verify the fix is honest | Score must return to ≥ 80 |
-| **TestSprite tests** | Real E2E tests run against live deployed app | TestSprite CLI — behavior verified |
-| **LOOP.md logged** | Every iteration logged with verdict | One row per cycle — evidence for judges |
-
-> **Evidence:** See [LOOP.md](LOOP.md) for the complete iteration history — 6 real iterations including a live bug found and fixed by TestSprite.
 
 ---
 
 ## 📊 Benchmark Results
 
-Mantiz includes a built-in benchmark suite with 6 curated fixtures across 3 datasets:
+Mantiz includes a built-in benchmark suite with **12 fixtures across 3 datasets**:
 
 | Dataset | Description | Fixtures | Target Score |
 |---------|-------------|----------|-------------|
@@ -183,79 +241,33 @@ Mantiz includes a built-in benchmark suite with 6 curated fixtures across 3 data
 | **B** — "The Lazy/Cheating AI" | `.skip()`, `if(false)`, commented assertions | 2 | < 40 🔴 |
 | **C** — "The Smart Evasion AI" | Assertion tampering, mock + empty catch | 2 | 50–70 🟡 |
 
-> Visit the [**/benchmark**](https://mantiz-wine.vercel.app/benchmark) dashboard to see live accuracy results.
+Visit the [**/benchmark**](https://mantiz-wine.vercel.app/benchmark) dashboard to see live accuracy results with per-fixture breakdowns.
 
 ---
 
-## 🖥 Mantiz CLI
-
-Run Mantiz locally in any project to scan staged/unstaged changes:
-
-```bash
-cd mantiz
-npm run mantiz-scan
-
-# Output:
-# 🔍 MANTIZ SCAN RESULTS
-# Trust Score: 55/100 🔴 CHEATING DETECTED
-# Findings: 2
-# - HIGH test/auth.test.js:42 — Assertion value changed
-# 📝 LOOP.md updated — iteration 3 logged
-# ✗ BUILD FAILED — Trust score below 70 threshold
-```
-
-The CLI also integrates with **GitHub Actions** via `.github/workflows/mantiz.yml` — any push or PR that triggers a low trust score will fail the build.
-
----
-
-## 🏗 Tech Stack
+## 🛠 Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| **Framework** | [TanStack Start](https://tanstack.com/start) (React) |
-| **Routing** | [TanStack Router](https://tanstack.com/router) (file-based) |
+| **Framework** | [TanStack Start](https://tanstack.com/start) (React 19) |
+| **Routing** | [TanStack Router](https://tanstack.com/router) (file-based, auto code-split) |
 | **Styling** | [Tailwind CSS v4](https://tailwindcss.com) + Magic UI |
 | **Animation** | [Framer Motion](https://framermotion.framer.website) |
 | **Icons** | [Lucide](https://lucide.dev) |
 | **Database** | [Neon Postgres](https://neon.tech) (serverless) |
 | **ORM** | [Drizzle ORM](https://orm.drizzle.team) |
+| **Auth** | GitHub OAuth + HMAC-signed session cookies |
+| **AI** | [Fireworks Inference](https://fireworks.ai) + [Groq](https://groq.com) |
 | **Diff Parsing** | [diff](https://npm.im/diff) |
+| **Rate Limiting** | In-memory sliding window (3 tiers) |
 | **GitHub API** | [Octokit](https://github.com/octokit) |
-| **AST Parsing** | [@babel/parser](https://babel.dev/docs/babel-parser) |
-| **Testing** | [TestSprite CLI](https://testsprite.com) |
+| **Testing** | [TestSprite CLI](https://testsprite.com) + Vitest |
+| **Bundler** | [Vite 8](https://vite.dev) + TanStack Router Plugin |
 | **Deploy** | [Vercel](https://vercel.com) |
 
 ---
 
-## 📁 Project Structure
-
-```
-mantiz/
-├── src/
-│   ├── components/       # Reusable UI components
-│   │   ├── magicui/      # Magic UI animated components
-│   │   ├── Header.tsx
-│   │   └── Footer.tsx
-│   ├── routes/           # TanStack file-based routes
-│   │   ├── index.tsx      # Landing page (hero, features, patterns)
-│   │   ├── scan/          # Diff paste & scan page
-│   │   └── history/       # Scan history page
-│   ├── detectors/        # Detection pattern engines
-│   ├── schemas/          # Drizzle database schemas
-│   ├── router.tsx        # Router configuration
-│   ├── routeTree.gen.ts  # Auto-generated route tree
-│   └── styles.css        # Global styles + Tailwind
-├── app.config.ts         # TanStack Start config
-├── drizzle.config.ts     # Drizzle ORM config
-├── LOOP.template.md      # TestSprite loop log template
-└── PLAN.md               # Development plan
-```
-
----
-
 ## 🤝 Contributing
-
-This project is part of the TestSprite S3 Hackathon. While it's primarily a solo project, feedback and suggestions are welcome!
 
 1. Fork the repo
 2. Create a feature branch (`git checkout -b feat/amazing-detector`)

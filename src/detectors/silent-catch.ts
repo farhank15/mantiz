@@ -199,6 +199,12 @@ export function detectSilentCatch(files: ParsedDiff[]): Finding[] {
   for (const file of files) {
     const filePath = file.newFile || file.oldFile || 'unknown'
 
+    // Ignore deleted files
+    if (file.newFile === '/dev/null') continue
+
+    // Ignore React UI component files (.tsx, .jsx) for silent catch detection
+    if (/\.(tsx|jsx)$/i.test(filePath)) continue
+
     for (const hunk of file.hunks) {
       const hunkFindings = scanForSilentCatches(hunk.content, hunk.newStart)
       for (const f of hunkFindings) {

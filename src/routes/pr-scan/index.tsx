@@ -3,21 +3,28 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Github,
-  ArrowLeft,
   Search,
   CheckCircle2,
   AlertTriangle,
   Shield,
   Code2,
   ExternalLink,
-  Loader2,
   GitPullRequest,
   ChevronDown,
   ChevronUp,
   FileCode,
+  Loader2,
+  Share2,
+  Check,
 } from "lucide-react";
 import { scanPR } from "../../server/auth";
+import { createShareLink } from "../../server/share";
 import { useAuth } from "../../lib/auth-context";
+import PageHeader from "../../components/PageHeader";
+import ScanAnimation from "../../components/ScanAnimation";
+import DiffViewer from "../../components/DiffViewer";
+import AiEvidenceCard from "../../components/AiEvidenceCard";
+import StatCard from "../../components/StatCard";
 
 export const Route = createFileRoute("/pr-scan/")({ component: PRScanPage });
 
@@ -33,6 +40,9 @@ interface PRScanResult {
     trustScore: number;
     totalFindings: number;
     highCount: number;
+    mediumCount: number;
+    lowCount: number;
+    filesScanned: number;
     findings: Array<{
       patternType: string;
       filePath: string;
@@ -51,9 +61,57 @@ function PRScanPage() {
   const [result, setResult] = useState<PRScanResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [expandedFindings, setExpandedFindings] = useState<Set<number>>(
     new Set(),
   );
+
+  const handleShare = async () => {
+    if (!result) return;
+
+    if (shareUrl) {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+      } catch { /* fallback */ }
+      return
+    }
+
+    try {
+      const shareResult = await createShareLink({ data: {
+        sourceType: "github_pr",
+        sourceRef: result.pr.url,
+        scanData: {
+          trustScore: result.scan.trustScore,
+          totalFindings: result.scan.totalFindings,
+          highCount: result.scan.highCount,
+          mediumCount: result.scan.mediumCount,
+          lowCount: result.scan.lowCount,
+          filesScanned: result.scan.filesScanned,
+          files: result.scan.filesScanned,
+          findings: result.scan.findings.map((f) => ({
+            patternType: f.patternType,
+            filePath: f.filePath,
+            lineStart: f.lineStart,
+            lineEnd: f.lineStart,
+            confidence: f.confidence,
+            explanation: f.explanation,
+            evidenceExcerpt: f.evidenceExcerpt,
+          })),
+        },
+      }})
+      setShareUrl(shareResult.url)
+      try {
+        await navigator.clipboard.writeText(shareResult.url)
+        setCopySuccess(true)
+        setTimeout(() => setCopySuccess(false), 2000)
+      } catch { /* fallback */ }
+    } catch (err) {
+      console.error("Failed to create share link:", err)
+    }
+  };
 
   const toggleFinding = (idx: number) => {
     setExpandedFindings((prev) => {
@@ -138,42 +196,16 @@ function PRScanPage() {
     return "Cheating Detected";
   };
 
-  const getConfidenceBadge = (c: string) => {
-    switch (c) {
-      case "high":
-        return "text-severity-critical border-severity-critical/25 bg-severity-critical/10";
-      case "medium":
-        return "text-severity-high border-severity-high/25 bg-severity-high/10";
-      default:
-        return "text-ink-muted border-border bg-surface-2";
-    }
-  };
-
   return (
     <main className="page-wrap px-4 pb-16 pt-8 sm:pt-10">
-      <div className="mx-auto max-w-3xl">
-        {/* Back link */}
-        <Link
-          to="/"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm text-ink-muted transition hover:text-ink"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Home
-        </Link>
-
-        {/* Page header */}
-        <div className="mb-8 text-center">
-          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-interactive/10">
-            <Github className="h-7 w-7 text-interactive" />
-          </div>
-          <h1 className="mb-2 text-3xl font-bold text-ink">
-            Scan a Pull Request
-          </h1>
-          <p className="text-ink-muted">
-            Paste a GitHub PR URL. Mantiz fetches the diff and scans for
-            cheating patterns.
-          </p>
-        </div>
+      <div className="mx-auto">
+        <PageHeader
+          icon={Github}
+          title="Scan a Pull Request"
+          description="Paste a GitHub PR URL. Mantiz fetches the diff and scans for cheating patterns."
+          breadcrumbs={[{ label: "Home", to: "/" }, { label: "Scan PR" }]}
+          badge={{ label: "Requires auth", color: "interactive" }}
+        />
 
         {/* PR URL Input */}
         <div className="mb-8 rounded-xl border border-border bg-surface-1 p-5">
@@ -197,7 +229,7 @@ function PRScanPage() {
               className="btn btn-primary whitespace-nowrap"
             >
               {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
               ) : (
                 <Search className="h-4 w-4" />
               )}
@@ -210,6 +242,28 @@ function PRScanPage() {
             with GitHub.
           </p>
         </div>
+
+        {/* Scan Animation */}
+        <AnimatePresence>
+          {isLoading && (
+            <ScanAnimation
+              isScanning={isLoading}
+              scanPhase="static"
+              lineCount={prUrl.length}
+              onComplete={() => {}}
+              findings={result?.scan.findings.map((f) => ({
+                patternType: f.patternType as any,
+                filePath: f.filePath,
+                lineStart: f.lineStart,
+                lineEnd: f.lineStart,
+                confidence: f.confidence as any,
+                explanation: f.explanation,
+                evidenceExcerpt: f.evidenceExcerpt,
+              })) || []}
+              trustScore={result?.scan.trustScore}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Error state */}
         {error && (
@@ -306,137 +360,110 @@ function PRScanPage() {
               </div>
 
               {/* Summary stats */}
-              <div className="mb-6 grid grid-cols-3 gap-3">
-                {[
-                  {
-                    label: "Findings",
-                    value: result.scan.totalFindings,
-                    color:
-                      result.scan.totalFindings > 0
-                        ? "text-severity-critical"
-                        : "text-success",
-                  },
-                  {
-                    label: "High Severity",
-                    value: result.scan.highCount,
-                    color:
-                      result.scan.highCount > 0
-                        ? "text-severity-critical"
-                        : "text-ink-muted",
-                  },
-                  {
-                    label: "PR Files",
-                    value: "N/A",
-                    color: "text-interactive",
-                  },
-                ].map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="rounded-lg border border-border bg-surface-1 p-3 text-center"
-                  >
-                    <div className={`text-xl font-bold ${stat.color}`}>
-                      {stat.value}
-                    </div>
-                    <div className="text-xs text-ink-muted">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
+              <StatCard
+                stats={[
+                  { label: "Findings", value: result.scan.totalFindings, color: result.scan.totalFindings > 0 ? "text-severity-critical" : "text-success" },
+                  { label: "High", value: result.scan.highCount, color: result.scan.highCount > 0 ? "text-severity-critical" : "text-ink-muted" },
+                  { label: "Medium", value: result.scan.mediumCount, color: result.scan.mediumCount > 0 ? "text-severity-medium" : "text-ink-muted" },
+                  { label: "Low", value: result.scan.lowCount, color: result.scan.lowCount > 0 ? "text-severity-info" : "text-ink-muted" },
+                  { label: "PR Files", value: result.scan.filesScanned, color: "text-interactive" },
+                ]}
+              />
 
-              {/* Findings */}
+              {/* Findings — Card style */}
               {result.scan.findings.length > 0 ? (
-                <div className="rounded-xl border border-border bg-surface-1 overflow-hidden">
-                  <div className="border-b border-border bg-surface-2 px-4 py-3">
+                <div className="grid gap-3">
+                  <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-ink">
                       Findings ({result.scan.findings.length})
                     </h3>
+                    <span className="text-xs text-ink-muted">
+                      {result.scan.highCount} high
+                    </span>
                   </div>
-                  <div className="divide-y divide-border">
-                    {result.scan.findings.map((finding, idx) => {
-                      const isExpanded = expandedFindings.has(idx);
-                      return (
-                        <div
-                          key={idx}
-                          className="transition hover:bg-surface-2/50"
+                  {result.scan.findings.map((finding, idx) => {
+                    const isExpanded = expandedFindings.has(idx);
+                    const isHigh = finding.confidence === 'high';
+                    const isAI = finding.patternType === 'ai_assisted_detection';
+                    const borderColor = isHigh
+                      ? 'border-severity-critical/25'
+                      : 'border-border';
+                    const severityBadge = isHigh
+                      ? 'bg-severity-critical/10 text-severity-critical border-severity-critical/25'
+                      : finding.confidence === 'medium'
+                        ? 'bg-severity-medium/10 text-severity-medium border-severity-medium/25'
+                        : 'bg-surface-2 text-ink-muted border-border';
+
+                    return (
+                      <motion.div
+                        key={idx}
+                        layout
+                        className={`rounded-xl border ${borderColor} bg-surface-1 overflow-hidden transition hover:bg-surface-2/30`}
+                      >
+                        <button
+                          onClick={() => toggleFinding(idx)}
+                          className="flex w-full items-start gap-3 px-4 py-3.5 text-left cursor-pointer"
                         >
-                          <button
-                            onClick={() => toggleFinding(idx)}
-                            className="flex w-full items-center gap-3 px-4 py-3 text-left"
-                          >
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${getConfidenceBadge(finding.confidence)}`}
-                            >
-                              {finding.confidence}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-ink truncate">
+                          <span className={`mt-0.5 shrink-0 rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${severityBadge}`}>
+                            {finding.confidence}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-semibold text-ink">
                                 {finding.explanation}
-                              </div>
-                              <div className="text-xs text-ink-subdued mt-0.5">
-                                {finding.filePath}:{finding.lineStart}
-                              </div>
+                              </span>
+                              {isAI && (
+                                <span className="rounded-full bg-interactive/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-interactive">
+                                  AI
+                                </span>
+                              )}
                             </div>
+                            <div className="mt-1 flex items-center gap-2 text-xs text-ink-subdued font-mono">
+                              <FileCode className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{finding.filePath}</span>
+                              <span className="shrink-0">:{finding.lineStart}</span>
+                            </div>
+                          </div>
+                          <div className="shrink-0 mt-0.5">
                             {isExpanded ? (
-                              <ChevronUp className="h-4 w-4 shrink-0 text-ink-muted" />
+                              <ChevronUp className="h-4 w-4 text-ink-muted" />
                             ) : (
-                              <ChevronDown className="h-4 w-4 shrink-0 text-ink-muted" />
+                              <ChevronDown className="h-4 w-4 text-ink-muted" />
                             )}
-                          </button>
-                          <AnimatePresence>
-                            {isExpanded && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="overflow-hidden"
-                              >
-                                <div className="border-t border-border px-4 py-3">
-                                  <div className="mb-1.5 flex items-center gap-1.5 text-xs text-ink-subdued">
-                                    <FileCode className="h-3 w-3" />
-                                    Evidence excerpt
-                                  </div>
-                                  <div className="overflow-hidden rounded-lg border border-border bg-surface-2">
-                                    <div className="px-3 py-2 font-mono text-[11px] leading-5">
-                                      {finding.evidenceExcerpt
-                                        .split("\n")
-                                        .map((line, li) => {
-                                          const isAdd =
-                                            line.startsWith("+") &&
-                                            !line.startsWith("+++");
-                                          const isRemove =
-                                            line.startsWith("-") &&
-                                            !line.startsWith("---");
-                                          const isMeta =
-                                            line.startsWith("@@") ||
-                                            line.startsWith("Index:") ||
-                                            line.startsWith("diff --git");
-                                          return (
-                                            <div
-                                              key={li}
-                                              className={`${
-                                                isAdd
-                                                  ? "text-success bg-success/5"
-                                                  : isRemove
-                                                    ? "text-severity-critical bg-severity-critical/5"
-                                                    : isMeta
-                                                      ? "text-interactive"
-                                                      : "text-ink-muted"
-                                              } ${isAdd || isRemove ? "-mx-3 px-3" : ""}`}
-                                            >
-                                              {line}
-                                            </div>
-                                          );
-                                        })}
-                                    </div>
-                                  </div>
+                          </div>
+                        </button>
+
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="border-t border-border px-4 py-3 space-y-2">
+                                <div className="flex items-center gap-1.5 text-xs text-ink-subdued">
+                                  <FileCode className="h-3 w-3" />
+                                  {isAI ? "AI analysis" : "Evidence excerpt"}
+                                  <span className="ml-auto opacity-50">{finding.patternType.replace(/_/g, ' ')}</span>
                                 </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      );
-                    })}
-                  </div>
+                                {isAI ? (
+                                  <AiEvidenceCard content={finding.evidenceExcerpt} />
+                                ) : (
+                                  <DiffViewer
+                                    content={finding.evidenceExcerpt}
+                                    maxHeight="200px"
+                                    showHeader={false}
+                                  />
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="rounded-xl border border-success/20 bg-success/5 p-8 text-center">
@@ -450,8 +477,8 @@ function PRScanPage() {
                 </div>
               )}
 
-              {/* Scan another */}
-              <div className="mt-6 text-center">
+              {/* Actions */}
+              <div className="mt-6 flex items-center justify-center gap-3">
                 <button
                   onClick={() => {
                     setResult(null);
@@ -461,6 +488,17 @@ function PRScanPage() {
                 >
                   <Code2 className="h-4 w-4" />
                   Scan Another PR
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="btn btn-secondary"
+                >
+                  {copySuccess ? (
+                    <Check className="h-4 w-4 text-success" />
+                  ) : (
+                    <Share2 className="h-4 w-4" />
+                  )}
+                  {copySuccess ? "Link Copied!" : shareUrl ? "Copy Link" : "Share Results"}
                 </button>
               </div>
             </motion.div>

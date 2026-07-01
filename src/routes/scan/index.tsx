@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BugPlay,
@@ -7,18 +7,26 @@ import {
   AlertTriangle,
   CheckCircle2,
   FileCode,
-  ArrowLeft,
   Code2,
   Search,
   Terminal,
   X,
   ChevronDown,
   ChevronUp,
+  Share2,
+  Check,
 } from "lucide-react";
 import { scanDiff } from "../../detectors/engine";
 import type { ScanResult } from "../../detectors/engine";
+import { detectWithAI } from "../../detectors/ai-assisted";
 import { useAuth } from "../../lib/auth-context";
 import { saveManualScan } from "../../server/auth";
+import { createShareLink } from "../../server/share";
+import PageHeader from "../../components/PageHeader";
+import ScanAnimation from "../../components/ScanAnimation";
+import DiffViewer from "../../components/DiffViewer";
+import AiEvidenceCard from "../../components/AiEvidenceCard";
+import StatCard from "../../components/StatCard";
 
 export const Route = createFileRoute("/scan/")({ component: ScanPage });
 
@@ -27,26 +35,136 @@ function ScanPage() {
   const [diffInput, setDiffInput] = useState("");
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [scanPhase, setScanPhase] = useState<"idle" | "static" | "ai" | "done">(
+    "idle",
+  );
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [expandedFindings, setExpandedFindings] = useState<Set<number>>(
     new Set(),
   );
 
-  const handleScan = () => {
+  const handleScan = async () => {
     if (!diffInput.trim()) return;
+
     setIsScanning(true);
+    setScanPhase("static");
 
-    // Simulate brief processing delay for UX
-    setTimeout(() => {
-      const result = scanDiff(diffInput);
-      setScanResult(result);
-      setIsScanning(false);
+    // Yield to React to render the animation before blocking
+    await new Promise((r) => setTimeout(r, 50));
 
-      if (isAuthenticated) {
-        saveManualScan({
-          data: {
-            rawDiff: diffInput,
-            trustScore: result.trustScore,
-            findings: result.findings.map((f) => ({
+    // Phase 1: Static analysis (sync, instant)
+    const staticResult = scanDiff(diffInput);
+
+    // Phase 2: AI analysis (async, slow)
+    const aiEnabled =
+      typeof process !== "undefined" &&
+      process.env.AI_DETECTION_ENABLED === "true";
+
+    let finalResult = staticResult;
+
+    if (aiEnabled) {
+      setScanPhase("ai");
+      try {
+        const aiFindings = await detectWithAI(staticResult.files);
+
+        if (aiFindings.length > 0) {
+          const mergedFindings = [...staticResult.findings, ...aiFindings];
+          let deductions = 0;
+          for (const finding of mergedFindings) {
+            deductions +=
+              finding.confidence === "high"
+                ? 30
+                : finding.confidence === "medium"
+                  ? 15
+                  : 5;
+          }
+          const minScore = mergedFindings.length > 0 ? 10 : 0;
+          const newTrustScore = Math.max(minScore, 100 - deductions);
+
+          finalResult = {
+            ...staticResult,
+            findings: mergedFindings,
+            trustScore: newTrustScore,
+            summary: {
+              totalFindings: mergedFindings.length,
+              highCount: mergedFindings.filter((f) => f.confidence === "high")
+                .length,
+              mediumCount: mergedFindings.filter(
+                (f) => f.confidence === "medium",
+              ).length,
+              lowCount: mergedFindings.filter((f) => f.confidence === "low")
+                .length,
+              filesScanned: staticResult.summary.filesScanned,
+            },
+          };
+        }
+      } catch (err) {
+        console.error("AI detection failed:", err);
+      }
+    }
+
+    setScanPhase("done");
+    setScanResult(finalResult);
+
+    // Save to DB if authenticated
+    if (isAuthenticated) {
+      saveManualScan({
+        data: {
+          rawDiff: diffInput,
+          trustScore: finalResult.trustScore,
+          findings: finalResult.findings.map((f) => ({
+            patternType: f.patternType,
+            filePath: f.filePath,
+            lineStart: f.lineStart,
+            lineEnd: f.lineEnd,
+            confidence: f.confidence,
+            explanation: f.explanation,
+            evidenceExcerpt: f.evidenceExcerpt,
+          })),
+        },
+      }).catch((err) => console.error("Failed to save manual scan:", err));
+    }
+  };
+
+  const handleScanComplete = () => {
+    setIsScanning(false);
+  };
+
+  const handleClear = () => {
+    setDiffInput("");
+    setScanResult(null);
+    setExpandedFindings(new Set());
+  };
+
+  const handleShare = async () => {
+    if (!scanResult) return;
+
+    // If we already have a share URL, just copy it
+    if (shareUrl) {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+      } catch {
+        /* fallback */
+      }
+      return;
+    }
+
+    try {
+      const result = await createShareLink({
+        data: {
+          sourceType: "manual",
+          scanData: {
+            trustScore: scanResult.trustScore,
+            totalFindings: scanResult.summary.totalFindings,
+            highCount: scanResult.summary.highCount,
+            mediumCount: scanResult.summary.mediumCount,
+            lowCount: scanResult.summary.lowCount,
+            filesScanned: scanResult.summary.filesScanned,
+            files: scanResult.summary.filesScanned,
+            findings: scanResult.findings.map((f) => ({
               patternType: f.patternType,
               filePath: f.filePath,
               lineStart: f.lineStart,
@@ -56,15 +174,19 @@ function ScanPage() {
               evidenceExcerpt: f.evidenceExcerpt,
             })),
           },
-        }).catch((err) => console.error("Failed to save manual scan:", err));
+        },
+      });
+      setShareUrl(result.url);
+      try {
+        await navigator.clipboard.writeText(result.url);
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+      } catch {
+        /* fallback */
       }
-    }, 400);
-  };
-
-  const handleClear = () => {
-    setDiffInput("");
-    setScanResult(null);
-    setExpandedFindings(new Set());
+    } catch (err) {
+      console.error("Failed to create share link:", err);
+    }
   };
 
   const toggleFinding = (idx: number) => {
@@ -94,44 +216,18 @@ function ScanPage() {
     return "Cheating Detected";
   };
 
-  const getConfidenceColor = (c: string) => {
-    switch (c) {
-      case "high":
-        return "text-severity-critical border-severity-critical/25 bg-severity-critical/10";
-      case "medium":
-        return "text-severity-high border-severity-high/25 bg-severity-high/10";
-      case "low":
-        return "text-severity-medium border-severity-medium/25 bg-severity-medium/10";
-      default:
-        return "text-ink-muted border-border bg-surface-2";
-    }
-  };
-
   const isEmpty = diffInput.trim() === "";
 
   return (
     <main className="page-wrap px-4 pb-16 pt-8 sm:pt-10">
-      <div className="mx-auto max-w-4xl">
-        {/* Back link */}
-        <Link
-          to="/"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm text-ink-muted transition hover:text-ink"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Home
-        </Link>
-
-        {/* Page header */}
-        <div className="mb-8 text-center">
-          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-severity-critical/10">
-            <BugPlay className="h-7 w-7 text-severity-critical" />
-          </div>
-          <h1 className="mb-2 text-3xl font-bold text-ink">Scan a Diff</h1>
-          <p className="text-ink-muted">
-            Paste a GitHub-style diff below. Mantiz will scan it for cheating
-            patterns.
-          </p>
-        </div>
+      <div className="mx-auto">
+        <PageHeader
+          icon={BugPlay}
+          title="Scan a Diff"
+          description="Paste a GitHub-style diff below. Mantiz will scan it for cheating patterns."
+          breadcrumbs={[{ label: "Home", to: "/" }, { label: "Scan Diff" }]}
+          badge={{ label: "No signup needed", color: "success" }}
+        />
 
         {/* Diff Input Form */}
         <div className="mb-8 rounded-xl border border-border bg-surface-1 p-5">
@@ -218,6 +314,20 @@ index abc123..def456 100644
           </div>
         </div>
 
+        {/* Scan Animation */}
+        <AnimatePresence>
+          {isScanning && (
+            <ScanAnimation
+              isScanning={isScanning}
+              scanPhase={scanPhase}
+              lineCount={diffInput.split("\n").length}
+              onComplete={handleScanComplete}
+              findings={scanResult?.findings || []}
+              trustScore={scanResult?.trustScore}
+            />
+          )}
+        </AnimatePresence>
+
         {/* Results */}
         <AnimatePresence mode="wait">
           {scanResult && (
@@ -277,8 +387,8 @@ index abc123..def456 100644
               </div>
 
               {/* Summary */}
-              <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {[
+              <StatCard
+                stats={[
                   {
                     label: "Files Scanned",
                     value: scanResult.summary.filesScanned,
@@ -293,7 +403,7 @@ index abc123..def456 100644
                         : "text-success",
                   },
                   {
-                    label: "High Severity",
+                    label: "High",
                     value: scanResult.summary.highCount,
                     color:
                       scanResult.summary.highCount > 0
@@ -301,121 +411,138 @@ index abc123..def456 100644
                         : "text-ink-muted",
                   },
                   {
-                    label: "Low Severity",
-                    value: scanResult.summary.lowCount,
+                    label: "Medium",
+                    value: scanResult.summary.mediumCount,
                     color:
-                      scanResult.summary.lowCount > 0
+                      scanResult.summary.mediumCount > 0
                         ? "text-severity-medium"
                         : "text-ink-muted",
                   },
-                ].map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="rounded-lg border border-border bg-surface-1 p-3 text-center"
-                  >
-                    <div className={`text-xl font-bold ${stat.color}`}>
-                      {stat.value}
-                    </div>
-                    <div className="text-xs text-ink-muted">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
+                  {
+                    label: "Low",
+                    value: scanResult.summary.lowCount,
+                    color:
+                      scanResult.summary.lowCount > 0
+                        ? "text-severity-info"
+                        : "text-ink-muted",
+                  },
+                ]}
+              />
 
-              {/* Findings List */}
+              {/* Findings List — Card style */}
               {scanResult.findings.length > 0 ? (
-                <div className="rounded-xl border border-border bg-surface-1 overflow-hidden">
-                  <div className="border-b border-border bg-surface-2 px-4 py-3">
+                <div className="grid gap-3">
+                  <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-ink">
                       Findings ({scanResult.findings.length})
                     </h3>
+                    <span className="text-xs text-ink-muted">
+                      {scanResult.summary.highCount} high ·{" "}
+                      {scanResult.summary.mediumCount} med ·{" "}
+                      {scanResult.summary.lowCount} low
+                    </span>
                   </div>
-                  <div className="divide-y divide-border">
-                    {scanResult.findings.map((finding, idx) => {
-                      const isExpanded = expandedFindings.has(idx);
-                      return (
-                        <div
-                          key={idx}
-                          className="transition hover:bg-surface-2/50"
+                  {scanResult.findings.map((finding, idx) => {
+                    const isExpanded = expandedFindings.has(idx);
+                    const isHigh = finding.confidence === "high";
+                    const isAI =
+                      finding.patternType === "ai_assisted_detection";
+                    const borderColor = isHigh
+                      ? "border-severity-critical/25"
+                      : finding.confidence === "medium"
+                        ? "border-severity-medium/25"
+                        : "border-border";
+                    const severityBadge = isHigh
+                      ? "bg-severity-critical/10 text-severity-critical border-severity-critical/25"
+                      : finding.confidence === "medium"
+                        ? "bg-severity-medium/10 text-severity-medium border-severity-medium/25"
+                        : "bg-surface-2 text-ink-muted border-border";
+
+                    return (
+                      <motion.div
+                        key={idx}
+                        layout
+                        className={`rounded-xl border ${borderColor} bg-surface-1 overflow-hidden transition hover:bg-surface-2/30`}
+                      >
+                        {/* Card Header — always visible */}
+                        <button
+                          onClick={() => toggleFinding(idx)}
+                          className="flex w-full items-start gap-3 px-4 py-3.5 text-left cursor-pointer"
                         >
-                          <button
-                            onClick={() => toggleFinding(idx)}
-                            className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                          {/* Severity badge */}
+                          <span
+                            className={`mt-0.5 shrink-0 rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${severityBadge}`}
                           >
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${getConfidenceColor(finding.confidence)}`}
-                            >
-                              {finding.confidence}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-ink truncate">
+                            {finding.confidence}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            {/* Title row */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-semibold text-ink">
                                 {finding.explanation}
-                              </div>
-                              <div className="text-xs text-ink-subdued mt-0.5">
-                                {finding.filePath}:{finding.lineStart}
-                              </div>
+                              </span>
+                              {isAI && (
+                                <span className="rounded-full bg-interactive/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-interactive">
+                                  AI
+                                </span>
+                              )}
                             </div>
+                            {/* File path + line */}
+                            <div className="mt-1 flex items-center gap-2 text-xs text-ink-subdued font-mono">
+                              <FileCode className="h-3 w-3 shrink-0" />
+                              <span className="truncate">
+                                {finding.filePath}
+                              </span>
+                              <span className="shrink-0">
+                                :{finding.lineStart}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="shrink-0 mt-0.5">
                             {isExpanded ? (
-                              <ChevronUp className="h-4 w-4 shrink-0 text-ink-muted" />
+                              <ChevronUp className="h-4 w-4 text-ink-muted" />
                             ) : (
-                              <ChevronDown className="h-4 w-4 shrink-0 text-ink-muted" />
+                              <ChevronDown className="h-4 w-4 text-ink-muted" />
                             )}
-                          </button>
-                          <AnimatePresence>
-                            {isExpanded && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="overflow-hidden"
-                              >
-                                <div className="border-t border-border px-4 py-3">
-                                  <div className="mb-1.5 flex items-center gap-1.5 text-xs text-ink-subdued">
-                                    <FileCode className="h-3 w-3" />
-                                    Evidence excerpt
-                                  </div>
-                                  <div className="overflow-hidden rounded-lg border border-border bg-surface-2">
-                                    <div className="px-3 py-2 font-mono text-[11px] leading-5">
-                                      {finding.evidenceExcerpt
-                                        .split("\n")
-                                        .map((line, li) => {
-                                          const isAdd =
-                                            line.startsWith("+") &&
-                                            !line.startsWith("+++");
-                                          const isRemove =
-                                            line.startsWith("-") &&
-                                            !line.startsWith("---");
-                                          const isMeta =
-                                            line.startsWith("@@") ||
-                                            line.startsWith("Index:") ||
-                                            line.startsWith("diff --git");
-                                          return (
-                                            <div
-                                              key={li}
-                                              className={`${
-                                                isAdd
-                                                  ? "text-success bg-success/5"
-                                                  : isRemove
-                                                    ? "text-severity-critical bg-severity-critical/5"
-                                                    : isMeta
-                                                      ? "text-interactive"
-                                                      : "text-ink-muted"
-                                              } ${isAdd || isRemove ? "-mx-3 px-3" : ""}`}
-                                            >
-                                              {line}
-                                            </div>
-                                          );
-                                        })}
-                                    </div>
-                                  </div>
+                          </div>
+                        </button>
+
+                        {/* Expanded Evidence */}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="border-t border-border px-4 py-3 space-y-2">
+                                <div className="flex items-center gap-1.5 text-xs text-ink-subdued">
+                                  <FileCode className="h-3 w-3" />
+                                  {isAI ? "AI analysis" : "Evidence excerpt"}
+                                  <span className="ml-auto opacity-50">
+                                    {finding.patternType.replace(/_/g, " ")}
+                                  </span>
                                 </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      );
-                    })}
-                  </div>
+                                {isAI ? (
+                                  <AiEvidenceCard
+                                    content={finding.evidenceExcerpt}
+                                  />
+                                ) : (
+                                  <DiffViewer
+                                    content={finding.evidenceExcerpt}
+                                    maxHeight="200px"
+                                    showHeader={false}
+                                  />
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="rounded-xl border border-success/20 bg-success/5 p-8 text-center">
@@ -430,11 +557,23 @@ index abc123..def456 100644
                 </div>
               )}
 
-              {/* Scan another */}
-              <div className="mt-6 text-center">
+              {/* Actions */}
+              <div className="mt-6 flex items-center justify-center gap-3">
                 <button onClick={handleClear} className="btn btn-secondary">
                   <Code2 className="h-4 w-4" />
                   Scan Another Diff
+                </button>
+                <button onClick={handleShare} className="btn btn-secondary">
+                  {copySuccess ? (
+                    <Check className="h-4 w-4 text-success" />
+                  ) : (
+                    <Share2 className="h-4 w-4" />
+                  )}
+                  {copySuccess
+                    ? "Link Copied!"
+                    : shareUrl
+                      ? "Copy Link"
+                      : "Share Results"}
                 </button>
               </div>
             </motion.div>
@@ -442,7 +581,7 @@ index abc123..def456 100644
         </AnimatePresence>
 
         {/* Empty state (when no results yet) */}
-        {!scanResult && !isEmpty && (
+        {!scanResult && !isEmpty && !isScanning && (
           <div className="rounded-xl border border-dashed border-border bg-surface-1 p-12 text-center">
             <Search className="mx-auto mb-3 h-10 w-10 text-ink-subdued" />
             <p className="text-ink-muted">

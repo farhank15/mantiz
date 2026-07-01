@@ -10,16 +10,24 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ScanIndexRouteImport } from './routes/scan/index'
 import { Route as PrScanIndexRouteImport } from './routes/pr-scan/index'
 import { Route as LoginIndexRouteImport } from './routes/login/index'
 import { Route as HistoryIndexRouteImport } from './routes/history/index'
 import { Route as BenchmarkIndexRouteImport } from './routes/benchmark/index'
+import { Route as ShareIdRouteImport } from './routes/share/$id'
+import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as AuthGithubCallbackRouteImport } from './routes/auth/github/callback'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ScanIndexRoute = ScanIndexRouteImport.update({
@@ -47,6 +55,16 @@ const BenchmarkIndexRoute = BenchmarkIndexRouteImport.update({
   path: '/benchmark/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShareIdRoute = ShareIdRouteImport.update({
+  id: '/share/$id',
+  path: '/share/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiScanRoute = ApiScanRouteImport.update({
+  id: '/api/scan',
+  path: '/api/scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthGithubCallbackRoute = AuthGithubCallbackRouteImport.update({
   id: '/auth/github/callback',
   path: '/auth/github/callback',
@@ -55,69 +73,90 @@ const AuthGithubCallbackRoute = AuthGithubCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/scan': typeof ApiScanRoute
+  '/share/$id': typeof ShareIdRoute
   '/benchmark/': typeof BenchmarkIndexRoute
   '/history/': typeof HistoryIndexRoute
   '/login/': typeof LoginIndexRoute
   '/pr-scan/': typeof PrScanIndexRoute
   '/scan/': typeof ScanIndexRoute
+  '/settings/': typeof SettingsIndexRoute
   '/auth/github/callback': typeof AuthGithubCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/scan': typeof ApiScanRoute
+  '/share/$id': typeof ShareIdRoute
   '/benchmark': typeof BenchmarkIndexRoute
   '/history': typeof HistoryIndexRoute
   '/login': typeof LoginIndexRoute
   '/pr-scan': typeof PrScanIndexRoute
   '/scan': typeof ScanIndexRoute
+  '/settings': typeof SettingsIndexRoute
   '/auth/github/callback': typeof AuthGithubCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/scan': typeof ApiScanRoute
+  '/share/$id': typeof ShareIdRoute
   '/benchmark/': typeof BenchmarkIndexRoute
   '/history/': typeof HistoryIndexRoute
   '/login/': typeof LoginIndexRoute
   '/pr-scan/': typeof PrScanIndexRoute
   '/scan/': typeof ScanIndexRoute
+  '/settings/': typeof SettingsIndexRoute
   '/auth/github/callback': typeof AuthGithubCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/api/scan'
+    | '/share/$id'
     | '/benchmark/'
     | '/history/'
     | '/login/'
     | '/pr-scan/'
     | '/scan/'
+    | '/settings/'
     | '/auth/github/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/api/scan'
+    | '/share/$id'
     | '/benchmark'
     | '/history'
     | '/login'
     | '/pr-scan'
     | '/scan'
+    | '/settings'
     | '/auth/github/callback'
   id:
     | '__root__'
     | '/'
+    | '/api/scan'
+    | '/share/$id'
     | '/benchmark/'
     | '/history/'
     | '/login/'
     | '/pr-scan/'
     | '/scan/'
+    | '/settings/'
     | '/auth/github/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiScanRoute: typeof ApiScanRoute
+  ShareIdRoute: typeof ShareIdRoute
   BenchmarkIndexRoute: typeof BenchmarkIndexRoute
   HistoryIndexRoute: typeof HistoryIndexRoute
   LoginIndexRoute: typeof LoginIndexRoute
   PrScanIndexRoute: typeof PrScanIndexRoute
   ScanIndexRoute: typeof ScanIndexRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
   AuthGithubCallbackRoute: typeof AuthGithubCallbackRoute
 }
 
@@ -128,6 +167,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/': {
+      id: '/settings/'
+      path: '/settings'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/scan/': {
@@ -165,6 +211,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BenchmarkIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/share/$id': {
+      id: '/share/$id'
+      path: '/share/$id'
+      fullPath: '/share/$id'
+      preLoaderRoute: typeof ShareIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/scan': {
+      id: '/api/scan'
+      path: '/api/scan'
+      fullPath: '/api/scan'
+      preLoaderRoute: typeof ApiScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/github/callback': {
       id: '/auth/github/callback'
       path: '/auth/github/callback'
@@ -177,11 +237,14 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiScanRoute: ApiScanRoute,
+  ShareIdRoute: ShareIdRoute,
   BenchmarkIndexRoute: BenchmarkIndexRoute,
   HistoryIndexRoute: HistoryIndexRoute,
   LoginIndexRoute: LoginIndexRoute,
   PrScanIndexRoute: PrScanIndexRoute,
   ScanIndexRoute: ScanIndexRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
   AuthGithubCallbackRoute: AuthGithubCallbackRoute,
 }
 export const routeTree = rootRouteImport

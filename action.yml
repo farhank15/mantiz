@@ -1,0 +1,102 @@
+# Mantiz GitHub Action
+#
+# Reusable action that scans a PR/project diff for AI cheating patterns.
+#
+# Usage in your workflow:
+# ```yaml
+# - name: Run Mantiz Scan
+#   uses: farhank15/mantiz@main
+#   with:
+#     api-token: ${{ secrets.MANTIZ_API_TOKEN }}
+#     threshold: 70
+# ```
+
+name: 'Mantiz Scan 🔍'
+description: 'AI Lie Detector — scans diffs for AI agent cheating patterns in test suites'
+
+inputs:
+  api-token:
+    description: 'Mantiz API token from https://mantiz-wine.vercel.app/settings'
+    required: true
+  threshold:
+    description: 'Trust score threshold (0-100). Scores below this fail the build.'
+    required: false
+    default: '70'
+  json-output:
+    description: 'Output results as JSON'
+    required: false
+    default: 'false'
+
+outputs:
+  trust-score:
+    description: 'The trust score (0-100)'
+    value: ${{ steps.scan.outputs.trust-score }}
+  verdict:
+    description: 'The verdict (pass/fail)'
+    value: ${{ steps.scan.outputs.verdict }}
+  findings-count:
+    description: 'Number of findings'
+    value: ${{ steps.scan.outputs.findings-count }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+
+    - name: Run Mantiz Scan 🔍
+      id: scan
+      shell: bash
+      env:
+        MANTIZ_API_TOKEN: ${{ inputs.api-token }}
+        MANTIZ_API_URL: 'https://mantiz-wine.vercel.app'
+      run: |
+        # Get the PR diff or commit diff
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          DIFF_URL="${{ github.event.pull_request.diff_url }}"
+          DIFF=$(curl -s -H "Authorization: Bearer $MANTIZ_API_TOKEN" "$DIFF_URL")
+        else
+          DIFF=$(git diff HEAD~1 2>/dev/null || git diff 2>/dev/null || echo "")
+        fi
+
+        if [ -z "$DIFF" ] || [ "$DIFF" = "" ]; then
+          echo "trust-score=100" >> $GITHUB_OUTPUT
+          echo "verdict=pass" >> $GITHUB_OUTPUT
+          echo "findings-count=0" >> $GITHUB_OUTPUT
+          echo "::notice::No diff found — skipping Mantiz scan"
+          exit 0
+        fi
+
+        # Send to Mantiz API
+        echo "Sending diff to Mantiz API..."
+        RESPONSE=$(curl -s -X POST "$MANTIZ_API_URL/api/scan" \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer $MANTIZ_API_TOKEN" \
+          -d "{\"diff\": $(echo "$DIFF" | jq -Rs '.')}")
+
+        TRUST_SCORE=$(echo "$RESPONSE" | jq -r '.trustScore // 100')
+        FINDINGS=$(echo "$RESPONSE" | jq -r '.totalFindings // 0')
+
+        echo "trust-score=$TRUST_SCORE" >> $GITHUB_OUTPUT
+        echo "findings-count=$FINDINGS" >> $GITHUB_OUTPUT
+
+        if [ "$TRUST_SCORE" -lt "${{ inputs.threshold }}" ]; then
+          echo "verdict=fail" >> $GITHUB_OUTPUT
+          echo "::error::Mantiz detected suspicious code changes! Trust Score: $TRUST_SCORE/${{ inputs.threshold }}"
+          echo "::error::Review findings at: $MANTIZ_API_URL"
+          exit 1
+        else
+          echo "verdict=pass" >> $GITHUB_OUTPUT
+          echo "::notice::Mantiz scan passed — Trust Score: $TRUST_SCORE/100 ✅"
+        fi
+
+        if [ "${{ inputs.json-output }}" = "true" ]; then
+          echo "$RESPONSE" | jq '.'
+        fi

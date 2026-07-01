@@ -1,9 +1,10 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
-import { Github, Shield, ArrowLeft } from 'lucide-react'
+import { Github, Shield } from 'lucide-react'
 import RetroGrid from '#/components/magicui/retro-grid'
 import Particles from '#/components/magicui/particles'
 import { useAuth } from '../../lib/auth-context'
+import PageHeader from '../../components/PageHeader'
 
 export const Route = createFileRoute('/login/')({ component: LoginPage })
 
@@ -14,7 +15,7 @@ function LoginPage() {
     <main className="relative flex min-h-[80vh] flex-col items-center justify-center overflow-hidden px-4">
       <RetroGrid className="z-0" glow={false} />
       <Particles
-        className="absolute inset-0 z-[1]"
+        className="absolute inset-0 z-1"
         quantity={40}
         staticity={30}
         color="#58A6FF"
@@ -22,14 +23,15 @@ function LoginPage() {
       />
 
       <div className="relative z-10 w-full max-w-md">
-        {/* Back link */}
-        <Link
-          to="/"
-          className="mb-8 inline-flex items-center gap-1.5 text-sm text-ink-muted transition hover:text-ink"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Home
-        </Link>
+        <PageHeader
+          icon={Shield}
+          title="Welcome to Mantiz"
+          description="Sign in with GitHub to scan PR diffs and detect AI cheating patterns."
+          breadcrumbs={[
+            { label: 'Home', to: '/' },
+            { label: 'Sign In' },
+          ]}
+        />
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
