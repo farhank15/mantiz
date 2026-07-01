@@ -1,7 +1,0 @@
-[
-  {"type":"action","description":"Navigate to https://mantiz-wine.vercel.app/scan"},
-  {"type":"action","description":"In the diff input area, type or paste this exact text: diff --git a/src/math.ts b/src/math.ts then on a new line: +export function add(a, b) { return a + b; }"},
-  {"type":"action","description":"Click the Scan or Analyze button to submit"},
-  {"type":"assertion","description":"The Trust Score shown in the results is 80 or higher and the result label says 'Clean' or 'No Cheating Detected'"},
-  {"type":"assertion","description":"The findings section shows zero findings or displays a message stating the diff is clean and no cheating patterns were detected"}
-]

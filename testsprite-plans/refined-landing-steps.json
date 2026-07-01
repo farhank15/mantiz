@@ -1,5 +1,0 @@
-[
-  {"type":"action","description":"Navigate to https://mantiz-wine.vercel.app"},
-  {"type":"assertion","description":"The hero section is visible and contains a headline with the words 'AI' and either 'lie detector', 'trust score', or 'fake' describing Mantiz as a tool that scans code diffs for cheating patterns"},
-  {"type":"assertion","description":"A 'Scan a Diff' button is visible in the hero area"}
-]
