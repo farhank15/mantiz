@@ -38,12 +38,17 @@ const injectMockSession = createServerFn({ method: 'GET' })
     throw redirect({ to: '/pr-scan' })
   })
 
+interface SearchParams {
+  secret?: string
+}
+
 export const Route = createFileRoute('/api/mock-login')({
-  validateSearch: (search: Record<string, unknown>) => {
+  validateSearch: (search: Record<string, unknown>): SearchParams => {
     return {
-      secret: (search?.secret || search?.['secret']) as string | undefined,
+      secret: search.secret as string | undefined,
     }
   },
+  loaderDeps: ({ search: { secret } }) => ({ secret }),
   component: () => null,
-  loader: ({ search }) => injectMockSession({ data: { secret: search?.secret } }),
+  loader: ({ deps: { secret } }) => injectMockSession({ data: { secret } }),
 })
