@@ -1,0 +1,29 @@
+{
+  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
+  "type": "frontend",
+  "name": "PR Scan - Invalid PR URL shows validation error",
+  "description": "After mock login, submit a malformed or non-GitHub URL to the PR Scan form and verify the app shows a helpful validation error instead of crashing.",
+  "priority": "p1",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://mantiz-wine.vercel.app/api/mock-login?secret=mantiz_e2e_bypass_2026 to authenticate"
+    },
+    {
+      "type": "assertion",
+      "description": "The PR Scan form is visible with a URL input field"
+    },
+    {
+      "type": "action",
+      "description": "In the PR URL input field, type: https://example.com/not-a-real-pr"
+    },
+    {
+      "type": "action",
+      "description": "Click the Scan or Analyze button"
+    },
+    {
+      "type": "assertion",
+      "description": "The app shows an error message or validation warning — it does not crash, show a blank screen, or display a Trust Score for an invalid URL"
+    }
+  ]
+}

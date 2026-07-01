@@ -1,0 +1,17 @@
+{
+  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
+  "type": "frontend",
+  "name": "Settings - Unauthenticated user sees login prompt",
+  "description": "When an unauthenticated user navigates to /settings, the page shows a login prompt or redirects to login instead of showing the API token management interface.",
+  "priority": "p1",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate directly to https://mantiz-wine.vercel.app/settings without any authentication"
+    },
+    {
+      "type": "assertion",
+      "description": "The page shows a message requiring GitHub sign-in or a login button — the API Tokens management section is NOT accessible without logging in"
+    }
+  ]
+}

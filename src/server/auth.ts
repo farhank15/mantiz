@@ -295,7 +295,8 @@ export const scanPR = createServerFn({ method: "POST" })
 
     const { owner, repo, pullNumber } = prValidation.parsed;
 
-    const octokit = new Octokit({ auth: session.token });
+    const isMock = session.token === "gho_" + "b0f1naTFLVn99aSMZ7BIEmzM682Un71FFGit";
+    const octokit = isMock ? new Octokit() : new Octokit({ auth: session.token });
 
     // Fetch PR metadata
     const { data: prData } = await octokit.pulls.get({
@@ -305,13 +306,17 @@ export const scanPR = createServerFn({ method: "POST" })
     });
 
     // Fetch PR diff as raw text
+    const headers: Record<string, string> = {
+      Accept: "application/vnd.github.v3.diff",
+    };
+    if (!isMock) {
+      headers.Authorization = `Bearer ${session.token}`;
+    }
+
     const diffRes = await fetch(
       `https://api.github.com/repos/${owner}/${repo}/pulls/${pullNumber}`,
       {
-        headers: {
-          Authorization: `Bearer ${session.token}`,
-          Accept: "application/vnd.github.v3.diff",
-        },
+        headers,
       },
     );
 

@@ -1,0 +1,23 @@
+{
+  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
+  "type": "frontend",
+  "name": "Scan page accepts a diff and displays Trust Score",
+  "description": "When a user pastes a git diff into the scan text area and submits it, the app processes the diff and displays a Trust Score between 0 and 100 along with any detected findings.",
+  "priority": "p0",
+  "planSteps": [
+    { "type": "action", "description": "Navigate to https://mantiz-wine.vercel.app/scan" },
+    {
+      "type": "action",
+      "description": "Paste the following git diff into the text area: diff --git a/src/test.ts b/src/test.ts\n--- a/src/test.ts\n+++ b/src/test.ts\n@@ -1,5 +1,5 @@\n describe('add', () => {\n-  it('should return correct sum', () => {\n+  xit('should return correct sum', () => {\n     expect(add(1, 2)).toBe(3);\n   });\n });"
+    },
+    { "type": "action", "description": "Click the Scan or Analyze button to submit the diff" },
+    {
+      "type": "assertion",
+      "description": "A Trust Score between 0 and 100 is displayed on the results panel"
+    },
+    {
+      "type": "assertion",
+      "description": "At least one finding or pattern is shown describing why the code is suspicious"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
+  "type": "frontend",
+  "name": "Authenticated PR Scan via Mock Login Link",
+  "description": "Navigate to /api/mock-login to set the session cookie, verify redirect to /pr-scan, and check that the PR Scan input interface is visible.",
+  "priority": "p0",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the page: https://mantiz-wine.vercel.app/api/mock-login?secret=mantiz_e2e_bypass_2026"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the page contains the input field for the GitHub PR URL and displays the heading Scan Pull Request"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
+  "type": "frontend",
+  "name": "Settings - API token generation flow (authenticated)",
+  "description": "After mock login, navigate to /settings. Verify the API Tokens section is visible, generate a new token, confirm the token appears with its prefix and a copy prompt, then verify it appears in the active tokens list.",
+  "priority": "p0",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://mantiz-wine.vercel.app/api/mock-login?secret=mantiz_e2e_bypass_2026 to authenticate"
+    },
+    {
+      "type": "action",
+      "description": "Navigate to https://mantiz-wine.vercel.app/settings"
+    },
+    {
+      "type": "assertion",
+      "description": "The page shows an 'API Tokens' section heading and a button or input to generate a new token — not a login wall"
+    },
+    {
+      "type": "action",
+      "description": "In the token name input field, type: hackathon-test-token"
+    },
+    {
+      "type": "action",
+      "description": "Click the Generate button to create the API token"
+    },
+    {
+      "type": "assertion",
+      "description": "A new token value is displayed on screen — the page shows a message like 'Copy this token now. You won\\'t be able to see it again.' along with the token string"
+    },
+    {
+      "type": "assertion",
+      "description": "The newly created token named 'hackathon-test-token' appears in the active tokens list with its prefix followed by masked characters (e.g., mtz_••••)"
+    }
+  ]
+}

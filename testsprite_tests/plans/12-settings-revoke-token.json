@@ -1,0 +1,37 @@
+{
+  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
+  "type": "frontend",
+  "name": "Settings - Revoke API token",
+  "description": "After mock login, navigate to /settings, generate a token, then revoke it and verify it moves to the revoked tokens section.",
+  "priority": "p1",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://mantiz-wine.vercel.app/api/mock-login?secret=mantiz_e2e_bypass_2026 to authenticate"
+    },
+    {
+      "type": "action",
+      "description": "Navigate to https://mantiz-wine.vercel.app/settings"
+    },
+    {
+      "type": "assertion",
+      "description": "The API Tokens section is visible with a Generate button"
+    },
+    {
+      "type": "action",
+      "description": "Type 'revoke-test-token' in the token name input and click Generate"
+    },
+    {
+      "type": "assertion",
+      "description": "The new token appears in the active tokens list"
+    },
+    {
+      "type": "action",
+      "description": "Click the revoke button (trash icon or Revoke button) next to the 'revoke-test-token' entry"
+    },
+    {
+      "type": "assertion",
+      "description": "The token disappears from the active tokens list and either appears in the Revoked tokens section or the active list count decreases by one"
+    }
+  ]
+}

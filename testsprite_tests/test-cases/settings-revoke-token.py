@@ -1,0 +1,71 @@
+import asyncio
+from playwright import async_api
+from playwright.async_api import expect
+
+async def run_test():
+    pw = None
+    browser = None
+    context = None
+
+    try:
+        pw = await async_api.async_playwright().start()
+
+        browser = await pw.chromium.launch(
+            headless=True,
+            args=[
+                "--window-size=1280,720",
+                "--disable-dev-shm-usage",
+                "--ipc=host",
+                "--single-process"
+            ],
+        )
+
+        context = await browser.new_context()
+        context.set_default_timeout(15000)
+
+        page = await context.new_page()
+
+        # Step 1: Navigate to mock-login to authenticate
+        await page.goto("https://mantiz-wine.vercel.app/api/mock-login?secret=mantiz_e2e_bypass_2026")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
+
+        # Step 2: Navigate to settings page
+        await page.goto("https://mantiz-wine.vercel.app/settings")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
+
+        # Step 3: Type token name
+        token_name_input = page.locator("input[placeholder*='Token Name'], input[placeholder*='e.g.'], input[type='text']").first
+        await token_name_input.fill("revoke-test-token")
+
+        # Step 4: Click the Generate button
+        generate_button = page.locator("button:has-text('Generate')").first
+        await generate_button.click()
+
+        # Assert: Token appears in the active list
+        await expect(page.locator("text=revoke-test-token").first).to_be_visible(timeout=15000)
+
+        # Step 5: Click the Revoke button (which could be a trash can icon or button with title/text)
+        # Usually it is a button with a title 'Revoke token' or inside the token list item
+        revoke_btn = page.locator("button[title*='Revoke'], button:has-text('Revoke')").first
+        await revoke_btn.click()
+
+        # Assert: Check that active token is gone or moved to revoked list
+        await expect(page.locator("text=revoke-test-token").first).not_to_be_visible(timeout=15000)
+
+        await asyncio.sleep(3)
+
+    finally:
+        if context:
+            await context.close()
+        if browser:
+            await browser.close()
+        if pw:
+            await pw.stop()
+
+asyncio.run(run_test())
