@@ -22,10 +22,14 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-3FB950?style=flat-square" alt="License">
   </a>
+  <a href="https://github.com/farhank15/mantiz/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/farhank15/mantiz/mantiz.yml?style=flat-square&logo=github&label=Mantiz%20CI" alt="Mantiz CI">
+  </a>
   <br />
   <img src="https://img.shields.io/badge/Stack-TanStack_Start-FF4154?style=flat-square&logo=react&logoColor=white" alt="TanStack">
   <img src="https://img.shields.io/badge/Database-Neon Postgres-00E59B?style=flat-square&logo=postgresql&logoColor=white" alt="Neon">
   <img src="https://img.shields.io/badge/Tests-TestSprite_CLI-6B7280?style=flat-square" alt="TestSprite">
+  <img src="https://img.shields.io/badge/OAuth-GitHub-333?style=flat-square&logo=github" alt="GitHub OAuth">
 </p>
 
 ---
@@ -124,6 +128,41 @@ This cycle repeats until all tests pass cleanly — with Mantiz ensuring the age
 | **LOOP.md logged** | Every iteration logged to `LOOP.md` | One row per cycle — evidence for judges |
 
 > **Evidence:** See [LOOP.md](LOOP.md) for the complete iteration history.
+
+---
+
+## 📊 Benchmark Results
+
+Mantiz includes a built-in benchmark suite with 6 curated fixtures across 3 datasets:
+
+| Dataset | Description | Fixtures | Target Score |
+|---------|-------------|----------|-------------|
+| **A** — "The Honest Code" | Proper diff + valid test updates | 2 | 90–100 ✅ |
+| **B** — "The Lazy/Cheating AI" | `.skip()`, `if(false)`, commented assertions | 2 | < 40 🔴 |
+| **C** — "The Smart Evasion AI" | Assertion tampering, mock + empty catch | 2 | 50–70 🟡 |
+
+> Visit the [**/benchmark**](https://mantiz-wine.vercel.app/benchmark) dashboard to see live accuracy results.
+
+---
+
+## 🖥 Mantiz CLI
+
+Run Mantiz locally in any project to scan staged/unstaged changes:
+
+```bash
+cd mantiz
+npm run mantiz-scan
+
+# Output:
+# 🔍 MANTIZ SCAN RESULTS
+# Trust Score: 55/100 🔴 CHEATING DETECTED
+# Findings: 2
+# - HIGH test/auth.test.js:42 — Assertion value changed
+# 📝 LOOP.md updated — iteration 3 logged
+# ✗ BUILD FAILED — Trust score below 70 threshold
+```
+
+The CLI also integrates with **GitHub Actions** via `.github/workflows/mantiz.yml` — any push or PR that triggers a low trust score will fail the build.
 
 ---
 

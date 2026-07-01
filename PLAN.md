@@ -225,30 +225,30 @@ src/cli/scan.ts  → import { scanDiff } from '../detectors/engine'
 ## 🎯 SUBMISSION CHECKLIST FINAL (Berdasarkan Aturan Resmi TestSprite S3)
 
 ### 📦 Di Repositori GitHub (Wajib)
-- [ ] **Source code publik** — https://github.com/farhank15/mantiz
-- [ ] **LOOP.md** — 10+ entries, auto-generated oleh agent, 1 baris per iterasi
-- [ ] **README.md** — deskripsi + live URL + loop coverage
-- [ ] **Commit history** — bukti loop berjalan (real failures + fixes)
+- [✅] **Source code publik** — https://github.com/farhank15/mantiz
+- [✅] **LOOP.md** — 15 entries, auto-generated oleh CLI, 1 baris per iterasi
+- [✅] **README.md** — deskripsi + live URL + loop coverage + benchmark
+- [✅] **Commit history** — bukti loop berjalan (real failures + fixes)
 
 ### 🌐 Di Vercel (Wajib)
-- [✅] **Live URL** — https://mantiz-wine.vercel.app hidup (sudah ✅)
-- [ ] **5 detectors functional** — paste diff → scan → results
-- [ ] **Manual diff paste flow** — form → parse → trust score → findings
+- [✅] **Live URL** — https://mantiz-wine.vercel.app hidup
+- [✅] **5 detectors functional** — paste diff → scan → results
+- [✅] **Manual diff paste flow** — form → parse → trust score → findings
 
 ### 🤖 The Loop (Wajib — 40pts)
-- [ ] **Mantiz CLI** — `npm run mantiz-scan` jalan di terminal
-- [ ] **LOOP.md auto-log** — setiap scan append row otomatis
-- [ ] **10+ iterasi** — real failures detected + agent fixes + re-scans
-- [ ] **TestSprite CLI** — ter-instal dan ter-integrasi
+- [✅] **Mantiz CLI** — `npm run mantiz-scan` jalan di terminal
+- [✅] **LOOP.md auto-log** — setiap scan append row otomatis
+- [✅] **15 iterasi** — real failures detected + agent fixes + re-scans
+- [✅] **TestSprite CLI** — ter-instal dan ter-integrasi
 
 ### ⭐ Bonus (Max +5 Innovation)
-- [ ] **GitHub Actions CI/CD** — `.github/workflows/mantiz.yml` — fail build if score < 70
-- [ ] **TestSprite in CI** — gate pipeline on TestSprite
+- [✅] **GitHub Actions CI/CD** — `.github/workflows/mantiz.yml` — fail build if score < 70
+- [✅] **TestSprite in CI** — gate pipeline on TestSprite
 
 ### 📢 Engagement (Bonus ∞)
-- [ ] **Discord submission** — di `#hackathon-submissions` sebelum 7 Jul 4:59PM PDT
-- [ ] **X post** — tag @TestSprite
-- [ ] **Discord polls** — vote di polling yang ada
+- [⏳] **Discord submission** — di `#hackathon-submissions` sebelum 7 Jul 4:59PM PDT
+- [⏳] **X post** — tag @TestSprite
+- [⏳] **Discord polls** — vote di polling yang ada
 
 ---
 
