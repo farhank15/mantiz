@@ -8,7 +8,7 @@
 - **Project:** Mantiz — AI coding agent lie detector
 - **Live URL:** https://mantiz-wine.vercel.app
 - **Stack:** TanStack Start / Neon Postgres / Drizzle ORM / TestSprite CLI
-- **Total iterations:** 40
+- **Total iterations:** 43
 
 ---
 
@@ -56,6 +56,10 @@
 | 38 | Antigravity Agent | Rerun all 7 TestSprite test plans via TestSprite CLI against the live Vercel app after implementing the fixes. | ✅ PASSED | All tests green: benchmark (100% accuracy), clean code scan, history, login, auth guard | PASSED | Loop complete, project fully verified and ready for submission | 2026-07-01 |
 | 39 | Antigravity Agent | Implement multi-line catch support, add xit/fit test shorthands, and support nested parentheses in assertion tampering. | 100/100 | None | PASSED | Push updates and release tag v0.1.2 | 2026-07-01 |
 | 40 | Antigravity Agent | Export all 7 E2E tests to testsprite_tests/ and write comprehensive PRD (Mantiz-PRD.md). | 70/100 | 1 findings (1 high) | PASSED | Commit and push to remote | 2026-07-01 |
+| 41 | Antigravity Agent | Add `/api/mock-login` endpoint for E2E auth bypass. First attempt using raw `GET` export → **FAILED** (Nitro renders HTML shell, cookie never set). Fixed by rewriting with `createServerFn + loader` pattern (same as `auth.ts`) — sets HttpOnly cookie server-side before any HTML is sent, then `throw redirect({ to: '/pr-scan' })`. Re-run → **PASSED** (3/3 steps, video recorded). | ✅ PASSED | mock-login auth flow now works correctly via createServerFn pattern | PASSED | Create PR scan tests with public GitHub repos | 2026-07-01 |
+| 42 | Antigravity Agent | Restore 10 deleted TestSprite plan files from git history (`testsprite-plans/` folder was removed in commit `f7759ef`). Recovered all plans (01–07 + 3 refined steps) back to `testsprite_tests/plans/`. Committed and pushed to preserve for hackathon judges. | — | No code bug — documentation/plan files restored | DONE | Add new authenticated PR scan test plans | 2026-07-01 |
+| 43 | Antigravity Agent | Create 3 new authenticated PR scan test cases using public GitHub repos: (08) scan `vercel/next.js/pull/72000`, (09) scan `facebook/react/pull/31611` for pattern detection, (10) invalid URL validation error. All 3 queued and running in TestSprite via mock-login auth bypass. Plans committed to `testsprite_tests/plans/`. | 🟡 Running | Tests 08–10 queued in TestSprite — waiting for verdict | RUNNING | Log results when tests complete | 2026-07-01 |
+
 
 ---
 
