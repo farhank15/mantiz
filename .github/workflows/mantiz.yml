@@ -22,17 +22,13 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
-          cache-dependency-path: mantiz/package-lock.json
 
       - name: Install dependencies
-        run: |
-          cd mantiz
-          npm ci
+        run: npm ci
 
       - name: Run Mantiz Scan 🔍
         id: mantiz
         continue-on-error: true
-        working-directory: mantiz
         run: |
           npx tsx src/cli/scan.ts
         env:
@@ -44,17 +40,32 @@ jobs:
           echo "::warning::Mantiz detected suspicious code changes!"
           echo "::warning::Trust score below 70 — review findings above."
 
-      - name: Run TestSprite 🧪
+      - name: Run TestSprite Smoke Tests 🧪
+        id: testsprite
         if: always()
         env:
           TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
-        working-directory: mantiz
         run: |
-          if [ -n "$TESTSPRITE_API_KEY" ]; then
-            npx testsprite test run --headless 2>&1 || echo "TestSprite CI run completed with warnings"
-          else
+          if [ -z "$TESTSPRITE_API_KEY" ]; then
             echo "::warning::TESTSPRITE_API_KEY not set — skipping TestSprite tests"
+            exit 0
           fi
+
+          echo "Running TestSprite smoke tests against live app..."
+          # Run landing page + diff scan tests (the two most critical)
+          npx testsprite@latest test run 54fb472b-cd69-4f7b-8711-aa45625abb1e \
+            --target-url https://mantiz-wine.vercel.app \
+            --wait \
+            --timeout 300 \
+            --output json || true
+
+          npx testsprite@latest test run 85f99ee9-7119-4df3-a026-ed6339a47e4c \
+            --target-url https://mantiz-wine.vercel.app \
+            --wait \
+            --timeout 300 \
+            --output json || true
+
+          echo "TestSprite smoke tests complete."
 
       - name: Final Status
         if: steps.mantiz.outcome != 'success'

@@ -34,3 +34,4 @@ Instructions for the AI agent:
 - Never skip a scan step. Every code change → scan → fix → re-scan → log.
 - Run TestSprite after Mantiz passes. Log the TestSprite result too.
 -->
+| 7 | Mantiz CLI | auto-scan | 70/100 | 1 findings (1 high) | PASSED | Manual review needed | 2026-07-01 |
