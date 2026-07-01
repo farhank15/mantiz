@@ -39,11 +39,10 @@ const injectMockSession = createServerFn({ method: 'GET' })
   })
 
 export const Route = createFileRoute('/api/mock-login')({
-  validateSearch: (search: Record<string, unknown>) => {
-    return {
-      secret: (search?.secret || search?.['secret']) as string | undefined,
-    }
-  },
   component: () => null,
-  loader: ({ search }) => injectMockSession({ data: { secret: search?.secret } }),
+  loader: ({ request }) => {
+    const url = new URL(request.url)
+    const secret = url.searchParams.get('secret') || undefined
+    return injectMockSession({ data: { secret } })
+  },
 })
