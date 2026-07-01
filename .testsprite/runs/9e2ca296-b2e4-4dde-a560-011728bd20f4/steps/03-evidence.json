@@ -1,8 +1,0 @@
-[
-  {
-    "kind": "snapshot",
-    "stepIndex": 3,
-    "summary": "Step 3 'Expected the page heading or title to contain 'History' or 'Scan History'.' failed. Error: TEST BLOCKED\n\nThe History page could not be validated because the UI requires signing in via GitHub OAuth and the OAuth flow cannot be completed in this test environment.\n\nObservations:\n- The /history page shows a sign-in prompt with heading 'Welcome to Mantiz' and a 'Continue with GitHub' button.\n- No 'History' or 'Scan History' heading, no list of scans, and no empty-state message are visible.",
-    "path": "steps/03-snapshot.html"
-  }
-]
