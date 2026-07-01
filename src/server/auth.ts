@@ -175,14 +175,20 @@ export const handleCallback = createServerFn({ method: 'POST' })
     // Set session cookie (7 day expiry)
     setSessionCookie(session)
 
-    return { login: session.login, avatar: session.avatar, name: session.name }
+    return {
+      login: session.login,
+      avatar: session.avatar,
+      name: session.name,
+      userId: session.userId,
+    }
   }
 )
 
 /**
  * Get the current user session. Returns null if not authenticated.
+ * Uses POST to ensure cookies are properly included in the request context.
  */
-export const getSession = createServerFn({ method: 'GET' }).handler(async () => {
+export const getSession = createServerFn({ method: 'POST' }).handler(async () => {
   const cookie = getCookie(SESSION_COOKIE)
   if (!cookie) return null
 

@@ -35,7 +35,9 @@ function CallbackPage() {
 
     const exchangeCode = async () => {
       try {
-        await handleCallback({ data: { code: search.code!, state: search.state! } })
+        const session = await handleCallback({ data: { code: search.code!, state: search.state! } })
+        // Store session in sessionStorage as fallback
+        sessionStorage.setItem('mantiz_auth', JSON.stringify(session))
         setStatus('success')
         // Redirect to home after a brief delay
         timer = setTimeout(() => navigate({ to: '/' }), 1500)

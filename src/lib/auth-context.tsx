@@ -39,6 +39,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkSession = async () => {
       try {
+        // First check sessionStorage (immediate, from callback page)
+        const stored = sessionStorage.getItem('mantiz_auth')
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored) as AuthUser
+            setUser(parsed)
+            sessionStorage.removeItem('mantiz_auth')
+            // Still verify with server in background
+            getSession().then((s) => setUser(s)).catch(() => setUser(null))
+            setIsLoading(false)
+            return
+          } catch {
+            sessionStorage.removeItem('mantiz_auth')
+          }
+        }
+
+        // Fall back to server function cookie check
         const session = await getSession()
         setUser(session)
       } catch {

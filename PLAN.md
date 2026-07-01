@@ -35,6 +35,8 @@
 | **Mantiz CLI** | ✅ Selesai | `npm run mantiz-scan` |
 | **LOOP.md auto-log** | ✅ Selesai | Auto-logging via CLI |
 | **GitHub Actions** | ✅ Selesai | `.github/workflows/mantiz.yml` |
+| **GitHub OAuth** | ✅ Selesai | Login via GitHub + session cookie |
+| **PR Scan** | ✅ Selesai | Paste PR URL → fetch diff via Octokit → scan |
 | **Benchmark** | ❌ Belum | 3 dataset + dashboard (Day 5) |
 
 ---
