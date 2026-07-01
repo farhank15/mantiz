@@ -11,7 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ScanIndexRouteImport } from './routes/scan/index'
+import { Route as PrScanIndexRouteImport } from './routes/pr-scan/index'
+import { Route as LoginIndexRouteImport } from './routes/login/index'
 import { Route as HistoryIndexRouteImport } from './routes/history/index'
+import { Route as AuthGithubCallbackRouteImport } from './routes/auth/github/callback'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,40 +26,81 @@ const ScanIndexRoute = ScanIndexRouteImport.update({
   path: '/scan/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrScanIndexRoute = PrScanIndexRouteImport.update({
+  id: '/pr-scan/',
+  path: '/pr-scan/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginIndexRoute = LoginIndexRouteImport.update({
+  id: '/login/',
+  path: '/login/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HistoryIndexRoute = HistoryIndexRouteImport.update({
   id: '/history/',
   path: '/history/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthGithubCallbackRoute = AuthGithubCallbackRouteImport.update({
+  id: '/auth/github/callback',
+  path: '/auth/github/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/history/': typeof HistoryIndexRoute
+  '/login/': typeof LoginIndexRoute
+  '/pr-scan/': typeof PrScanIndexRoute
   '/scan/': typeof ScanIndexRoute
+  '/auth/github/callback': typeof AuthGithubCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/history': typeof HistoryIndexRoute
+  '/login': typeof LoginIndexRoute
+  '/pr-scan': typeof PrScanIndexRoute
   '/scan': typeof ScanIndexRoute
+  '/auth/github/callback': typeof AuthGithubCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/history/': typeof HistoryIndexRoute
+  '/login/': typeof LoginIndexRoute
+  '/pr-scan/': typeof PrScanIndexRoute
   '/scan/': typeof ScanIndexRoute
+  '/auth/github/callback': typeof AuthGithubCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/history/' | '/scan/'
+  fullPaths:
+    | '/'
+    | '/history/'
+    | '/login/'
+    | '/pr-scan/'
+    | '/scan/'
+    | '/auth/github/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/history' | '/scan'
-  id: '__root__' | '/' | '/history/' | '/scan/'
+  to:
+    '/' | '/history' | '/login' | '/pr-scan' | '/scan' | '/auth/github/callback'
+  id:
+    | '__root__'
+    | '/'
+    | '/history/'
+    | '/login/'
+    | '/pr-scan/'
+    | '/scan/'
+    | '/auth/github/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HistoryIndexRoute: typeof HistoryIndexRoute
+  LoginIndexRoute: typeof LoginIndexRoute
+  PrScanIndexRoute: typeof PrScanIndexRoute
   ScanIndexRoute: typeof ScanIndexRoute
+  AuthGithubCallbackRoute: typeof AuthGithubCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -75,11 +119,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScanIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pr-scan/': {
+      id: '/pr-scan/'
+      path: '/pr-scan'
+      fullPath: '/pr-scan/'
+      preLoaderRoute: typeof PrScanIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login/': {
+      id: '/login/'
+      path: '/login'
+      fullPath: '/login/'
+      preLoaderRoute: typeof LoginIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/history/': {
       id: '/history/'
       path: '/history'
       fullPath: '/history/'
       preLoaderRoute: typeof HistoryIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/github/callback': {
+      id: '/auth/github/callback'
+      path: '/auth/github/callback'
+      fullPath: '/auth/github/callback'
+      preLoaderRoute: typeof AuthGithubCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -88,7 +153,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HistoryIndexRoute: HistoryIndexRoute,
+  LoginIndexRoute: LoginIndexRoute,
+  PrScanIndexRoute: PrScanIndexRoute,
   ScanIndexRoute: ScanIndexRoute,
+  AuthGithubCallbackRoute: AuthGithubCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

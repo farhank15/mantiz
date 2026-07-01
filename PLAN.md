@@ -32,10 +32,10 @@
 | **Open source files** | ✅ Selesai | LICENSE, CONTRIBUTING, SECURITY, dll |
 | **TestSprite CLI** | ✅ Selesai | Setup + API key linked |
 | **PLAN.md** | ✅ Selesai | Final strategy documented |
-| **Mantiz CLI** | 🟡 Day 4 | `npm run mantiz-scan` |
-| **LOOP.md auto-log** | 🟡 Day 4 | Auto-logging via CLI |
-| **GitHub Actions** | 🟡 Day 4 | Fail build on score < 70 |
-| **Benchmark** | ❌ Belum | 3 dataset + dashboard |
+| **Mantiz CLI** | ✅ Selesai | `npm run mantiz-scan` |
+| **LOOP.md auto-log** | ✅ Selesai | Auto-logging via CLI |
+| **GitHub Actions** | ✅ Selesai | `.github/workflows/mantiz.yml` |
+| **Benchmark** | ❌ Belum | 3 dataset + dashboard (Day 5) |
 
 ---
 
