@@ -8,7 +8,7 @@
 - **Project:** Mantiz — AI coding agent lie detector
 - **Live URL:** https://mantiz-wine.vercel.app
 - **Stack:** TanStack Start / Neon Postgres / Drizzle ORM / TestSprite CLI
-- **Total iterations:** 3
+- **Total iterations:** 6
 
 ---
 
@@ -18,7 +18,11 @@
 |---|---|---|---|---|---|---|---|
 | 1 | Antigravity Agent | TestSprite project setup — 7 test plans created & batch-uploaded for all core flows (landing, scan, login, benchmark, PR-scan, history) | — | — | DONE | Run smoke tests | 2026-07-01 |
 | 2 | TestSprite | Smoke run: landing page → **blocked** (plan ambiguity); diff-scan cheating code → **FAILED** — scanner returned Trust Score 100 / "No Cheating Detected" for diff containing `test.skip` | 100 (wrong) | `test.skip` not flagged — `SKIP_PATTERN` regex `/\.skip\(\)/` only matches no-arg form, misses `test.skip('desc', fn)` | FAILED | Fix regex bug in `disabled-assertion.ts`, redeploy, re-run | 2026-07-01 |
-| 3 | Antigravity Agent | Fix `SKIP_PATTERN`: `/\.skip\(\)/` → `/\.skip\s*\(/` — now catches all `.skip(` forms. Commit `56f14fe`, pushed to `main`, Vercel auto-deploy triggered. Landing page test re-run with tighter assertions → **PASSED** (3/3 steps) | — | 1 bug fixed in `src/detectors/disabled-assertion.ts` | FIXED | Re-run diff-scan test after Vercel deploy, then run remaining 5 tests | 2026-07-01 |
+| 3 | Antigravity Agent | Fix `SKIP_PATTERN`: `/\.skip\(\)/` → `/\.skip\s*\(/` — now catches all `.skip(` forms. Commit `56f14fe`, pushed to `main`, Vercel auto-deploy triggered. Landing page test re-run with tighter assertions → **PASSED** (3/3 steps) | — | 1 bug fixed in `src/detectors/disabled-assertion.ts` | FIXED | Re-run diff-scan test after Vercel deploy, run remaining 5 tests | 2026-07-01 |
+| 4 | TestSprite | Re-run diff-scan cheating code after fix deployed → **PASSED** (7/7 steps) — scanner now correctly flags `test.skip` finding, returns low Trust Score | ✅ Correct low score | `test.skip` now detected as `disabled_assertion` with high confidence | PASSED | Run remaining 5 tests (login, benchmark, PR-scan, clean-scan, history) | 2026-07-01 |
+| 5 | TestSprite | Batch run remaining 5 tests — Benchmark ✅ PASSED (5/5), PR-scan auth ✅ PASSED (3/3), History ✅ PASSED (5/5); Login page → **blocked** (agent verified UI correct, navigate step classification issue); Clean-scan → **blocked** then **FAILED** | 85 | Clean-scan diff correctly flagged by claim-mismatch detector — source changed without test update is legitimately suspicious | INCONCLUSIVE (2 tests); 3 PASSED | Fix login plan navigate issue; redesign clean-scan diff to use test-only change | 2026-07-01 |
+| 6 | Antigravity Agent | Root-cause clean-scan failure: test diff `+export function add(...)` without corresponding test update legitimately triggers Detector 4 (claim-mismatch). This is correct product behavior — the test design was wrong. Login "blocked" is a persistent TestSprite navigation classification quirk, UI verified correct by agent on both runs. | — | Test design issue (not product bug) for clean-scan; login inconclusive due to nav classification | ANALYSIS | Redesign clean-scan test with test-only diff (no source change) to avoid claim-mismatch trigger | 2026-07-01 |
+
 
 ---
 
