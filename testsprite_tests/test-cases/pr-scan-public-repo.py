@@ -40,7 +40,7 @@ async def run_test():
             "PR Scan input should be visible after auth"
 
         # Step 2: Type a real public GitHub PR URL
-        pr_url = "https://github.com/vercel/next.js/pull/72000"
+        pr_url = "https://github.com/vercel/next.js/pull/73509"
         input_locator = page.locator("input[placeholder*='github.com'], input[type='url'], input[type='text']").first
         await input_locator.fill(pr_url)
 
