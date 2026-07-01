@@ -8,12 +8,23 @@
 import { scanDiff } from '../detectors/engine'
 
 // Hardcoded imports — avoids import.meta.glob which breaks on Vercel serverless
+// Dataset A: Honest Code
 import * as honestMath from '../../tests/fixtures/dataset-a/honest-math'
 import * as honestAuth from '../../tests/fixtures/dataset-a/honest-auth'
+import * as honestCart from '../../tests/fixtures/dataset-a/honest-cart'
+import * as honestValidator from '../../tests/fixtures/dataset-a/honest-validator'
+
+// Dataset B: Cheating AI
 import * as cheatingSkip from '../../tests/fixtures/dataset-b/cheating-skip'
 import * as cheatingIfFalse from '../../tests/fixtures/dataset-b/cheating-if-false'
+import * as cheatingXit from '../../tests/fixtures/dataset-b/cheating-xit'
+import * as cheatingPending from '../../tests/fixtures/dataset-b/cheating-pending'
+
+// Dataset C: Smart Evasion
 import * as evasionAssertionTamper from '../../tests/fixtures/dataset-c/evasion-assertion-tamper'
 import * as evasionMockCatch from '../../tests/fixtures/dataset-c/evasion-mock-catch'
+import * as evasionMockOverride from '../../tests/fixtures/dataset-c/evasion-mock-override'
+import * as evasionConditionalAssert from '../../tests/fixtures/dataset-c/evasion-conditional-assert'
 
 export interface BenchmarkResult {
   dataset: string
@@ -50,14 +61,28 @@ interface FixtureModule {
 /**
  * All known fixtures with their names and module references.
  * This replaces import.meta.glob which is unreliable on Vercel serverless.
+ *
+ * Total: 12 fixtures across 3 datasets (4 per dataset)
+ *   A: Honest Code — honest-math, honest-auth, honest-cart, honest-validator
+ *   B: Cheating AI — cheating-skip, cheating-if-false, cheating-xit, cheating-pending
+ *   C: Evasion — evasion-assertion-tamper, evasion-mock-catch, evasion-mock-override, evasion-conditional-assert
  */
 const FIXTURE_REGISTRY: Array<{ name: string; module: FixtureModule }> = [
+  // Dataset A
   { name: 'honest-math', module: honestMath as unknown as FixtureModule },
   { name: 'honest-auth', module: honestAuth as unknown as FixtureModule },
+  { name: 'honest-cart', module: honestCart as unknown as FixtureModule },
+  { name: 'honest-validator', module: honestValidator as unknown as FixtureModule },
+  // Dataset B
   { name: 'cheating-skip', module: cheatingSkip as unknown as FixtureModule },
   { name: 'cheating-if-false', module: cheatingIfFalse as unknown as FixtureModule },
+  { name: 'cheating-xit', module: cheatingXit as unknown as FixtureModule },
+  { name: 'cheating-pending', module: cheatingPending as unknown as FixtureModule },
+  // Dataset C
   { name: 'evasion-assertion-tamper', module: evasionAssertionTamper as unknown as FixtureModule },
   { name: 'evasion-mock-catch', module: evasionMockCatch as unknown as FixtureModule },
+  { name: 'evasion-mock-override', module: evasionMockOverride as unknown as FixtureModule },
+  { name: 'evasion-conditional-assert', module: evasionConditionalAssert as unknown as FixtureModule },
 ]
 
 /**
