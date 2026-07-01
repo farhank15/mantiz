@@ -1,0 +1,18 @@
+{
+  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
+  "type": "frontend",
+  "name": "Landing page loads with hero section and CTA buttons",
+  "description": "When a visitor opens Mantiz, the landing page renders the hero section headline about AI lie detection, along with at least two call-to-action buttons (e.g. Scan Diff and GitHub login).",
+  "priority": "p0",
+  "planSteps": [
+    { "type": "action", "description": "Navigate to https://mantiz-wine.vercel.app" },
+    {
+      "type": "assertion",
+      "description": "The hero section is visible with a headline that mentions AI lie detection or trust score for code"
+    },
+    {
+      "type": "assertion",
+      "description": "At least one call-to-action button linking to the scan or login page is visible in the hero area"
+    }
+  ]
+}

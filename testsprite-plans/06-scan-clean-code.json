@@ -1,0 +1,23 @@
+{
+  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
+  "type": "frontend",
+  "name": "Scanning honest code returns high Trust Score with no findings",
+  "description": "When a user pastes a clean diff with no cheating patterns into the Scan page and submits, the app returns a high Trust Score (80 or above) and shows zero findings or explicitly states the code is clean.",
+  "priority": "p1",
+  "planSteps": [
+    { "type": "action", "description": "Navigate to https://mantiz-wine.vercel.app/scan" },
+    {
+      "type": "action",
+      "description": "Paste the following clean diff into the text area:\n--- a/src/math.ts\n+++ b/src/math.ts\n@@ -1,3 +1,7 @@\n export function add(a: number, b: number): number {\n-  return a + b;\n+  if (typeof a !== 'number' || typeof b !== 'number') {\n+    throw new Error('Invalid input');\n+  }\n+  return a + b;\n }"
+    },
+    { "type": "action", "description": "Click the Scan or Analyze button to submit the diff" },
+    {
+      "type": "assertion",
+      "description": "The Trust Score displayed is 80 or higher, indicating clean and honest code"
+    },
+    {
+      "type": "assertion",
+      "description": "The findings section shows zero findings, or displays a message confirming no suspicious patterns were detected"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
+  "type": "frontend",
+  "name": "Login page shows GitHub OAuth sign-in button",
+  "description": "When a user navigates to the login page, the page renders a GitHub sign-in button that initiates OAuth. The button is clearly visible and clickable.",
+  "priority": "p1",
+  "planSteps": [
+    { "type": "action", "description": "Navigate to https://mantiz-wine.vercel.app/login" },
+    {
+      "type": "assertion",
+      "description": "A GitHub login or Sign in with GitHub button is visible on the page"
+    },
+    {
+      "type": "assertion",
+      "description": "The page shows a heading or description explaining that GitHub authentication is required to scan pull requests"
+    }
+  ]
+}
