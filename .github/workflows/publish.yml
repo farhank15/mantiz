@@ -51,12 +51,12 @@ jobs:
           node-version: 22
           registry-url: 'https://registry.npmjs.org/'
 
-      - name: Rewrite package scopes to @farhan22
+      - name: Rewrite package scopes to unscoped
         run: |
-          sed -i 's/"name": "@farhank15\/mantiz-core"/"name": "@farhan22\/mantiz-core"/g' packages/mantiz-core/package.json
-          sed -i 's/"name": "@farhank15\/mantiz-cli"/"name": "@farhan22\/mantiz-cli"/g' packages/mantiz-cli/package.json
-          sed -i 's/"@farhank15\/mantiz-core": "0.1.1"/"@farhan22\/mantiz-core": "0.1.1"/g' packages/mantiz-cli/package.json
-          sed -i 's/@farhank15\/mantiz-core/@farhan22\/mantiz-core/g' packages/mantiz-cli/src/index.ts
+          sed -i 's/"name": "@farhank15\/mantiz-core"/"name": "mantiz-core"/g' packages/mantiz-core/package.json
+          sed -i 's/"name": "@farhank15\/mantiz-cli"/"name": "mantiz-cli"/g' packages/mantiz-cli/package.json
+          sed -i 's/"@farhank15\/mantiz-core": "0.1.2"/"mantiz-core": "0.1.2"/g' packages/mantiz-cli/package.json
+          sed -i 's/@farhank15\/mantiz-core/mantiz-core/g' packages/mantiz-cli/src/index.ts
           sed -i '/"publishConfig": {/,/}/d' packages/mantiz-core/package.json
           sed -i '/"publishConfig": {/,/}/d' packages/mantiz-cli/package.json
 
@@ -66,12 +66,12 @@ jobs:
       - name: Build packages
         run: npm run build --if-present
 
-      - name: Publish @farhan22/mantiz-core to NPM
+      - name: Publish mantiz-core to NPM
         run: npm publish -w packages/mantiz-core --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @farhan22/mantiz-cli to NPM
+      - name: Publish mantiz-cli to NPM
         run: npm publish -w packages/mantiz-cli --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
