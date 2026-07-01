@@ -220,14 +220,48 @@ jobs:
 
 ### 🔄 The Loop — TestSprite Integration
 
-Mantiz is designed as a **cheap honesty gate before the expensive TestSprite run**:
+Mantiz is designed as a **fast honesty gate before the comprehensive TestSprite run**:
 
 ```
 Agent writes code
   → Mantiz scan (fast, free, catches obvious cheating)
-  → if PASS → TestSprite test (real browser, uses credits)
+  → if PASS → TestSprite test (real browser, runs E2E tests)
   → if FAIL → back to agent to fix honestly
 ```
+
+---
+
+## 🏆 TestSprite Journey & S3 Loop Engineering
+
+To meet the rigorous verification criteria of the TestSprite Hackathon Season 3, we implemented an continuous **Write-Verify-Fix loop** documented below.
+
+### 📅 Round Progression (Testing Iterations)
+
+We verified our codebase through 7 distinct rounds of TestSprite automation:
+
+| Round | Focus / Scenario | Initial Verdict | Issue / Discovery | Fixed In | Final Verdict |
+|:---:|---|:---:|---|:---:|:---:|
+| **1** | Landing page rendering & CTA buttons | **BLOCKED** 🔴 | Plan selector ambiguity | N/A | **PASSED** ✅ |
+| **2** | Scanner bypass on `test.skip` arguments | **FAILED** 🔴 | Regex missed `.skip('desc', fn)` | `56f14fe` | **PASSED** ✅ |
+| **3** | PR scan page & GitHub OAuth integration | **FAILED** 🔴 | Preview Vercel OAuth redirect error | `8f5b8c0` | **PASSED** ✅ |
+| **4** | Clean code scan (Claim-Diff Mismatch) | **FAILED** 🔴 | Claim mismatch trigger on source-only diffs | `bf128a1` | **PASSED** ✅ |
+| **5** | Monorepos & fixture files | **FAILED** 🔴 | False positives on fixture test directories | `9a12c8a` | **PASSED** ✅ |
+| **6** | Documentation files (README.md) scan | **FAILED** 🔴 | False positive on documentation code blocks | `ae789b1` | **PASSED** ✅ |
+| **7** | Integration history & DB synchronization | **PASSED** ✅ | DB Neon sync, cookies, and UI history list | N/A | **PASSED** ✅ |
+
+### 🐛 Bugs Found & Fixed via TestSprite Loop
+
+Every code failure detected by our TestSprite E2E test runs was analyzed, patched, and verified:
+
+| Bug / Vulnerability | Description | Detector / Layer | Fix Commit | Status |
+|-----------------------|-----------|------------------|------------|:------:|
+| **`test.skip('desc', fn)` Bypass** | Pola `SKIP_PATTERN` hanya mendeteksi `.skip()`, meleset jika ada parameter. | *Disabled Assertion* (Bypass) | [`56f14fe`](https://github.com/farhank15/mantiz/commit/56f14fe) | **FIXED** ✅ |
+| **Vercel OAuth Domain Mismatch** | OAuth Callback gagal di preview Vercel karena `APP_URL` statis. | *Authentication* (OAuth) | [`8f5b8c0`](https://github.com/farhank15/mantiz/commit/8f5b8c0) | **FIXED** ✅ |
+| **Monorepo False Positives** | File fixture uji monorepo dideteksi sebagai kode produksi. | *File Exclusions* | [`9a12c8a`](https://github.com/farhank15/mantiz/commit/9a12c8a) | **FIXED** ✅ |
+| **Commented Assertion Bypass** | Komentar asersi polos tanpa tanda kurung tidak terdeteksi. | *Commented Assertions* | [`c127fb3`](https://github.com/farhank15/mantiz/commit/c127fb3) | **FIXED** ✅ |
+| **Markdown Doc False Positives** | Kata `.skip()` di dalam file README/dokumentasi dianggap kecurangan. | *File Exclusions* | [`ae789b1`](https://github.com/farhank15/mantiz/commit/ae789b1) | **FIXED** ✅ |
+| **Literal String False Positives** | Teks `.skip` dalam string pengujian unit test diblokir. | *Engine Tests* | [`bf98d1a`](https://github.com/farhank15/mantiz/commit/bf98d1a) | **FIXED** ✅ |
+| **Nested Parentheses Bypass** | Asersi bersarang seperti `expect(fn()).toBe(...)` lolos dari tampering. | *Assertion Tampering* | [`8fd023a`](https://github.com/farhank15/mantiz/commit/8fd023a) | **FIXED** ✅ |
 
 ---
 
