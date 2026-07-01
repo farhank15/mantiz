@@ -307,8 +307,25 @@ index abc123..def456 100644
                                     Evidence excerpt
                                   </div>
                                   <div className="overflow-hidden rounded-lg border border-border bg-surface-2">
-                                    <div className="px-3 py-2 font-mono text-[11px] leading-5 text-ink-muted">
-                                      {finding.evidenceExcerpt}
+                                    <div className="px-3 py-2 font-mono text-[11px] leading-5">
+                                      {finding.evidenceExcerpt.split('\n').map((line, li) => {
+                                        const isAdd = line.startsWith('+') && !line.startsWith('+++')
+                                        const isRemove = line.startsWith('-') && !line.startsWith('---')
+                                        const isMeta = line.startsWith('@@') || line.startsWith('Index:') || line.startsWith('diff --git')
+                                        return (
+                                          <div
+                                            key={li}
+                                            className={`${
+                                              isAdd ? 'text-success bg-success/5' :
+                                              isRemove ? 'text-severity-critical bg-severity-critical/5' :
+                                              isMeta ? 'text-interactive' :
+                                              'text-ink-muted'
+                                            } ${isAdd || isRemove ? '-mx-3 px-3' : ''}`}
+                                          >
+                                            {line}
+                                          </div>
+                                        )
+                                      })}
                                     </div>
                                   </div>
                                 </div>
