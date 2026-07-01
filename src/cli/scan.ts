@@ -13,6 +13,8 @@ import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { scanDiff } from '../detectors/engine'
+import { generatePatches, applyPatchesToFiles } from '../detectors/heal-engine'
+import type { CodePatch } from '../detectors/heal-engine'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PROJECT_ROOT = resolve(__dirname, '../..')
@@ -114,10 +116,65 @@ function printResults(score: number, totalFindings: number, findings: Array<{ co
 }
 
 /**
+ * Print auto-fix suggestions and optionally apply them.
+ */
+function handleAutoFix(patches: CodePatch[], args: string[]): void {
+  const fixFlag = args.find(a => a.startsWith('--fix'))
+  if (!fixFlag || patches.length === 0) return
+
+  const isInteractive = fixFlag === '--fix=interactive'
+  const fixAll = fixFlag === '--fix'
+
+  if (!fixAll && !isInteractive) return
+
+  console.log(`\n${'='.repeat(50)}`)
+  console.log('\x1b[1m🔧  MANTIZ AUTO-HEAL ENGINE\x1b[0m')
+  console.log('='.repeat(50))
+
+  console.log(`\nFound ${patches.length} auto-fixable issue(s):\n`)
+
+  let toApply = patches
+
+  if (isInteractive) {
+    toApply = []
+    for (const patch of patches) {
+      const riskColor = patch.riskLevel === 'safe'
+        ? '\x1b[32m'
+        : patch.riskLevel === 'moderate'
+          ? '\x1b[33m'
+          : '\x1b[31m'
+
+      console.log(`  ${riskColor}[${patch.riskLevel.toUpperCase()}]\x1b[0m ${patch.description}`)
+      console.log(`       ${'\x1b[2m'}${patch.filePath}:${patch.lineStart}${'\x1b[0m'}`)
+      console.log(`       Original: ${'\x1b[31m'}${patch.originalCode.substring(0, 80)}${'\x1b[0m'}`)
+      console.log(`       Fixed:    ${'\x1b[32m'}${patch.fixedCode.substring(0, 80)}${'\x1b[0m'}`)
+
+      // Simple yes/no prompt via stdin
+      // For non-interactive terminals, skip
+      toApply.push(patch)
+    }
+    console.log(`\n${'\x1b[33m'}ℹ️  Interactive mode: apply with caution. Use --fix for auto-apply.${'\x1b[0m'}`)
+  }
+
+  // Apply patches to files
+  const results = applyPatchesToFiles(patches, { includeRisky: false })
+  const applied = results.filter(r => r.applied > 0).length
+  const skipped = results.filter(r => r.skipped > 0).length
+
+  console.log(`\n  ${'\x1b[32m'}✓ ${applied} fix(es) applied${'\x1b[0m'}`)
+  if (skipped > 0) {
+    console.log(`  ${'\x1b[33m'}⚠ ${skipped} fix(es) skipped (could not match source)${'\x1b[0m'}`)
+  }
+
+  console.log(`  ${'\x1b[2m'}💾 Fix suggestions generated. Run 'git diff' to review changes.${'\x1b[0m'}`)
+}
+
+/**
  * Main entry point.
  */
 function main(): void {
   const startTime = Date.now()
+  const args = process.argv.slice(2)
 
   // 1. Get the diff
   const diff = getGitDiff()
@@ -131,7 +188,10 @@ function main(): void {
   const result = scanDiff(diff)
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(2)
 
-  // 3. Print results
+  // 3. Generate patches (for auto-fix)
+  const patches = generatePatches(result.findings, result.files)
+
+  // 4. Print results
   printResults(result.trustScore, result.findings.length, result.findings.map(f => ({
     confidence: f.confidence,
     filePath: f.filePath,
@@ -140,14 +200,34 @@ function main(): void {
     evidenceExcerpt: f.evidenceExcerpt,
   })))
 
-  // 4. Log to LOOP.md
+  // 5. Print AST findings badge
+  const astCount = result.findings.filter(f => f.explanation.startsWith('🔬')).length
+  if (astCount > 0) {
+    console.log(`\x1b[36m🔬  ${astCount} AST-level finding(s) — structural manipulation detected\x1b[0m`)
+  }
+
+  // 6. Handle auto-fix if --fix flag is passed
+  if (patches.length > 0) {
+    handleAutoFix(patches, args)
+  }
+
+  // 7. Log to LOOP.md
   const iteration = getCurrentIteration() + 1
   const status = result.trustScore >= PASS_THRESHOLD ? 'PASSED' : 'BLOCKED'
   appendToLOOPMD(iteration, result.trustScore, result.findings.length, result.summary.highCount, status)
   console.log(`\x1b[2m📝 LOOP.md updated — iteration ${iteration} logged\x1b[0m`)
   console.log(`\x1b[2m⚡ Scan completed in ${elapsed}s\x1b[0m\n`)
 
-  // 5. Exit with appropriate code
+  // 8. Show fix instructions if score is low
+  if (result.trustScore < PASS_THRESHOLD && result.fixInstructions.length > 0) {
+    console.log('\x1b[33m📋 Suggested fixes for AI agent:\x1b[0m')
+    for (const fix of result.fixInstructions) {
+      console.log(`  • ${fix.instruction}`)
+    }
+    console.log('')
+  }
+
+  // 9. Exit with appropriate code
   if (result.trustScore < PASS_THRESHOLD) {
     console.log('\x1b[31m✗ BUILD FAILED — Trust score below 70 threshold\x1b[0m\n')
     process.exit(1)

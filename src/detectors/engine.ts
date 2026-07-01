@@ -7,6 +7,7 @@ import { detectClaimDiffMismatch, isNonFunctional } from './claim-mismatch'
 import { detectSilentCatch } from './silent-catch'
 import { detectHallucinatedAssertions } from './hallucination'
 import { detectWithAI } from './ai-assisted'
+import { detectWithAST } from './ast-analyzer'
 
 // ─── Debug Logging ───────────────────────────────────────────────
 
@@ -86,6 +87,10 @@ export function scanDiff(rawDiff: string, prContext?: { title?: string; author?:
   const d6 = detectHallucinatedAssertions(functionalFiles)
   debug(`  Detector 6 [Hallucinated Assertion]: ${d6.length} finding${d6.length !== 1 ? 's' : ''}`)
 
+  // Detector 7: AST-based deep analysis (structural manipulation regex can't catch)
+  const d7 = detectWithAST(functionalFiles)
+  debug(`  Detector 7 [AST Analysis]: ${d7.length} finding${d7.length !== 1 ? 's' : ''}`)
+
   const findings: Finding[] = [
     ...d1,
     ...d2,
@@ -93,6 +98,7 @@ export function scanDiff(rawDiff: string, prContext?: { title?: string; author?:
     ...d4,
     ...d5,
     ...d6,
+    ...d7,
   ]
 
   let deductions = 0
@@ -139,11 +145,11 @@ export async function scanDiffAsync(
   try {
     const aiFindings = await detectWithAI(baseResult.files)
     if (aiFindings.length === 0) {
-      debug('  Detector 7 [AI-Assisted Detection]: 0 findings (clean AI verdict)')
+      debug('  Detector 8 [AI-Assisted Detection]: 0 findings (clean AI verdict)')
       return baseResult
     }
 
-    debug(`  Detector 7 [AI-Assisted Detection]: ${aiFindings.length} finding${aiFindings.length !== 1 ? 's' : ''}`)
+    debug(`  Detector 8 [AI-Assisted Detection]: ${aiFindings.length} finding${aiFindings.length !== 1 ? 's' : ''}`)
 
     const mergedFindings = [...baseResult.findings, ...aiFindings]
 
@@ -175,7 +181,7 @@ export async function scanDiffAsync(
       fixInstructions,
     }
   } catch (err) {
-    debug('  Detector 7 [AI-Assisted Detection]: failed —', err)
+    debug('  Detector 8 [AI-Assisted Detection]: failed —', err)
     return baseResult
   }
 }

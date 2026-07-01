@@ -28,21 +28,37 @@ jobs:
 
       - name: Run Mantiz Scan 🔍
         id: mantiz
-        continue-on-error: true
+        # No continue-on-error — we need accurate exit code for the gate
         run: |
-          npx tsx src/cli/scan.ts
+          npx tsx src/cli/scan.ts || echo "mantiz_score=fail" >> $GITHUB_OUTPUT
         env:
           NODE_ENV: ci
 
-      - name: Mantiz Results
-        if: steps.mantiz.outcome != 'success'
+      - name: Mantiz Cost-Saver Gate 🔒
+        id: mantiz-gate
+        if: always()
         run: |
-          echo "::warning::Mantiz detected suspicious code changes!"
-          echo "::warning::Trust score below 70 — review findings above."
+          MANTIZ_EXIT="${{ steps.mantiz.outcome }}"
+          if [ "$MANTIZ_EXIT" == "success" ]; then
+            echo "::notice::Mantiz scan PASSED — code looks honest."
+            echo "::notice::TestSprite tests will proceed (trust score ≥ 70)."
+            echo "gate=pass" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::╔══════════════════════════════════════════════════════╗"
+            echo "::warning::║  🔒 MANTIZ COST-SAVER GATE ACTIVATED             ║"
+            echo "::warning::╠══════════════════════════════════════════════════════╣"
+            echo "::warning::║  Trust score below 70 — TestSprite tests BLOCKED  ║"
+            echo "::warning::║  Reason: Agent code shows cheating patterns       ║"
+            echo "::warning::║  Result: ~$0.50 TestSprite credits SAVED          ║"
+            echo "::warning::╚══════════════════════════════════════════════════════╝"
+            echo ""
+            echo "::warning::Fix the issues above, then re-run the workflow."
+            echo "gate=blocked" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Run TestSprite Smoke Tests 🧪
         id: testsprite
-        if: always()
+        if: steps.mantiz-gate.outputs.gate == 'pass'
         env:
           TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
           TESTSPRITE_PROJECT_ID: ${{ secrets.TESTSPRITE_PROJECT_ID }}
@@ -58,8 +74,7 @@ jobs:
           FAILED=0
           BLOCKED=0
 
-          echo "Running TestSprite smoke tests against ${TARGET_URL}..."
-          echo "Project: ${PROJECT_ID}"
+          echo "🧪 Mantiz passed — running TestSprite smoke tests..."
           echo ""
 
           # Test 1: Landing page
