@@ -8,7 +8,7 @@
 - **Project:** Mantiz — AI coding agent lie detector
 - **Live URL:** https://mantiz-wine.vercel.app
 - **Stack:** TanStack Start / Neon Postgres / Drizzle ORM / TestSprite CLI
-- **Total iterations:** 21
+- **Total iterations:** 22
 
 ---
 
@@ -37,6 +37,7 @@
 | 19 | Antigravity Agent | Replace direct route redirect with inline auth CTA. Fix tsc compile errors. | 25/100 | 3 findings (2 high) | FAILED | Stage and run final verification scan | 2026-07-01 |
 | 20 | Antigravity Agent | Exclude .testsprite/ artifacts folder in claim-mismatch detector to prevent false positives. | 85/100 | 1 findings (0 high) | PASSED | Verify with tsc & TestSprite CLI | 2026-07-01 |
 | 21 | Antigravity Agent | Implement premium line-by-line color highlights (green/red/blue) in diff previews. | 85/100 | 1 findings (0 high) | PASSED | Verify UI on Scan PR & Scan Diff pages | 2026-07-01 |
+| 22 | Antigravity Agent | Implement fully interactive Scan Details modal with color diffs on History page. | 85/100 | 1 findings (0 high) | PASSED | Redeploy and verify history scan details | 2026-07-01 |
 
 ---
 

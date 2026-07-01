@@ -439,3 +439,52 @@ export const getScanHistory = createServerFn({ method: 'POST' }).handler(async (
 
   return history
 })
+
+/**
+ * Fetch detailed findings and information for a specific scan. Requires valid session.
+ */
+export const getScanDetails = createServerFn({ method: 'POST' })
+  .validator((input: unknown) => input as { scanId: string })
+  .handler(async ({ data }) => {
+    const cookie = getCookie(SESSION_COOKIE)
+    if (!cookie) {
+      throw new Error('Not authenticated')
+    }
+
+    const session = decodeSession(cookie)
+    if (!session) {
+      throw new Error('Session expired')
+    }
+
+    // Fetch the scan details
+    const scanRecord = await db.query.scans.findFirst({
+      where: eq(scans.id, data.scanId),
+    })
+
+    if (!scanRecord) {
+      throw new Error('Scan not found')
+    }
+
+    // Ensure the scan belongs to the current user (security check!)
+    if (scanRecord.userId !== session.dbUserId) {
+      throw new Error('Unauthorized access to this scan')
+    }
+
+    // Fetch findings for this scan
+    const scanFindings = await db.query.findings.findMany({
+      where: eq(findings.scanId, data.scanId),
+    })
+
+    return {
+      scan: {
+        id: scanRecord.id,
+        sourceType: scanRecord.sourceType,
+        sourceRef: scanRecord.sourceRef,
+        rawDiff: scanRecord.rawDiff,
+        trustScore: scanRecord.trustScore,
+        status: scanRecord.status,
+        createdAt: scanRecord.createdAt,
+      },
+      findings: scanFindings,
+    }
+  })

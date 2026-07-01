@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useAuth } from '../../lib/auth-context'
-import { getScanHistory } from '../../server/auth'
-import { Loader2, GitPullRequest, Laptop, Calendar, CheckCircle2, AlertTriangle, ShieldAlert } from 'lucide-react'
+import { getScanHistory, getScanDetails } from '../../server/auth'
+import { Loader2, GitPullRequest, Laptop, Calendar, CheckCircle2, AlertTriangle, ShieldAlert, X, ChevronUp, ChevronDown, FileCode } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export const Route = createFileRoute('/history/')({ component: HistoryPage })
 
@@ -22,6 +23,47 @@ function HistoryPage() {
   const [history, setHistory] = useState<ScanHistoryItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Details Modal States
+  const [selectedScanId, setSelectedScanId] = useState<string | null>(null)
+  const [selectedScanDetails, setSelectedScanDetails] = useState<any | null>(null)
+  const [isDetailsLoading, setIsDetailsLoading] = useState(false)
+  const [detailsError, setDetailsError] = useState<string | null>(null)
+  const [expandedFindings, setExpandedFindings] = useState<Set<number>>(new Set())
+  const [showRawDiff, setShowRawDiff] = useState(false)
+
+  const toggleModalFinding = (idx: number) => {
+    setExpandedFindings((prev) => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx)
+      else next.add(idx)
+      return next
+    })
+  }
+
+  const loadScanDetails = async (scanId: string) => {
+    setIsDetailsLoading(true)
+    setDetailsError(null)
+    setSelectedScanDetails(null)
+    setExpandedFindings(new Set())
+    setShowRawDiff(false)
+
+    try {
+      const data = await getScanDetails({ data: { scanId } })
+      setSelectedScanDetails(data)
+    } catch (err) {
+      setDetailsError('Failed to load scan details.')
+      console.error(err)
+    } finally {
+      setIsDetailsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (selectedScanId) {
+      loadScanDetails(selectedScanId)
+    }
+  }, [selectedScanId])
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -137,7 +179,11 @@ function HistoryPage() {
                     })
 
                     return (
-                      <tr key={item.id} className="transition hover:bg-surface-2/30">
+                      <tr
+                        key={item.id}
+                        className="transition hover:bg-surface-2/40 cursor-pointer"
+                        onClick={() => setSelectedScanId(item.id)}
+                      >
                         {/* Source Type */}
                         <td className="whitespace-nowrap px-5 py-4 font-medium text-ink">
                           {item.sourceType === 'github_pr' ? (
@@ -160,7 +206,8 @@ function HistoryPage() {
                               href={item.sourceRef}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="hover:text-interactive hover:underline"
+                              className="hover:text-interactive hover:underline relative z-10"
+                              onClick={(e) => e.stopPropagation()}
                             >
                               {item.repoName || item.sourceRef.split('github.com/')[1]}
                             </a>
@@ -209,6 +256,264 @@ function HistoryPage() {
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {selectedScanId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedScanId(null)}
+              className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+            />
+
+            {/* Modal Box */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ type: 'spring', duration: 0.4 }}
+              className="relative z-10 flex flex-col w-full max-w-3xl max-h-[85vh] rounded-xl border border-border bg-surface-1 shadow-2xl overflow-hidden"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-border bg-surface-2 px-6 py-4">
+                <div>
+                  <h3 className="text-lg font-bold text-ink flex items-center gap-2">
+                    {selectedScanDetails?.scan.sourceType === 'github_pr' ? (
+                      <span className="inline-flex items-center gap-1.5 text-interactive">
+                        <GitPullRequest className="h-5 w-5" />
+                        PR Scan Details
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-ink-muted">
+                        <Laptop className="h-5 w-5" />
+                        Manual Scan Details
+                      </span>
+                    )}
+                  </h3>
+                  {selectedScanDetails?.scan.createdAt && (
+                    <p className="text-xs text-ink-subdued mt-0.5">
+                      Scanned on {new Date(selectedScanDetails.scan.createdAt).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setSelectedScanId(null)}
+                  className="rounded-lg p-1.5 text-ink-subdued hover:bg-surface-3 hover:text-ink transition animate-none cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {isDetailsLoading && (
+                  <div className="py-20 text-center">
+                    <Loader2 className="mx-auto h-8 w-8 animate-spin text-interactive mb-3" />
+                    <p className="text-sm text-ink-muted">Fetching findings from database...</p>
+                  </div>
+                )}
+
+                {detailsError && (
+                  <div className="rounded-xl border border-severity-critical/20 bg-severity-critical/5 p-6 text-center">
+                    <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-severity-critical" />
+                    <p className="text-sm text-ink-muted">{detailsError}</p>
+                  </div>
+                )}
+
+                {selectedScanDetails && (
+                  <>
+                    {/* Score Bar & Label */}
+                    <div className={`rounded-xl border p-6 text-center ${
+                      selectedScanDetails.scan.trustScore >= 80 ? 'bg-success/5 border-success/15' :
+                      selectedScanDetails.scan.trustScore >= 70 ? 'bg-severity-medium/5 border-severity-medium/15' :
+                      'bg-severity-critical/5 border-severity-critical/15'
+                    }`}>
+                      <div className="mb-2 flex items-center justify-center gap-2">
+                        {selectedScanDetails.scan.trustScore >= 80 ? (
+                          <CheckCircle2 className="h-6 w-6 text-success" />
+                        ) : selectedScanDetails.scan.trustScore >= 70 ? (
+                          <AlertTriangle className="h-6 w-6 text-severity-medium" />
+                        ) : (
+                          <ShieldAlert className="h-6 w-6 text-severity-critical" />
+                        )}
+                        <span className={`text-3xl font-bold ${
+                          selectedScanDetails.scan.trustScore >= 80 ? 'text-success' :
+                          selectedScanDetails.scan.trustScore >= 70 ? 'text-severity-medium' :
+                          'text-severity-critical'
+                        }`}>
+                          {selectedScanDetails.scan.trustScore}/100
+                        </span>
+                      </div>
+                      <div className={`text-sm font-semibold ${
+                        selectedScanDetails.scan.trustScore >= 80 ? 'text-success' :
+                        selectedScanDetails.scan.trustScore >= 70 ? 'text-severity-medium' :
+                        'text-severity-critical'
+                      }`}>
+                        {selectedScanDetails.scan.trustScore >= 80 ? 'CLEAN VERDICT' : 'HIGH CHEAT RISK'}
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="mx-auto mt-4 h-2 w-full max-w-xs overflow-hidden rounded-full bg-surface-2">
+                        <div
+                          style={{ width: `${selectedScanDetails.scan.trustScore}%` }}
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            selectedScanDetails.scan.trustScore >= 80 ? 'bg-success' :
+                            selectedScanDetails.scan.trustScore >= 70 ? 'bg-severity-medium' :
+                            'bg-severity-critical'
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {[
+                        { label: 'Findings', value: selectedScanDetails.findings.length, color: selectedScanDetails.findings.length > 0 ? 'text-severity-critical' : 'text-success' },
+                        { label: 'High Severity', value: selectedScanDetails.findings.filter((f: any) => f.confidence === 'high').length, color: selectedScanDetails.findings.filter((f: any) => f.confidence === 'high').length > 0 ? 'text-severity-critical' : 'text-ink-muted' },
+                        { label: 'Medium Severity', value: selectedScanDetails.findings.filter((f: any) => f.confidence === 'medium').length, color: 'text-severity-medium' },
+                        { label: 'Low Severity', value: selectedScanDetails.findings.filter((f: any) => f.confidence === 'low').length, color: 'text-severity-info' },
+                      ].map((stat) => (
+                        <div key={stat.label} className="rounded-lg border border-border bg-surface-2 p-3 text-center">
+                          <div className={`text-xl font-bold ${stat.color}`}>{stat.value}</div>
+                          <div className="text-[10px] uppercase tracking-wider text-ink-subdued mt-0.5">{stat.label}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Findings list */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-ink">Detected Violations ({selectedScanDetails.findings.length})</h4>
+                      {selectedScanDetails.findings.length > 0 ? (
+                        <div className="rounded-xl border border-border bg-surface-2 overflow-hidden divide-y divide-border">
+                          {selectedScanDetails.findings.map((finding: any, idx: number) => {
+                            const isExpanded = expandedFindings.has(idx)
+                            const confidenceColor = 
+                              finding.confidence === 'high' ? 'bg-severity-critical/10 text-severity-critical border-severity-critical/20' :
+                              finding.confidence === 'medium' ? 'bg-severity-medium/10 text-severity-medium border-severity-medium/20' :
+                              'bg-severity-info/10 text-severity-info border-severity-info/20'
+
+                            return (
+                              <div key={finding.id || idx} className="bg-surface-1 transition hover:bg-surface-2/20">
+                                <button
+                                  onClick={() => toggleModalFinding(idx)}
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-left cursor-pointer"
+                                >
+                                  <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${confidenceColor}`}>
+                                    {finding.confidence}
+                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-medium text-ink truncate">
+                                      {finding.explanation}
+                                    </div>
+                                    <div className="text-xs text-ink-subdued mt-0.5">
+                                      {finding.filePath}:{finding.lineStart}
+                                    </div>
+                                  </div>
+                                  {isExpanded ? (
+                                    <ChevronUp className="h-4 w-4 flex-shrink-0 text-ink-muted" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4 flex-shrink-0 text-ink-muted" />
+                                  )}
+                                </button>
+                                <AnimatePresence>
+                                  {isExpanded && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      transition={{ duration: 0.2 }}
+                                      className="overflow-hidden"
+                                    >
+                                      <div className="border-t border-border px-4 py-3 bg-surface-2/50">
+                                        <div className="mb-1.5 flex items-center gap-1.5 text-xs text-ink-subdued">
+                                          <FileCode className="h-3 w-3" />
+                                          Evidence excerpt
+                                        </div>
+                                        <div className="overflow-hidden rounded-lg border border-border bg-surface-2">
+                                          <div className="px-3 py-2 font-mono text-[11px] leading-5">
+                                            {finding.evidenceExcerpt.split('\n').map((line: string, li: number) => {
+                                              const isAdd = line.startsWith('+') && !line.startsWith('+++')
+                                              const isRemove = line.startsWith('-') && !line.startsWith('---')
+                                              const isMeta = line.startsWith('@@') || line.startsWith('Index:') || line.startsWith('diff --git')
+                                              return (
+                                                <div
+                                                  key={li}
+                                                  className={`${
+                                                    isAdd ? 'text-success bg-success/5' :
+                                                    isRemove ? 'text-severity-critical bg-severity-critical/5' :
+                                                    isMeta ? 'text-interactive' :
+                                                    'text-ink-muted'
+                                                  } ${isAdd || isRemove ? '-mx-3 px-3' : ''}`}
+                                                >
+                                                  {line}
+                                                </div>
+                                              )
+                                            })}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-success/20 bg-success/5 p-8 text-center">
+                          <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-success" />
+                          <h4 className="text-md font-bold text-ink">Honest Code Detected</h4>
+                          <p className="mt-1 text-xs text-ink-muted">No cheating patterns were found in this historical scan.</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Raw Diff Accordion */}
+                    {selectedScanDetails.scan.rawDiff && (
+                      <div className="rounded-xl border border-border overflow-hidden bg-surface-2">
+                        <button
+                          onClick={() => setShowRawDiff(!showRawDiff)}
+                          className="flex w-full items-center justify-between px-4 py-3 bg-surface-2 hover:bg-surface-3 transition text-left cursor-pointer"
+                        >
+                          <span className="text-xs font-semibold text-ink flex items-center gap-1.5">
+                            <FileCode className="h-4 w-4 text-ink-subdued" />
+                            Review Raw Diff ({selectedScanDetails.scan.rawDiff.split('\n').length} lines)
+                          </span>
+                          {showRawDiff ? (
+                            <ChevronUp className="h-4 w-4 text-ink-subdued" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-ink-subdued" />
+                          )}
+                        </button>
+                        <AnimatePresence>
+                          {showRawDiff && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="border-t border-border p-4 bg-surface-1">
+                                <pre className="font-mono text-[10px] text-ink-muted bg-surface-2 p-3 rounded-lg border border-border overflow-x-auto max-h-[300px]">
+                                  {selectedScanDetails.scan.rawDiff}
+                                </pre>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   )
 }
