@@ -10,8 +10,17 @@ const VALID_MATCHERS = new Set([
   'toThrow', 'toThrowError', 'toThrowErrorMatchingSnapshot',
   'toThrowErrorMatchingInlineSnapshot',
 
-  // Jest 29+ matchers — often falsely flagged
+  // Jest 29+ matchers
   'toHaveBeenCalledOnceWith',
+  'toHaveBeenCalled', 'toHaveBeenCalledOnce', 'toHaveBeenCalledTimes',
+  'toHaveBeenCalledWith', 'toHaveReturned', 'toHaveReturnedWith',
+
+  // Mock methods (frequently chained)
+  'mock', 'mocked', 'fn', 'spyOn',
+  'mockReturnValue', 'mockReturnValueOnce', 'mockResolvedValue',
+  'mockResolvedValueOnce', 'mockRejectedValue', 'mockRejectedValueOnce',
+  'mockImplementation', 'mockImplementationOnce', 'mockRestore',
+  'mockClear', 'mockReset',
 
   'toBeArray', 'toBeArrayOfSize', 'toBeBoolean', 'toBeDate',
   'toBeEmpty', 'toBeEmptyObject', 'toBeEven', 'toBeFinite',
@@ -36,9 +45,7 @@ const KNOWN_HALLUCINATED_MATCHERS = [
   'toExist', 'toNotExist', 'toNotBe', 'toNotEqual', 'toNotMatch',
   'toHave', 'toNotHave', 'toHas', 'toNotHas', 'toBePresent',
   'toNotBePresent', 'toIncludeAll', 'toExclude', 'toExcludeAll',
-  'toBeValid', 'toBeInvalid', 'toHaveBeenCalled', 'toHaveBeenCalledOnce',
-  'toHaveBeenCalledTimes', 'toHaveBeenCalledWith', 'toHaveReturned',
-  'toHaveReturnedWith',
+  'toBeValid', 'toBeInvalid',
 ]
 
 function scanLineForHallucination(line: string, lineIndex: number, filePath: string): Finding | null {

@@ -67,7 +67,7 @@ interface FixtureModule {
  *   B: Cheating AI — cheating-skip, cheating-if-false, cheating-xit, cheating-pending
  *   C: Evasion — evasion-assertion-tamper, evasion-mock-catch, evasion-mock-override, evasion-conditional-assert
  */
-const FIXTURE_REGISTRY: Array<{ name: string; module: FixtureModule }> = [
+export const FIXTURE_REGISTRY: Array<{ name: string; module: FixtureModule }> = [
   // Dataset A
   { name: 'honest-math', module: honestMath as unknown as FixtureModule },
   { name: 'honest-auth', module: honestAuth as unknown as FixtureModule },
