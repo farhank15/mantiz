@@ -1,6 +1,10 @@
 import type { Finding, ParsedDiff } from './types'
 import { parseRawDiff } from './diff-parser'
 import { detectDisabledAssertions } from './disabled-assertion'
+import { detectAssertionTampering } from './assertion-tampering'
+import { detectMockToAvoid } from './mock-to-avoid'
+import { detectClaimDiffMismatch } from './claim-mismatch'
+import { detectSilentCatch } from './silent-catch'
 
 export interface ScanResult {
   files: ParsedDiff[]
@@ -47,13 +51,13 @@ export function scanDiff(rawDiff: string): ScanResult {
     }
   }
 
-  // Run all detectors
+  // Run all 5 detectors
   const findings: Finding[] = [
     ...detectDisabledAssertions(files),
-    // Future: detectAssertionTampering(files),
-    // Future: detectMockToAvoidFailure(files),
-    // Future: detectClaimDiffMismatch(files),
-    // Future: detectSilentCatchAndPass(files),
+    ...detectAssertionTampering(files),
+    ...detectMockToAvoid(files),
+    ...detectClaimDiffMismatch(files),
+    ...detectSilentCatch(files),
   ]
 
   // Calculate trust score
