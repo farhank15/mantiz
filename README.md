@@ -37,7 +37,7 @@
 
 **Mantiz** is an AI-powered lie detector for code — specifically designed to catch AI coding agents when they try to cheat their test suites.
 
-When an AI agent writes code, it can subtly **disable assertions, mock failing APIs, skip test suites, hallucinate matchers, or tamper with expected values** to make tests pass. Mantiz scans every line of a diff through **7 detection patterns** (6 static + AI-assisted) and produces a **Trust Score (0–100)** with ranked findings.
+When an AI agent writes code, it can subtly **disable assertions, mock failing APIs, skip test suites, hallucinate matchers, or tamper with expected values** to make tests pass. Mantiz scans every line of a diff through **8 detection patterns** (7 static + AI-assisted) and produces a **Trust Score (0–100)** with ranked findings.
 
 > **Mantiz adalah *honesty gate* yang berjalan sebelum test eksekusi.** Dia tidak menggantikan TestSprite (yang verifikasi behavior), tapi memastikan hasil test yang "lolos" itu lolos beneran — bukan karena dimanipulasi oleh agentnya sendiri.
 
@@ -47,7 +47,7 @@ When an AI agent writes code, it can subtly **disable assertions, mock failing A
 
 ## ✨ Features
 
-### 🔬 7 Detection Patterns (6 Static + AI-Assisted)
+### 🔬 8 Detection Patterns (7 Static + AI-Assisted)
 
 | Pattern | Severity | What It Catches |
 |---------|----------|----------------|
@@ -57,6 +57,7 @@ When an AI agent writes code, it can subtly **disable assertions, mock failing A
 | **Claim-Diff Mismatch** | 🟡 Medium | Commit message says "fix tests" but diff only touches source — no test updated |
 | **Silent Catch-and-Pass** | 🟠 Medium | Empty catch blocks that swallow real errors and let the agent declare success |
 | **Hallucinated Assertion** | 🔴 High | Non-existent Jest/Vitest matchers hallucinated by AI agents (e.g. `.toExist()`) |
+| **AST Analyzer** 🆕 | 🔴 High | Parses added code with `@babel/parser` — detects trivial function bodies (`return true/false`), async gutting (async → empty try/catch), conditional wrapping, and empty test shells |
 | **AI-Assisted Detection** | 🟡 Varies | LLM-powered analysis via Fireworks/Groq — detects test weakening, assertion removal, semantic bypass, coverage reduction |
 
 ### 🧠 Detection Nuances
@@ -198,7 +199,7 @@ npm run preview
 1. Go to [/pr-scan](https://mantiz-wine.vercel.app/pr-scan)
 2. Sign in with GitHub
 3. Paste a PR URL: `https://github.com/owner/repo/pull/123`
-4. Mantiz fetches the diff, runs 7 detectors, and returns findings
+4. Mantiz fetches the diff, runs 8 detectors, and returns findings
 
 ### 🔗 CI/CD Integration
 
@@ -218,6 +219,8 @@ jobs:
           MANTIZ_API_TOKEN: ${{ secrets.MANTIZ_API_TOKEN }}
 ```
 
+> 💡 **Pro tip:** Combined with the Cost-Saver Gate, this workflow blocks TestSprite from running if Mantiz detects cheating — saving your cloud test credits for code that deserves it.
+
 ### 🔄 The Loop — TestSprite Integration
 
 Mantiz is designed as a **fast honesty gate before the comprehensive TestSprite run**:
@@ -228,6 +231,40 @@ Agent writes code
   → if PASS → TestSprite test (real browser, runs E2E tests)
   → if FAIL → back to agent to fix honestly
 ```
+
+### 🩹 Auto-Heal Mode (`--fix`)
+
+Mantiz doesn't just report cheating — it can **auto-fix it**. Run with the `--fix` flag to automatically apply code patches for detected issues:
+
+```bash
+npx mantiz scan diff.diff --fix
+```
+
+**What gets fixed:**
+
+| Pattern | Auto-Fix Behavior |
+|---------|-------------------|
+| **Disabled Assertion** | Re-enables `.skip()` tests, removes `if(false)` wrappers |
+| **Assertion Tampering** | Flags the tampered value with a fix comment |
+| **Silent Catch-and-Pass** | Wraps the empty catch body with `console.error` logging |
+| **Mock-to-Avoid-Failure** | Adds a comment suggesting real integration test |
+
+### ⛔ Cost-Saver Gate
+
+In CI/CD, Mantiz acts as an **intelligent gate** that prevents wasteful TestSprite cloud runs on dishonest code:
+
+```yaml
+# If Mantiz score < 80 → TestSprite is SKIPPED → saves credits 💰
+- name: Mantiz Gate
+  run: |
+    SCORE=$(npx mantiz scan diff.diff --json | jq '.trustScore')
+    if [ "$SCORE" -lt 80 ]; then
+      echo "gate=fail" >> $GITHUB_OUTPUT
+      exit 1  # Blocks TestSprite from running
+    fi
+```
+
+This ensures every TestSprite credit is spent on **code that has already passed the honesty check**.
 
 ---
 
@@ -292,6 +329,7 @@ Visit the [**/benchmark**](https://mantiz-wine.vercel.app/benchmark) dashboard t
 | **ORM** | [Drizzle ORM](https://orm.drizzle.team) |
 | **Auth** | GitHub OAuth + HMAC-signed session cookies |
 | **AI** | [Fireworks Inference](https://fireworks.ai) + [Groq](https://groq.com) |
+| **AST Parsing** | [@babel/parser](https://babeljs.io/docs/babel-parser) |
 | **Diff Parsing** | [diff](https://npm.im/diff) |
 | **Rate Limiting** | In-memory sliding window (3 tiers) |
 | **GitHub API** | [Octokit](https://github.com/octokit) |
