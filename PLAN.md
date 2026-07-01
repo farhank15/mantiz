@@ -37,7 +37,7 @@
 | **GitHub Actions** | ✅ Selesai | `.github/workflows/mantiz.yml` |
 | **GitHub OAuth** | ✅ Selesai | Login via GitHub + session cookie |
 | **PR Scan** | ✅ Selesai | Paste PR URL → fetch diff via Octokit → scan |
-| **Benchmark** | ❌ Belum | 3 dataset + dashboard (Day 5) |
+| **Benchmark** | ✅ Selesai | 3 dataset + runner + dashboard + auto-healer |
 
 ---
 

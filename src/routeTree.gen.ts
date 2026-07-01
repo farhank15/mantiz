@@ -14,6 +14,7 @@ import { Route as ScanIndexRouteImport } from './routes/scan/index'
 import { Route as PrScanIndexRouteImport } from './routes/pr-scan/index'
 import { Route as LoginIndexRouteImport } from './routes/login/index'
 import { Route as HistoryIndexRouteImport } from './routes/history/index'
+import { Route as BenchmarkIndexRouteImport } from './routes/benchmark/index'
 import { Route as AuthGithubCallbackRouteImport } from './routes/auth/github/callback'
 
 const IndexRoute = IndexRouteImport.update({
@@ -41,6 +42,11 @@ const HistoryIndexRoute = HistoryIndexRouteImport.update({
   path: '/history/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BenchmarkIndexRoute = BenchmarkIndexRouteImport.update({
+  id: '/benchmark/',
+  path: '/benchmark/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthGithubCallbackRoute = AuthGithubCallbackRouteImport.update({
   id: '/auth/github/callback',
   path: '/auth/github/callback',
@@ -49,6 +55,7 @@ const AuthGithubCallbackRoute = AuthGithubCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/benchmark/': typeof BenchmarkIndexRoute
   '/history/': typeof HistoryIndexRoute
   '/login/': typeof LoginIndexRoute
   '/pr-scan/': typeof PrScanIndexRoute
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/benchmark': typeof BenchmarkIndexRoute
   '/history': typeof HistoryIndexRoute
   '/login': typeof LoginIndexRoute
   '/pr-scan': typeof PrScanIndexRoute
@@ -66,6 +74,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/benchmark/': typeof BenchmarkIndexRoute
   '/history/': typeof HistoryIndexRoute
   '/login/': typeof LoginIndexRoute
   '/pr-scan/': typeof PrScanIndexRoute
@@ -76,6 +85,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/benchmark/'
     | '/history/'
     | '/login/'
     | '/pr-scan/'
@@ -83,10 +93,17 @@ export interface FileRouteTypes {
     | '/auth/github/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/history' | '/login' | '/pr-scan' | '/scan' | '/auth/github/callback'
+    | '/'
+    | '/benchmark'
+    | '/history'
+    | '/login'
+    | '/pr-scan'
+    | '/scan'
+    | '/auth/github/callback'
   id:
     | '__root__'
     | '/'
+    | '/benchmark/'
     | '/history/'
     | '/login/'
     | '/pr-scan/'
@@ -96,6 +113,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BenchmarkIndexRoute: typeof BenchmarkIndexRoute
   HistoryIndexRoute: typeof HistoryIndexRoute
   LoginIndexRoute: typeof LoginIndexRoute
   PrScanIndexRoute: typeof PrScanIndexRoute
@@ -140,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HistoryIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/benchmark/': {
+      id: '/benchmark/'
+      path: '/benchmark'
+      fullPath: '/benchmark/'
+      preLoaderRoute: typeof BenchmarkIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/github/callback': {
       id: '/auth/github/callback'
       path: '/auth/github/callback'
@@ -152,6 +177,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BenchmarkIndexRoute: BenchmarkIndexRoute,
   HistoryIndexRoute: HistoryIndexRoute,
   LoginIndexRoute: LoginIndexRoute,
   PrScanIndexRoute: PrScanIndexRoute,

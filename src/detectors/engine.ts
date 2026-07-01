@@ -6,6 +6,11 @@ import { detectMockToAvoid } from './mock-to-avoid'
 import { detectClaimDiffMismatch } from './claim-mismatch'
 import { detectSilentCatch } from './silent-catch'
 
+export interface FixInstruction {
+  patternType: string
+  instruction: string
+}
+
 export interface ScanResult {
   files: ParsedDiff[]
   findings: Finding[]
@@ -17,6 +22,7 @@ export interface ScanResult {
     lowCount: number
     filesScanned: number
   }
+  fixInstructions: FixInstruction[]
 }
 
 /**
@@ -48,6 +54,7 @@ export function scanDiff(rawDiff: string): ScanResult {
         lowCount: 0,
         filesScanned: 0,
       },
+      fixInstructions: [],
     }
   }
 
@@ -76,5 +83,68 @@ export function scanDiff(rawDiff: string): ScanResult {
     filesScanned: files.length,
   }
 
-  return { files, findings, trustScore, summary }
+  // Auto-Healer: generate fix instructions for high-severity findings
+  const fixInstructions = trustScore < 80 ? generateFixInstructions(findings) : []
+
+  return { files, findings, trustScore, summary, fixInstructions }
+}
+
+export interface FixInstruction {
+  patternType: string
+  instruction: string
+}
+
+/**
+ * Generate remediation instructions for detected findings.
+ * These can be fed back to an AI agent for self-healing.
+ */
+function generateFixInstructions(findings: Finding[]): FixInstruction[] {
+  const instructions: FixInstruction[] = []
+  const seen = new Set<string>()
+
+  for (const f of findings) {
+    if (seen.has(f.patternType)) continue
+    seen.add(f.patternType)
+
+    switch (f.patternType) {
+      case 'disabled_assertion':
+        instructions.push({
+          patternType: 'disabled_assertion',
+          instruction: `Remove '.skip()', 'if(false)' wrappers, or restore commented-out assertions. ` +
+            `If a test fails, fix the source logic instead of disabling the assertion.`,
+        })
+        break
+      case 'assertion_tampering':
+        instructions.push({
+          patternType: 'assertion_tampering',
+          instruction: `Restore the original assertion expected value and update the source ` +
+            `logic to match. The expected value changed without a corresponding source change.`,
+        })
+        break
+      case 'mock_to_avoid_failure':
+        instructions.push({
+          patternType: 'mock_to_avoid_failure',
+          instruction: `Remove unnecessary mock and add real-path test coverage. ` +
+            `Mocks should only isolate external dependencies, not bypass internal logic.`,
+        })
+        break
+      case 'claim_diff_mismatch':
+        instructions.push({
+          patternType: 'claim_diff_mismatch',
+          instruction: `Update the commit message to accurately describe the changes, ` +
+            `or add the expected test/source changes. The current diff doesn't match the claim.`,
+        })
+        break
+      case 'silent_catch_and_pass':
+        instructions.push({
+          patternType: 'silent_catch_and_pass',
+          instruction: `Add proper error handling in the catch block. ` +
+            `Empty catch blocks silently swallow errors and should include logging, ` +
+            `fallback logic, or re-throw with context.`,
+        })
+        break
+    }
+  }
+
+  return instructions
 }
