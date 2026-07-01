@@ -5,7 +5,7 @@ import type { Finding, ParsedDiff } from './types'
  * Matches: expect(...).toBe(VALUE) / .toEqual(VALUE) / .toMatch(VALUE) / etc.
  */
 const ASSERTION_PATTERN =
-  /expect\s*\([^)]*\)\s*\.\s*(toBe|toEqual|toMatch|toContain|toStrictEqual|toBeNull|toBeUndefined|toBeDefined|toBeTruthy|toBeFalsy)\s*\(([^)]*)\)\s*$/m
+  /expect\s*\((?:[^()]*|\([^()]*\))*\)\s*\.\s*(toBe|toEqual|toMatch|toContain|toStrictEqual|toBeNull|toBeUndefined|toBeDefined|toBeTruthy|toBeFalsy)\s*\(((?:[^()]*|\([^()]*\))*)\)\s*;?\s*$/m
 
 /**
  * Match a single assertion from a diff line.

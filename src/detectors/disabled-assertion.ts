@@ -12,7 +12,7 @@ const TODO_PREFIX = /\/\/\s*TODO/i
 interface MatchResult {
   lineIndex: number
   lineContent: string
-  pattern: 'comment' | 'skip' | 'if_false' | 'todo'
+  pattern: 'comment' | 'skip' | 'if_false' | 'todo' | 'focus'
 }
 
 /**
@@ -37,6 +37,18 @@ function scanHunk(hunkContent: string, baseLine: number): MatchResult[] {
     // Check for .skip()
     if (SKIP_PATTERN.test(line) && (line.includes('it') || line.includes('describe') || line.includes('test'))) {
       matches.push({ lineIndex: baseLine + i, lineContent: line.trim(), pattern: 'skip' })
+      continue
+    }
+
+    // Check for xit/xtest/xdescribe addition
+    if (line.startsWith('+') && /^\+\s*(?:xit|xtest|xdescribe)\b/.test(line)) {
+      matches.push({ lineIndex: baseLine + i, lineContent: line.trim(), pattern: 'skip' })
+      continue
+    }
+
+    // Check for fit/fdescribe addition
+    if (line.startsWith('+') && /^\+\s*(?:fit|fdescribe)\b/.test(line)) {
+      matches.push({ lineIndex: baseLine + i, lineContent: line.trim(), pattern: 'focus' })
       continue
     }
 
@@ -69,6 +81,8 @@ function patternToConfidence(pattern: MatchResult['pattern']): Confidence {
   switch (pattern) {
     case 'skip':
       return 'high'
+    case 'focus':
+      return 'high'
     case 'if_false':
       return 'high'
     case 'comment':
@@ -85,6 +99,8 @@ function patternToExplanation(pattern: MatchResult['pattern']): string {
   switch (pattern) {
     case 'skip':
       return 'Test or test suite marked with .skip() — will be silently ignored by the test runner.'
+    case 'focus':
+      return 'Focused test or test suite (fit/fdescribe) — will cause the runner to skip all other tests in the project.'
     case 'if_false':
       return 'Assertion wrapped in if(false) — the assertion will never execute.'
     case 'comment':

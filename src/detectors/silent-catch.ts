@@ -121,7 +121,7 @@ function scanForSilentCatches(hunkContent: string, baseLine: number): Finding[] 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     // Detect opening of a catch block on an added line
-    if (line.startsWith('+') && /catch\s*(?:\([^)]*\))?\s*$/.test(line)) {
+    if (line.startsWith('+') && /catch\s*(?:\([^)]*\))?\s*\{?\s*$/.test(line)) {
       // Check next few lines for empty/comment-only body
       let hasRealCode = false
       let hasTodo = false
