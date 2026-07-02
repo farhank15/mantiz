@@ -1,153 +1,250 @@
 /**
  * Mantiz Public API — /api/scan
  *
- * Uses TanStack Start createServerFn pattern.
- * Accepts POST with diff + optional token. Returns Trust Score + findings.
+ * TanStack Start Server Route — accepts POST with diff + optional token.
+ * Returns Trust Score + findings as JSON. Callable by external clients.
  *
  * Features:
- * - useAi: boolean — enable AI-assisted detection
+ * - Token auth (optional — anonymous scans allowed)
+ * - Rate limiting (3 tiers: anonymous, token, strict)
+ * - AI-assisted detection (useAi flag)
  * - Threshold from user settings
  * - Webhook delivery on completion
- * - Rate limited + body size check + CORS
+ * - CORS + body size check
  */
 
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerFn } from '@tanstack/react-start'
-import { setResponseHeader } from '@tanstack/react-start/server'
 import { scanDiff, scanDiffAsync } from '../../detectors/engine'
 import { verifyToken, saveAPIScan } from '../../server/tokens'
-import { checkRateLimit } from '../../server/rate-limiter'
+import { checkRateLimit, rateLimitHeaders } from '../../server/rate-limiter'
 import { loadUserSettings } from '../../server/settings'
 import { deliverWebhook } from '../../server/webhook'
 
+const MAX_DIFF_SIZE = 500_000
+const ALLOWED_ORIGINS = [
+  'https://mantiz-wine.vercel.app',
+  'http://localhost:3030',
+  'http://localhost:3000',
+]
+
+function getCorsOrigin(request: Request): string {
+  const origin = request.headers.get('origin') || request.headers.get('Origin') || ''
+  return ALLOWED_ORIGINS.includes(origin) ? origin : 'https://mantiz-wine.vercel.app'
+}
+
+function corsHeaders(origin: string): Record<string, string> {
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400',
+  }
+}
+
 export const Route = createFileRoute('/api/scan')({
   component: () => null,
+  server: {
+    handlers: {
+      OPTIONS: async ({ request }) => {
+        const origin = getCorsOrigin(request)
+        return new Response(null, {
+          status: 204,
+          headers: corsHeaders(origin),
+        })
+      },
+      POST: async ({ request }) => {
+        const origin = getCorsOrigin(request)
+        const baseCors = corsHeaders(origin)
+
+        try {
+          // ── Validate Content-Type ────────────────────────────────
+          const ct = request.headers.get('content-type') || ''
+          if (!ct.includes('application/json')) {
+            return Response.json(
+              { error: 'Content-Type must be application/json' },
+              { status: 415, headers: { ...baseCors, 'Content-Type': 'application/json' } },
+            )
+          }
+
+          // ── Parse body ───────────────────────────────────────────
+          let body: { diff?: string; token?: string; useAi?: boolean }
+          try {
+            body = await request.json() as typeof body
+          } catch {
+            return Response.json(
+              { error: 'Invalid JSON body' },
+              { status: 400, headers: { ...baseCors, 'Content-Type': 'application/json' } },
+            )
+          }
+
+          // Read token from body OR Authorization header
+          let apiToken = body.token
+          if (!apiToken) {
+            const authHeader = request.headers.get('authorization') || request.headers.get('Authorization') || ''
+            const match = authHeader.match(/^Bearer\s+(.+)$/i)
+            if (match) apiToken = match[1]
+          }
+
+          const { diff, useAi } = body
+          const token = apiToken
+
+          // ── Validate diff ────────────────────────────────────────
+          if (!diff || typeof diff !== 'string') {
+            return Response.json(
+              { error: 'Missing required field: diff' },
+              { status: 400, headers: { ...baseCors, 'Content-Type': 'application/json' } },
+            )
+          }
+          if (diff.trim().length === 0) {
+            return Response.json(
+              { error: 'Diff cannot be empty' },
+              { status: 400, headers: { ...baseCors, 'Content-Type': 'application/json' } },
+            )
+          }
+          if (diff.length > MAX_DIFF_SIZE) {
+            return Response.json(
+              { error: `Diff exceeds maximum size of ${MAX_DIFF_SIZE / 1000}KB` },
+              { status: 413, headers: { ...baseCors, 'Content-Type': 'application/json' } },
+            )
+          }
+
+          // ── Rate limiting ────────────────────────────────────────
+          const rateResult = checkRateLimit(
+            token ? 'token' : 'anonymous',
+            token ? `api_token:${token}` : `anonymous:api`,
+          )
+          if (!rateResult.allowed) {
+            return Response.json(
+              {
+                error: token
+                  ? 'Rate limit exceeded. Try again later.'
+                  : 'Rate limit exceeded. Use an API token for higher limits.',
+              },
+              {
+                status: 429,
+                headers: {
+                  ...baseCors,
+                  ...rateLimitHeaders(rateResult),
+                  'Content-Type': 'application/json',
+                  'Retry-After': String(Math.ceil(rateResult.resetMs / 1000)),
+                },
+              },
+            )
+          }
+
+          // ── Token verification ───────────────────────────────────
+          let userId: string | undefined
+          let userLogin = 'anonymous'
+
+          if (token) {
+            const user = await verifyToken(token)
+            if (user) {
+              userId = user.userId
+              userLogin = user.login
+            } else {
+              return Response.json(
+                { error: 'Invalid or revoked API token' },
+                { status: 401, headers: { ...baseCors, 'Content-Type': 'application/json' } },
+              )
+            }
+          }
+
+          // ── Load user settings ───────────────────────────────────
+          const settings = userId ? await loadUserSettings(userId) : null
+          const threshold = settings?.threshold ?? 70
+
+          // ── Run scan ─────────────────────────────────────────────
+          const useAiDetection = useAi || settings?.aiEnabled || false
+          const result = useAiDetection ? await scanDiffAsync(diff) : scanDiff(diff)
+
+          // ── Determine source context from X-Mantiz-Source header ─
+          const sourceLabel = request.headers.get('x-mantiz-source') || 'API / CLI'
+
+          // ── Save to DB + webhook (fire-and-forget) ───────────────
+          if (userId) {
+            const scanId = await saveAPIScan({
+              userId,
+              sourceRef: sourceLabel,
+              rawDiff: diff,
+              trustScore: result.trustScore,
+              findings: result.findings.map((f) => ({
+                patternType: f.patternType,
+                filePath: f.filePath,
+                lineStart: f.lineStart,
+                lineEnd: f.lineEnd,
+                confidence: f.confidence,
+                explanation: f.explanation,
+                evidenceExcerpt: f.evidenceExcerpt,
+              })),
+            }).catch(() => null)
+
+            if (scanId && settings?.webhookEnabled && settings?.webhookUrl) {
+              const passed = result.trustScore >= threshold
+              deliverWebhook({
+                userId,
+                webhookUrl: settings.webhookUrl,
+                scanId,
+                event: passed ? 'scan.completed' : 'scan.failed',
+                payload: {
+                  scanId,
+                  trustScore: result.trustScore,
+                  totalFindings: result.summary.totalFindings,
+                  highCount: result.summary.highCount,
+                  mediumCount: result.summary.mediumCount,
+                  lowCount: result.summary.lowCount,
+                  filesScanned: result.summary.filesScanned,
+                  passed,
+                  threshold,
+                  findings: result.findings.map((f) => ({
+                    patternType: f.patternType,
+                    filePath: f.filePath,
+                    lineStart: f.lineStart,
+                    lineEnd: f.lineEnd,
+                    confidence: f.confidence,
+                    explanation: f.explanation,
+                  })),
+                },
+              }).catch(() => {})
+            }
+          }
+
+          // ── Success response ─────────────────────────────────────
+          return Response.json(
+            {
+              trustScore: result.trustScore,
+              totalFindings: result.summary.totalFindings,
+              highCount: result.summary.highCount,
+              mediumCount: result.summary.mediumCount,
+              lowCount: result.summary.lowCount,
+              filesScanned: result.summary.filesScanned,
+              findings: result.findings.slice(0, 50),
+              fixInstructions: result.fixInstructions,
+              passed: result.trustScore >= threshold,
+              threshold,
+              scannedBy: userLogin,
+              aiDetected: useAiDetection,
+            },
+            {
+              status: 200,
+              headers: {
+                ...baseCors,
+                ...rateLimitHeaders(rateResult),
+                'Content-Type': 'application/json',
+              },
+            },
+          )
+        } catch (err) {
+          // ── Unhandled error ──────────────────────────────────────
+          const message = err instanceof Error ? err.message : 'Internal server error'
+          return Response.json(
+            { error: message },
+            {
+              status: 500,
+              headers: { ...baseCors, 'Content-Type': 'application/json' },
+            },
+          )
+        }
+      },
+    },
+  },
 })
-
-const MAX_DIFF_SIZE = 500_000
-
-/**
- * Server-side scan handler. Invoked via POST.
- * Returns plain JSON data or throws for errors.
- */
-export const handleScan = createServerFn({ method: 'POST' })
-  .validator((input: unknown) => {
-    const v = input as { diff?: string; token?: string; useAi?: boolean }
-    if (!v.diff || typeof v.diff !== 'string') {
-      throw new Error('Missing required field: diff')
-    }
-    if (v.diff.trim().length === 0) {
-      throw new Error('Diff cannot be empty')
-    }
-    if (v.diff.length > MAX_DIFF_SIZE) {
-      throw new Error(`Diff exceeds maximum size of ${MAX_DIFF_SIZE / 1000}KB`)
-    }
-    return { diff: v.diff, token: v.token, useAi: !!v.useAi }
-  })
-  .handler(async ({ data }) => {
-    const { diff, token, useAi } = data
-
-    // CORS — restrict to known origins
-    setResponseHeader('Access-Control-Allow-Origin', 'https://mantiz-wine.vercel.app')
-    setResponseHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-    setResponseHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-    setResponseHeader('Access-Control-Max-Age', '86400')
-
-    // Rate limiting — use IP from request context
-    const rateResult = checkRateLimit(
-      token ? 'token' : 'anonymous',
-      token ? `api_token:${token}` : `anonymous:api`,
-    )
-    if (!rateResult.allowed) {
-      throw new Error(
-        token
-          ? 'Rate limit exceeded. Try again later.'
-          : 'Rate limit exceeded. Use an API token for higher limits.',
-      )
-    }
-
-    // Token verification
-    let userId: string | undefined
-    let userLogin = 'anonymous'
-
-    if (token) {
-      const user = await verifyToken(token)
-      if (user) {
-        userId = user.userId
-        userLogin = user.login
-      } else {
-        throw new Error('Invalid or revoked API token')
-      }
-    }
-
-    // Load user settings
-    const settings = userId ? await loadUserSettings(userId) : null
-    const threshold = settings?.threshold ?? 70
-
-    // Run scan
-    const useAiDetection = useAi || settings?.aiEnabled || false
-    const result = useAiDetection ? await scanDiffAsync(diff) : scanDiff(diff)
-
-    // Save to DB + webhook (fire-and-forget)
-    if (userId) {
-      const scanId = await saveAPIScan({
-        userId,
-        rawDiff: diff,
-        trustScore: result.trustScore,
-        findings: result.findings.map((f) => ({
-          patternType: f.patternType,
-          filePath: f.filePath,
-          lineStart: f.lineStart,
-          lineEnd: f.lineEnd,
-          confidence: f.confidence,
-          explanation: f.explanation,
-          evidenceExcerpt: f.evidenceExcerpt,
-        })),
-      }).catch(() => null)
-
-      if (scanId && settings?.webhookEnabled && settings?.webhookUrl) {
-        const passed = result.trustScore >= threshold
-        deliverWebhook({
-          userId,
-          webhookUrl: settings.webhookUrl,
-          scanId,
-          event: passed ? 'scan.completed' : 'scan.failed',
-          payload: {
-            scanId,
-            trustScore: result.trustScore,
-            totalFindings: result.summary.totalFindings,
-            highCount: result.summary.highCount,
-            mediumCount: result.summary.mediumCount,
-            lowCount: result.summary.lowCount,
-            filesScanned: result.summary.filesScanned,
-            passed,
-            threshold,
-            findings: result.findings.map((f) => ({
-              patternType: f.patternType,
-              filePath: f.filePath,
-              lineStart: f.lineStart,
-              lineEnd: f.lineEnd,
-              confidence: f.confidence,
-              explanation: f.explanation,
-            })),
-          },
-        }).catch(() => {})
-      }
-    }
-
-    // Return plain data — framework handles HTTP framing
-    return {
-      trustScore: result.trustScore,
-      totalFindings: result.summary.totalFindings,
-      highCount: result.summary.highCount,
-      mediumCount: result.summary.mediumCount,
-      lowCount: result.summary.lowCount,
-      filesScanned: result.summary.filesScanned,
-      findings: result.findings.slice(0, 50),
-      fixInstructions: result.fixInstructions,
-      passed: result.trustScore >= threshold,
-      threshold,
-      scannedBy: userLogin,
-      aiDetected: useAiDetection,
-    }
-  })

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Github,
@@ -59,61 +60,55 @@ function PRScanPage() {
   const navigate = useNavigate();
   const [prUrl, setPrUrl] = useState("");
   const [result, setResult] = useState<PRScanResult | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [isSharing, setIsSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [expandedFindings, setExpandedFindings] = useState<Set<number>>(
     new Set(),
   );
 
-  const handleShare = async () => {
-    if (!result) return;
+  // ── TanStack Query: Mutations ─────────────────────────────
+  const scanPRMutation = useMutation({
+    mutationFn: () => scanPR({ data: { prUrl: prUrl.trim() } }),
+    onSuccess: (data) => setResult(data),
+    onError: (err: Error) => setError(err.message || "Failed to scan PR. Please try again."),
+  });
 
-    if (shareUrl) {
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        setCopySuccess(true);
-        setTimeout(() => setCopySuccess(false), 2000);
-      } catch { /* fallback */ }
-      return
-    }
-
-    setIsSharing(true);
-    try {
-      const shareResult = await createShareLink({ data: {
-        sourceType: "github_pr",
-        sourceRef: result.pr.url,
-        scanData: {
-          trustScore: result.scan.trustScore,
-          totalFindings: result.scan.totalFindings,
-          highCount: result.scan.highCount,
-          mediumCount: result.scan.mediumCount,
-          lowCount: result.scan.lowCount,
-          filesScanned: result.scan.filesScanned,
-          files: result.scan.filesScanned,
-          findings: result.scan.findings.map((f) => ({
-            patternType: f.patternType,
-            filePath: f.filePath,
-            lineStart: f.lineStart,
-            lineEnd: f.lineStart,
-            confidence: f.confidence,
-            explanation: f.explanation,
-            evidenceExcerpt: f.evidenceExcerpt,
-          })),
+  const createShareMutation = useMutation({
+    mutationFn: () => {
+      if (!result) throw new Error("No scan result");
+      return createShareLink({
+        data: {
+          sourceType: "github_pr",
+          sourceRef: result.pr.url,
+          scanData: {
+            trustScore: result.scan.trustScore,
+            totalFindings: result.scan.totalFindings,
+            highCount: result.scan.highCount,
+            mediumCount: result.scan.mediumCount,
+            lowCount: result.scan.lowCount,
+            filesScanned: result.scan.filesScanned,
+            files: result.scan.filesScanned,
+            findings: result.scan.findings.map((f) => ({
+              patternType: f.patternType,
+              filePath: f.filePath,
+              lineStart: f.lineStart,
+              lineEnd: f.lineStart,
+              confidence: f.confidence,
+              explanation: f.explanation,
+              evidenceExcerpt: f.evidenceExcerpt,
+            })),
+          },
         },
-      }})
-      setShareUrl(shareResult.url)
-      await navigator.clipboard.writeText(shareResult.url)
-      setCopySuccess(true)
-      setTimeout(() => setCopySuccess(false), 2000)
-    } catch (err) {
-      console.error("Failed to create share link:", err)
-    } finally {
-      setIsSharing(false);
-    }
-  };
+      });
+    },
+    onSuccess: async (shareResult) => {
+      setShareUrl(shareResult.url);
+      await navigator.clipboard.writeText(shareResult.url);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    },
+  });
 
   const toggleFinding = (idx: number) => {
     setExpandedFindings((prev) => {
@@ -159,25 +154,11 @@ function PRScanPage() {
     );
   }
 
-  const handleScan = async () => {
+  const handleScan = () => {
     if (!prUrl.trim()) return;
-
-    setIsLoading(true);
     setError(null);
     setResult(null);
-
-    try {
-      const data = await scanPR({ data: { prUrl: prUrl.trim() } });
-      setResult(data);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to scan PR. Please try again.",
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    scanPRMutation.mutate();
   };
 
   const getScoreColor = (score: number) => {
@@ -227,15 +208,15 @@ function PRScanPage() {
             />
             <button
               onClick={handleScan}
-              disabled={!prUrl.trim() || isLoading}
+              disabled={!prUrl.trim() || scanPRMutation.isPending}
               className="btn btn-primary whitespace-nowrap"
             >
-              {isLoading ? (
+              {scanPRMutation.isPending ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
               ) : (
                 <Search className="h-4 w-4" />
               )}
-              {isLoading ? "Scanning..." : "Scan"}
+              {scanPRMutation.isPending ? "Scanning..." : "Scan"}
             </button>
           </div>
 
@@ -247,9 +228,9 @@ function PRScanPage() {
 
         {/* Scan Animation */}
         <AnimatePresence>
-          {isLoading && (
+          {scanPRMutation.isPending && (
             <ScanAnimation
-              isScanning={isLoading}
+              isScanning={scanPRMutation.isPending}
               scanPhase="static"
               lineCount={prUrl.length}
               onComplete={() => {}}
@@ -493,18 +474,27 @@ function PRScanPage() {
                   Scan Another PR
                 </button>
                 <button
-                  onClick={handleShare}
-                  disabled={isSharing}
+                  onClick={() => {
+                    if (shareUrl) {
+                      navigator.clipboard.writeText(shareUrl).then(() => {
+                        setCopySuccess(true);
+                        setTimeout(() => setCopySuccess(false), 2000);
+                      }).catch(() => {});
+                      return;
+                    }
+                    createShareMutation.mutate();
+                  }}
+                  disabled={createShareMutation.isPending}
                   className="btn btn-secondary"
                 >
-                  {isSharing ? (
+                  {createShareMutation.isPending ? (
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   ) : copySuccess ? (
                     <Check className="h-4 w-4 text-success" />
                   ) : (
                     <Share2 className="h-4 w-4" />
                   )}
-                  {isSharing ? "Generating..." : copySuccess ? "Link Copied!" : shareUrl ? "Copy Link" : "Share Results"}
+                  {createShareMutation.isPending ? "Generating..." : copySuccess ? "Link Copied!" : shareUrl ? "Copy Link" : "Share Results"}
                 </button>
               </div>
             </motion.div>
@@ -512,7 +502,7 @@ function PRScanPage() {
         </AnimatePresence>
 
         {/* Empty state */}
-        {!result && !isLoading && !error && prUrl.trim() === "" && (
+        {!result && !scanPRMutation.isPending && !error && prUrl.trim() === "" && (
           <div className="rounded-xl border border-dashed border-border bg-surface-1 p-12 text-center">
             <Github className="mx-auto mb-3 h-10 w-10 text-ink-subdued" />
             <p className="text-ink-muted">

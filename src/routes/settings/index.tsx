@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Key,
@@ -30,16 +31,6 @@ import PageHeader from "../../components/PageHeader";
 
 export const Route = createFileRoute("/settings/")({ component: SettingsPage });
 
-interface TokenItem {
-  id: string;
-  name: string;
-  tokenPrefix: string;
-  createdAt: string;
-  lastUsedAt: string | null;
-  expiresAt: string | null;
-  isRevoked: boolean;
-}
-
 interface ScanSettings {
   threshold: number;
   aiEnabled: boolean;
@@ -50,8 +41,7 @@ interface ScanSettings {
 
 function SettingsPage() {
   const { isAuthenticated, isLoading: authLoading, login } = useAuth();
-  const [tokens, setTokens] = useState<TokenItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showNewToken, setShowNewToken] = useState(false);
   const [newTokenName, setNewTokenName] = useState("");
   const [createdToken, setCreatedToken] = useState<string | null>(null);
@@ -59,86 +49,17 @@ function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showCreated, setShowCreated] = useState(false);
 
-  // Scan settings state
-  const [settings, setSettings] = useState<ScanSettings>({
-    threshold: 70,
-    aiEnabled: false,
-    minScore: 0,
-    webhookUrl: null,
-    webhookEnabled: false,
-  });
-  const [settingsLoading, setSettingsLoading] = useState(true);
-  const [settingsSaving, setSettingsSaving] = useState(false);
-  const [settingsSaved, setSettingsSaved] = useState(false);
-  const [webhookTesting, setWebhookTesting] = useState(false);
-  const [webhookTestResult, setWebhookTestResult] = useState<{ ok: boolean; message: string } | null>(null);
-  const [webhookHistory, setWebhookHistory] = useState<any[]>([]);
-  const [showWebhookHistory, setShowWebhookHistory] = useState(false);
-  const [webhookHistoryLoading, setWebhookHistoryLoading] = useState(false);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadTokens();
-      loadSettings();
-    } else if (!authLoading) {
-      setIsLoading(false);
-      setSettingsLoading(false);
-    }
-  }, [isAuthenticated, authLoading]);
-
-  const loadSettings = async () => {
-    try {
-      setSettingsLoading(true);
-      const data = await getUserSettings();
-      setSettings(data);
-    } catch (err) {
-      console.error("Failed to load settings:", err);
-    } finally {
-      setSettingsLoading(false);
-    }
-  };
-
-  const handleSaveSettings = async () => {
-    try {
-      setSettingsSaving(true);
-      setError(null);
-      await saveUserSettings({ data: settings });
-      setSettingsSaved(true);
-      setTimeout(() => setSettingsSaved(false), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save settings");
-    } finally {
-      setSettingsSaving(false);
-    }
-  };
-
-  const handleTestWebhook = async () => {
-    if (!settings.webhookUrl) return;
-    try {
-      setWebhookTesting(true);
-      setWebhookTestResult(null);
-      const result = await testWebhook({ data: { url: settings.webhookUrl } });
-      setWebhookTestResult({
-        ok: result.ok,
-        message: result.ok
-          ? `Webhook responded with ${result.status}`
-          : `Failed: ${result.error || "No response"}`,
-      });
-    } catch (err) {
-      setWebhookTestResult({
-        ok: false,
-        message: `Error: ${err instanceof Error ? err.message : "Unknown"}`,
-      });
-    } finally {
-      setWebhookTesting(false);
-    }
-  };
-
-  const loadTokens = async () => {
-    try {
-      setIsLoading(true);
-      const data = await listTokens();
-      const mapped: TokenItem[] = data.map((t: any) => ({
+  // ── TanStack Query: Tokens ────────────────────────────────
+  const {
+    data: tokens = [],
+    isLoading: tokensLoading,
+  } = useQuery({
+    queryKey: ["tokens"],
+    queryFn: listTokens,
+    enabled: isAuthenticated,
+    staleTime: 2 * 60_000, // 2min — tokens rarely change
+    select: (data) =>
+      data.map((t: any) => ({
         id: t.id,
         name: t.name,
         tokenPrefix: t.tokenPrefix,
@@ -157,39 +78,99 @@ function SettingsPage() {
             : new Date(t.expiresAt).toISOString()
           : null,
         isRevoked: t.isRevoked,
-      }));
-      setTokens(mapped);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load tokens");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      })),
+  });
 
-  const handleCreate = async () => {
-    if (!newTokenName.trim()) return;
-    try {
-      setError(null);
-      const result = await createToken({ data: { name: newTokenName.trim() } });
+  // ── TanStack Query: Settings ──────────────────────────────
+  const {
+    data: serverSettings,
+    isLoading: settingsLoading,
+  } = useQuery({
+    queryKey: ["settings"],
+    queryFn: getUserSettings,
+    enabled: isAuthenticated,
+    staleTime: 5 * 60_000, // 5min — settings rarely change
+  });
+
+  const [settings, setSettings] = useState<ScanSettings>({
+    threshold: 70,
+    aiEnabled: false,
+    minScore: 0,
+    webhookUrl: null,
+    webhookEnabled: false,
+  });
+
+  // Sync server settings → local state when loaded
+  useEffect(() => {
+    if (serverSettings) setSettings(serverSettings);
+  }, [serverSettings]);
+
+  // ── TanStack Query: Webhook History ───────────────────────
+  const [showWebhookHistory, setShowWebhookHistory] = useState(false);
+  const {
+    data: webhookHistory = [],
+    isFetching: webhookHistoryLoading,
+  } = useQuery({
+    queryKey: ["webhook-events"],
+    queryFn: () => getWebhookEvents({ data: { limit: 10 } }),
+    enabled: isAuthenticated && showWebhookHistory,
+    staleTime: 30_000, // 30s — webhook events can change
+  });
+
+  // ── Mutations ─────────────────────────────────────────────
+  const [settingsSaved, setSettingsSaved] = useState(false);
+
+  const saveSettingsMutation = useMutation({
+    mutationFn: () => saveUserSettings({ data: settings }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+      setSettingsSaved(true);
+      setTimeout(() => setSettingsSaved(false), 3000);
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  const createTokenMutation = useMutation({
+    mutationFn: () => createToken({ data: { name: newTokenName.trim() } }),
+    onSuccess: (result) => {
       setCreatedToken(result.raw);
       setShowCreated(true);
       setNewTokenName("");
       setShowNewToken(false);
-      await loadTokens();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create token");
-    }
-  };
+      queryClient.invalidateQueries({ queryKey: ["tokens"] });
+    },
+    onError: (err: Error) => setError(err.message),
+  });
 
-  const handleRevoke = async (tokenId: string) => {
-    try {
-      setError(null);
-      await revokeToken({ data: { tokenId } });
-      await loadTokens();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to revoke token");
+  const revokeTokenMutation = useMutation({
+    mutationFn: (tokenId: string) => revokeToken({ data: { tokenId } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tokens"] }),
+    onError: (err: Error) => setError(err.message),
+  });
+
+  const testWebhookMutation = useMutation({
+    mutationFn: () => testWebhook({ data: { url: settings.webhookUrl! } }),
+  });
+
+  // Watch for test webhook result
+  useEffect(() => {
+    if (testWebhookMutation.data) {
+      setWebhookTestResult({
+        ok: testWebhookMutation.data.ok,
+        message: testWebhookMutation.data.ok
+          ? `Webhook responded with ${testWebhookMutation.data.status}`
+          : `Failed: ${testWebhookMutation.data.error || "No response"}`,
+      });
     }
-  };
+    if (testWebhookMutation.isError) {
+      setWebhookTestResult({
+        ok: false,
+        message: `Error: ${(testWebhookMutation.error as Error).message}`,
+      });
+    }
+  }, [testWebhookMutation.data, testWebhookMutation.isError]);
+
+  const [webhookTestResult, setWebhookTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const handleCopy = () => {
     if (createdToken) {
@@ -398,11 +379,11 @@ function SettingsPage() {
                     className="field-input flex-1"
                   />
                   <button
-                    onClick={handleTestWebhook}
-                    disabled={!settings.webhookUrl || webhookTesting}
+                    onClick={() => testWebhookMutation.mutate()}
+                    disabled={!settings.webhookUrl || testWebhookMutation.isPending}
                     className="btn btn-secondary text-xs"
                   >
-                    {webhookTesting ? (
+                    {testWebhookMutation.isPending ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
                       "Test"
@@ -420,17 +401,7 @@ function SettingsPage() {
 
                 {/* Webhook History Toggle */}
                 <button
-                  onClick={async () => {
-                    if (!showWebhookHistory) {
-                      setWebhookHistoryLoading(true);
-                      try {
-                        const events = await getWebhookEvents({ data: { limit: 10 } });
-                        setWebhookHistory(events);
-                      } catch {}
-                      setWebhookHistoryLoading(false);
-                    }
-                    setShowWebhookHistory(!showWebhookHistory);
-                  }}
+                  onClick={() => setShowWebhookHistory(!showWebhookHistory)}
                   className="mt-2 flex items-center gap-1.5 text-xs text-ink-muted hover:text-ink transition"
                 >
                   <History className="h-3 w-3" />
@@ -479,16 +450,16 @@ function SettingsPage() {
               {/* Save button */}
               <div className="px-5 py-4 flex justify-end">
                 <button
-                  onClick={handleSaveSettings}
-                  disabled={settingsSaving}
+                  onClick={() => saveSettingsMutation.mutate()}
+                  disabled={saveSettingsMutation.isPending}
                   className="btn btn-primary"
                 >
-                  {settingsSaving ? (
+                  {saveSettingsMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : settingsSaved ? (
                     <Check className="h-4 w-4" />
                   ) : null}
-                  {settingsSaving ? "Saving..." : settingsSaved ? "Saved!" : "Save Settings"}
+                  {saveSettingsMutation.isPending ? "Saving..." : settingsSaved ? "Saved!" : "Save Settings"}
                 </button>
               </div>
             </div>
@@ -536,10 +507,10 @@ function SettingsPage() {
                       placeholder="e.g., GitHub Actions, My CLI"
                       className="field-input flex-1"
                       autoFocus
-                      onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                      onKeyDown={(e) => e.key === "Enter" && createTokenMutation.mutate()}
                     />
                     <button
-                      onClick={handleCreate}
+                      onClick={() => createTokenMutation.mutate()}
                       disabled={!newTokenName.trim()}
                       className="btn btn-primary"
                     >
@@ -602,21 +573,21 @@ function SettingsPage() {
             )}
           </AnimatePresence>
 
-          {isLoading && (
+          {tokensLoading && (
             <div className="p-8 text-center">
               <Loader2 className="mx-auto h-6 w-6 animate-spin text-interactive" />
               <p className="mt-2 text-xs text-ink-muted">Loading tokens...</p>
             </div>
           )}
 
-          {!isLoading && activeTokens.length === 0 && !showNewToken && (
+          {!tokensLoading && activeTokens.length === 0 && !showNewToken && (
             <div className="p-8 text-center">
               <Key className="mx-auto mb-3 h-10 w-10 text-ink-subdued" />
               <p className="text-sm text-ink-muted">No API tokens yet. Create one to integrate Mantiz with your CI/CD.</p>
             </div>
           )}
 
-          {!isLoading && activeTokens.length > 0 && (
+          {!tokensLoading && activeTokens.length > 0 && (
             <div className="divide-y divide-border">
               {activeTokens.map((token) => (
                 <div key={token.id} className="flex items-center justify-between px-5 py-3.5">
@@ -633,7 +604,7 @@ function SettingsPage() {
                       </div>
                     </div>
                   </div>
-                  <button onClick={() => handleRevoke(token.id)} className="btn btn-danger text-xs p-2" title="Revoke token">
+                  <button onClick={() => revokeTokenMutation.mutate(token.id)} className="btn btn-danger text-xs p-2" title="Revoke token">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
