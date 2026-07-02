@@ -157,6 +157,7 @@ async function main(): Promise<void> {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiToken}`,
+          'X-Mantiz-Source': 'cli',
         },
         body: JSON.stringify({ diff: diffText, useAi: args.includes('--ai') }),
       })

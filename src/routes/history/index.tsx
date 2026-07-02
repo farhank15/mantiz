@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { useAuth } from "../../lib/auth-context";
 import { getScanHistory, getScanDetails } from "../../server/auth";
 import { updateFindingVerdict, type UserVerdict } from "../../server/verdict";
@@ -8,6 +9,7 @@ import PageHeader from "../../components/PageHeader";
 import {
   Loader2,
   GitPullRequest,
+  Terminal,
   Laptop,
   Calendar,
   CheckCircle2,
@@ -30,7 +32,7 @@ export const Route = createFileRoute("/history/")({ component: HistoryPage });
 
 interface ScanHistoryItem {
   id: string;
-  sourceType: "manual" | "github_pr";
+  sourceType: "manual" | "github_pr" | "api";
   sourceRef: string | null;
   trustScore: number | null;
   status: "pending" | "complete" | "failed";
@@ -49,28 +51,45 @@ interface HistoryResponse {
 function HistoryPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [history, setHistory] = useState<ScanHistoryItem[]>([]);
-  const [hasMore, setHasMore] = useState(false);
-  const [totalScans, setTotalScans] = useState(0);
-  const [offset, setOffset] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  // Details Modal States
+  // ── TanStack Query: Scan History (infinite) ───────────────
+  const {
+    data: historyPages,
+    isLoading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+    error,
+  } = useInfiniteQuery<HistoryResponse>({
+    queryKey: ["scan-history"],
+    placeholderData: (prev) => prev,
+    queryFn: ({ pageParam = 0 }) =>
+      getScanHistory({ data: { limit: 15, offset: pageParam } }),
+    getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.offset + 15 : undefined,
+    initialPageParam: 0,
+    enabled: isAuthenticated,
+  });
+
+  const history = historyPages?.pages.flatMap((p) => p.scans) ?? [];
+  const totalScans = historyPages?.pages[0]?.total ?? 0;
+
+  // ── TanStack Query: Scan Details Modal ────────────────────
   const [selectedScanId, setSelectedScanId] = useState<string | null>(null);
-  const [selectedScanDetails, setSelectedScanDetails] = useState<any | null>(
-    null,
-  );
-  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
-  const [detailsError, setDetailsError] = useState<string | null>(null);
-  const [expandedFindings, setExpandedFindings] = useState<Set<number>>(
-    new Set(),
-  );
+  const [expandedFindings, setExpandedFindings] = useState<Set<number>>(new Set());
   const [showRawDiff, setShowRawDiff] = useState(false);
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [isSharing, setIsSharing] = useState(false);
+
+  const {
+    data: selectedScanDetails,
+    isLoading: isDetailsLoading,
+    error: detailsError,
+  } = useQuery({
+    queryKey: ["scan-details", selectedScanId],
+    queryFn: () => getScanDetails({ data: { scanId: selectedScanId! } }),
+    enabled: !!selectedScanId,
+    staleTime: 2 * 60_000, // 2min — scan results don't change
+    placeholderData: (prev) => prev, // keep old scan visible while loading new
+  });
 
   const toggleModalFinding = (idx: number) => {
     setExpandedFindings((prev) => {
@@ -81,63 +100,53 @@ function HistoryPage() {
     });
   };
 
-  const loadScanDetails = async (scanId: string) => {
-    setIsDetailsLoading(true);
-    setDetailsError(null);
-    setSelectedScanDetails(null);
-    setExpandedFindings(new Set());
-    setShowRawDiff(false);
+  // ── TanStack Query: Mutations ─────────────────────────────
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
 
-    try {
-      const data = await getScanDetails({ data: { scanId } });
-      setSelectedScanDetails(data);
-    } catch (err) {
-      setDetailsError("Failed to load scan details.");
-      console.error(err);
-    } finally {
-      setIsDetailsLoading(false);
-    }
-  };
+  const updateVerdictMutation = useMutation({
+    mutationFn: (params: { findingId: string; verdict: UserVerdict }) =>
+      updateFindingVerdict({ data: params }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["scan-details", selectedScanId] });
+    },
+  });
 
-  useEffect(() => {
-    if (selectedScanId) {
-      loadScanDetails(selectedScanId);
-    }
-    // Reset share states when opening a different scan
-    setShareUrl(null);
-    setCopySuccess(false);
-  }, [selectedScanId]);
-
-  const loadHistory = useCallback(async (pageOffset: number, append = false) => {
-    try {
-      const data = await getScanHistory({ data: { limit: 15, offset: pageOffset } }) as unknown as HistoryResponse;
-      if (append) {
-        setHistory((prev) => [...prev, ...data.scans]);
-      } else {
-        setHistory(data.scans);
-      }
-      setHasMore(data.hasMore);
-      setTotalScans(data.total);
-      setOffset(pageOffset);
-    } catch (err) {
-      setError("Failed to load scan history");
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
-    }
-  }, []);
-
-  const handleLoadMore = () => {
-    setIsLoadingMore(true);
-    loadHistory(offset + 15, true);
-  };
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    setIsLoading(true);
-    loadHistory(0, false);
-  }, [isAuthenticated, loadHistory]);
+  const createShareMutation = useMutation({
+    mutationFn: (scan: any) => {
+      const findings = scan.findings.map((f: any) => ({
+        patternType: f.patternType,
+        filePath: f.filePath,
+        lineStart: f.lineStart,
+        lineEnd: f.lineEnd,
+        confidence: f.confidence,
+        explanation: f.explanation,
+        evidenceExcerpt: f.evidenceExcerpt,
+      }));
+      return createShareLink({
+        data: {
+          sourceType: scan.scan.sourceType || "manual",
+          sourceRef: scan.scan.sourceRef,
+          scanData: {
+            trustScore: scan.scan.trustScore,
+            totalFindings: findings.length,
+            highCount: findings.filter((f: any) => f.confidence === "high").length,
+            mediumCount: findings.filter((f: any) => f.confidence === "medium").length,
+            lowCount: findings.filter((f: any) => f.confidence === "low").length,
+            filesScanned: scan.scan.filesScanned ?? 0,
+            files: scan.scan.filesScanned ?? 0,
+            findings,
+          },
+        },
+      });
+    },
+    onSuccess: async (result) => {
+      setShareUrl(result.url);
+      await navigator.clipboard.writeText(result.url);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    },
+  });
 
   if (authLoading || (isAuthenticated && isLoading)) {
     return (
@@ -208,7 +217,7 @@ function HistoryPage() {
         {error ? (
           <div className="rounded-xl border border-severity-critical/25 bg-severity-critical/5 p-6 text-center">
             <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-severity-critical" />
-            <p className="text-sm text-ink-muted">{error}</p>
+            <p className="text-sm text-ink-muted">{error.message}</p>
           </div>
         ) : history.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-surface-1 p-16 text-center">
@@ -256,6 +265,11 @@ function HistoryPage() {
                               <GitPullRequest className="h-4 w-4" />
                               GitHub PR
                             </span>
+                          ) : item.sourceType === "api" ? (
+                            <span className="inline-flex items-center gap-1.5 text-ink-muted">
+                              <Terminal className="h-4 w-4" />
+                              {item.sourceRef || "API / CLI"}
+                            </span>
                           ) : (
                             <span className="inline-flex items-center gap-1.5 text-ink-muted">
                               <Laptop className="h-4 w-4" />
@@ -277,6 +291,10 @@ function HistoryPage() {
                               {item.repoName ||
                                 item.sourceRef.split("github.com/")[1]}
                             </a>
+                          ) : item.sourceRef ? (
+                            <span className="text-ink-muted">
+                              {item.sourceRef}
+                            </span>
                           ) : (
                             <span className="italic text-ink-subdued">
                               Pasted diff text
@@ -327,14 +345,14 @@ function HistoryPage() {
             </div>
 
             {/* Load More */}
-            {hasMore && (
+            {hasNextPage && (
               <div className="border-t border-border px-5 py-4 text-center">
                 <button
-                  onClick={handleLoadMore}
-                  disabled={isLoadingMore}
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
                   className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-5 py-2.5 text-xs font-medium text-ink-muted transition hover:border-interactive/30 hover:text-ink"
                 >
-                  {isLoadingMore ? (
+                  {isFetchingNextPage ? (
                     <>
                       <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ink-muted/30 border-t-ink-muted" />
                       Loading...
@@ -342,7 +360,7 @@ function HistoryPage() {
                   ) : (
                     <>
                       <ChevronsDown className="h-3.5 w-3.5" />
-                      Load More ({Math.max(0, totalScans - offset - 15)} remaining)
+                      Load More ({Math.max(0, totalScans - history.length)} remaining)
                     </>
                   )}
                 </button>
@@ -419,7 +437,7 @@ function HistoryPage() {
                 {detailsError && (
                   <div className="rounded-xl border border-severity-critical/20 bg-severity-critical/5 p-6 text-center">
                     <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-severity-critical" />
-                    <p className="text-sm text-ink-muted">{detailsError}</p>
+                    <p className="text-sm text-ink-muted">{detailsError.message}</p>
                   </div>
                 )}
 
@@ -428,43 +446,43 @@ function HistoryPage() {
                     {/* Score Bar & Label */}
                     <div
                       className={`rounded-xl border p-6 text-center ${
-                        selectedScanDetails.scan.trustScore >= 80
+                        (selectedScanDetails.scan.trustScore ?? 0) >= 80
                           ? "bg-success/5 border-success/15"
-                          : selectedScanDetails.scan.trustScore >= 50
+                          : (selectedScanDetails.scan.trustScore ?? 0) >= 50
                             ? "bg-severity-medium/5 border-severity-medium/15"
                             : "bg-severity-critical/5 border-severity-critical/15"
                       }`}
                     >
                       <div className="mb-2 flex items-center justify-center gap-2">
-                        {selectedScanDetails.scan.trustScore >= 80 ? (
+                        {(selectedScanDetails.scan.trustScore ?? 0) >= 80 ? (
                           <CheckCircle2 className="h-6 w-6 text-success" />
-                        ) : selectedScanDetails.scan.trustScore >= 50 ? (
+                        ) : (selectedScanDetails.scan.trustScore ?? 0) >= 50 ? (
                           <AlertTriangle className="h-6 w-6 text-severity-medium" />
                         ) : (
                           <ShieldAlert className="h-6 w-6 text-severity-critical" />
                         )}
                         <span
                           className={`text-3xl font-bold ${
-                            selectedScanDetails.scan.trustScore >= 80
+                            (selectedScanDetails.scan.trustScore ?? 0) >= 80
                               ? "text-success"
-                              : selectedScanDetails.scan.trustScore >= 50
+                              : (selectedScanDetails.scan.trustScore ?? 0) >= 50
                                 ? "text-severity-medium"
                                 : "text-severity-critical"
                           }`}
                         >
-                          {selectedScanDetails.scan.trustScore}/100
+                          {selectedScanDetails.scan.trustScore ?? 0}/100
                         </span>
                       </div>
                       <div
                         className={`text-sm font-semibold ${
-                          selectedScanDetails.scan.trustScore >= 80
+                          (selectedScanDetails.scan.trustScore ?? 0) >= 80
                             ? "text-success"
-                            : selectedScanDetails.scan.trustScore >= 50
+                            : (selectedScanDetails.scan.trustScore ?? 0) >= 50
                               ? "text-severity-medium"
                               : "text-severity-critical"
                         }`}
                       >
-                        {selectedScanDetails.scan.trustScore >= 80
+                        {(selectedScanDetails.scan.trustScore ?? 0) >= 80
                           ? "CLEAN VERDICT"
                           : "HIGH CHEAT RISK"}
                       </div>
@@ -473,12 +491,12 @@ function HistoryPage() {
                       <div className="mx-auto mt-4 h-2 w-full max-w-xs overflow-hidden rounded-full bg-surface-2">
                         <div
                           style={{
-                            width: `${selectedScanDetails.scan.trustScore}%`,
+                            width: `${selectedScanDetails.scan.trustScore ?? 0}%`,
                           }}
                           className={`h-full rounded-full transition-all duration-500 ${
-                            selectedScanDetails.scan.trustScore >= 80
+                            (selectedScanDetails.scan.trustScore ?? 0) >= 80
                               ? "bg-success"
-                              : selectedScanDetails.scan.trustScore >= 50
+                              : (selectedScanDetails.scan.trustScore ?? 0) >= 50
                                 ? "bg-severity-medium"
                                 : "bg-severity-critical"
                           }`}
@@ -515,14 +533,8 @@ function HistoryPage() {
                                     ? "bg-severity-medium/10 text-severity-medium border-severity-medium/20"
                                     : "bg-severity-info/10 text-severity-info border-severity-info/20";
 
-                              const handleVerdict = async (verdict: UserVerdict) => {
-                                try {
-                                  await updateFindingVerdict({ data: { findingId: finding.id, verdict } });
-                                  finding.userVerdict = verdict;
-                                  setSelectedScanDetails({ ...selectedScanDetails });
-                                } catch (err) {
-                                  console.error("Failed to update verdict:", err);
-                                }
+                              const handleVerdict = (verdict: UserVerdict) => {
+                                updateVerdictMutation.mutate({ findingId: finding.id, verdict });
                               };
 
                               const verdictLabel = finding.userVerdict === "confirmed"
@@ -640,60 +652,27 @@ function HistoryPage() {
                     {/* Share button */}
                     <div className="text-center">
                       <button
-                        onClick={async () => {
+                        onClick={() => {
                           if (shareUrl) {
-                            try {
-                              await navigator.clipboard.writeText(shareUrl);
+                            navigator.clipboard.writeText(shareUrl).then(() => {
                               setCopySuccess(true);
                               setTimeout(() => setCopySuccess(false), 2000);
-                            } catch {}
+                            }).catch(() => {});
                             return;
                           }
-                          setIsSharing(true);
-                          try {
-                            const findings = selectedScanDetails.findings.map((f: any) => ({
-                              patternType: f.patternType,
-                              filePath: f.filePath,
-                              lineStart: f.lineStart,
-                              lineEnd: f.lineEnd,
-                              confidence: f.confidence,
-                              explanation: f.explanation,
-                              evidenceExcerpt: f.evidenceExcerpt,
-                            }));
-                            const result = await createShareLink({ data: {
-                              sourceType: selectedScanDetails.scan.sourceType || "manual",
-                              sourceRef: selectedScanDetails.scan.sourceRef,
-                              scanData: {
-                                trustScore: selectedScanDetails.scan.trustScore,
-                                totalFindings: findings.length,
-                                highCount: findings.filter((f: any) => f.confidence === "high").length,
-                                mediumCount: findings.filter((f: any) => f.confidence === "medium").length,
-                                lowCount: findings.filter((f: any) => f.confidence === "low").length,
-                                filesScanned: selectedScanDetails.scan.filesScanned ?? 0,
-                                files: selectedScanDetails.scan.filesScanned ?? 0,
-                                findings,
-                              },
-                            }});
-                            setShareUrl(result.url);
-                            await navigator.clipboard.writeText(result.url);
-                            setCopySuccess(true);
-                            setTimeout(() => setCopySuccess(false), 2000);
-                          } catch (err) {
-                            console.error("Failed to share:", err);
-                          } finally {
-                            setIsSharing(false);
-                          }
+                          createShareMutation.mutate(selectedScanDetails);
                         }}
+                        disabled={createShareMutation.isPending}
                         className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-4 py-2.5 text-xs font-medium text-ink-muted transition hover:border-interactive/30 hover:text-ink"
                       >
-                        {isSharing ? (
+                        {createShareMutation.isPending ? (
                           <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                         ) : copySuccess ? (
                           <Check className="h-3.5 w-3.5 text-success" />
                         ) : (
                           <Share2 className="h-3.5 w-3.5" />
                         )}
-                        {isSharing ? "Generating..." : copySuccess ? "Link Copied!" : shareUrl ? "Copy Link" : "Share Results"}
+                        {createShareMutation.isPending ? "Generating..." : copySuccess ? "Link Copied!" : shareUrl ? "Copy Link" : "Share Results"}
                       </button>
                     </div>
 

@@ -4,6 +4,7 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { AuthProvider } from "../lib/auth-context";
+import { QueryClientProvider } from "../lib/query-client";
 
 import appCss from "../styles.css?url";
 
@@ -41,11 +42,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className="font-sans antialiased wrap-anywhere selection:bg-[rgba(88,166,255,0.2)]">
-        <AuthProvider>
-          <Header />
-          {children}
-          <Footer />
-        </AuthProvider>
+        <QueryClientProvider>
+          <AuthProvider>
+            <Header />
+            {children}
+            <Footer />
+          </AuthProvider>
+        </QueryClientProvider>
         <TanStackDevtools
           config={{
             position: "bottom-right",
