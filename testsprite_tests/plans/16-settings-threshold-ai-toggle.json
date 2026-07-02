@@ -1,0 +1,15 @@
+{
+  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
+  "type": "frontend",
+  "name": "Settings - Threshold slider and AI detection toggle are functional",
+  "description": "After mock login, navigate to /settings. Verify the Trust Score threshold slider is visible and draggable. Verify the AI detection toggle switch is visible and can be toggled on or off. After toggling, verify the UI reflects the changed state.",
+  "priority": "p1",
+  "planSteps": [
+    { "type": "action", "description": "Navigate to /api/mock-login?secret=mantiz_e2e_bypass_2026 to authenticate the session" },
+    { "type": "action", "description": "Navigate to /settings after authentication" },
+    { "type": "assertion", "description": "Verify the Settings page shows a threshold or Trust Score slider input control with a numeric value label" },
+    { "type": "assertion", "description": "Verify an AI Detection toggle or checkbox is visible in the settings form" },
+    { "type": "action", "description": "Click or toggle the AI Detection switch to change its current state" },
+    { "type": "assertion", "description": "Verify the AI Detection toggle reflects the new state (checked or unchecked, on or off) in the Settings panel" }
+  ]
+}

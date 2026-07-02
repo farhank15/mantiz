@@ -1,0 +1,16 @@
+{
+  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
+  "type": "frontend",
+  "name": "Settings - Webhook URL can be configured and test button is visible",
+  "description": "After mock login, navigate to /settings and find the Webhook configuration section. Enter a valid webhook URL, save it, and verify the webhook URL is persisted. Verify the 'Test Webhook' button is visible and clickable.",
+  "priority": "p1",
+  "planSteps": [
+    { "type": "action", "description": "Navigate to /api/mock-login?secret=mantiz_e2e_bypass_2026 to authenticate the session" },
+    { "type": "action", "description": "Navigate to /settings after authentication" },
+    { "type": "assertion", "description": "Verify the Settings page shows a Webhook section with a URL input field" },
+    { "type": "action", "description": "Clear any existing value in the webhook URL input and type a valid URL such as https://webhook.site/test-mantiz" },
+    { "type": "action", "description": "Click the Save or Update button in the Webhook section" },
+    { "type": "assertion", "description": "Verify a success confirmation message or toast appears indicating the webhook URL was saved" },
+    { "type": "assertion", "description": "Verify a 'Test Webhook' or 'Send Test' button is visible in the Webhook section" }
+  ]
+}

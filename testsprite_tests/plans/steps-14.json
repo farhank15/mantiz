@@ -1,0 +1,9 @@
+[
+  { "type": "action", "description": "Navigate to /api/mock-login?secret=mantiz_e2e_bypass_2026 to authenticate the session" },
+  { "type": "action", "description": "Navigate to /history after authentication" },
+  { "type": "assertion", "description": "Verify the history page shows a list of past scans with at least one scan row visible" },
+  { "type": "action", "description": "Click on the first scan row to open its findings detail panel or modal" },
+  { "type": "assertion", "description": "Verify at least one finding is displayed inside the detail panel with a verdict action control (e.g. 'Confirmed' or 'False Positive' button or dropdown)" },
+  { "type": "action", "description": "Click the 'Confirmed' verdict button or option on the first finding" },
+  { "type": "assertion", "description": "Verify the first finding's verdict badge or label now shows 'Confirmed' in the finding row inside the detail panel" }
+]

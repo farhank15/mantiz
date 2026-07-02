@@ -1,0 +1,13 @@
+{
+  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
+  "type": "frontend",
+  "name": "History - Scans show correct source label (CLI or GitHub Action)",
+  "description": "After mock login, navigate to /history. Verify that each scan row in the history list shows a source label such as 'CLI', 'GitHub Action', or 'Manual Scan' that correctly identifies where the scan originated. The label must not be blank for any scan row.",
+  "priority": "p1",
+  "planSteps": [
+    { "type": "action", "description": "Navigate to /api/mock-login?secret=mantiz_e2e_bypass_2026 to authenticate the session" },
+    { "type": "action", "description": "Navigate to /history after authentication" },
+    { "type": "assertion", "description": "Verify the history list shows at least one scan row" },
+    { "type": "assertion", "description": "Verify each visible scan row in the history list displays a source label (such as 'CLI', 'GitHub Action', or an icon indicating origin) and the label is not empty or missing" }
+  ]
+}
