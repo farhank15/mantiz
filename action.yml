@@ -83,6 +83,7 @@ runs:
         RESPONSE=$(curl -s -X POST "$MANTIZ_API_URL/api/scan" \
           -H "Content-Type: application/json" \
           -H "Authorization: Bearer $MANTIZ_API_TOKEN" \
+          -H "X-Mantiz-Source: github-actions" \
           -d "{\"diff\": $(echo "$DIFF" | jq -Rs '.'), \"useAi\": ${{ inputs.use-ai }}}")
 
         TRUST_SCORE=$(echo "$RESPONSE" | jq -r '.trustScore // 100')

@@ -48,19 +48,32 @@ npm test
 
 ```
 src/
-├── detectors/       # Detection pattern engines (one file per pattern)
-│   ├── types.ts     # Shared types (Finding, ParsedDiff, Confidence)
+├── detectors/          # Detection pattern engines (one file per pattern)
+│   ├── types.ts        # Shared types (Finding, ParsedDiff, Confidence, FileImportance)
 │   ├── diff-parser.ts
-│   ├── engine.ts    # Orchestrator — runs all detectors
+│   ├── engine.ts       # Orchestrator — runs all 11 detectors
 │   ├── disabled-assertion.ts
 │   ├── assertion-tampering.ts
 │   ├── mock-to-avoid.ts
 │   ├── claim-mismatch.ts
-│   └── silent-catch.ts
-├── routes/          # TanStack file-based routes
-├── components/      # Reusable UI components
-├── schemas/         # Drizzle database schemas
-└── styles.css       # Global styles
+│   ├── silent-catch.ts
+│   ├── hallucination.ts
+│   ├── ai-assisted.ts  # LLM-powered detection (Fireworks/Groq)
+│   ├── ast-analyzer.ts # Babel AST parser for JS/TS
+│   ├── tree-sitter-analyzer.ts  # Multi-language WASM AST
+│   ├── historical-scoring.ts    # Author behavioral tracking
+│   ├── mutation-susceptibility.ts
+│   └── heal-engine.ts  # Auto-fix for detected patterns
+├── server/            # Server functions (tokens, settings, webhook, verdict)
+├── routes/            # TanStack file-based routes
+├── components/        # Reusable UI components
+├── schemas/           # Drizzle database schemas (users, scans, findings, apiTokens, userSettings, webhookEvents)
+├── lib/               # DB init, auth context, query client (TanStack Query)
+├── styles.css         # Global styles
+
+packages/
+├── mantiz-core/       # Standalone detection engine (published to npm)
+└── mantiz-cli/        # CLI tool (published to npm)
 ```
 
 ## Adding a New Detector
