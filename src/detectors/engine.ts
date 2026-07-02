@@ -138,14 +138,19 @@ export function scanDiff(rawDiff: string, prContext?: { title?: string; author?:
   debug(`  Detector 6 [Hallucinated Assertion]: ${d6.length} finding${d6.length !== 1 ? 's' : ''}`)
 
   // ─── Layer 7a: AST Analysis (Babel for JS/TS) ────────────────────
-  const d7a = detectWithAST(functionalFiles)
-  debug(`  Detector 7a [AST Analysis - JS/TS]: ${d7a.length} finding${d7a.length !== 1 ? 's' : ''}`)
+  // PERFORMANCE: @babel/parser is SLOW (~10-50ms per call). For large diffs (6000+ lines),
+  // this can take MINUTES. Auto-skip if >5 files (MANTIZ_SKIP_AST env to override).
+  // D1/D2/D5 regex already catch most patterns D7a/D7b look for.
+  const _skipAstEnv = typeof process !== 'undefined' && process.env.MANTIZ_SKIP_AST
+  const SKIP_AST = _skipAstEnv === 'true' || (_skipAstEnv !== 'false' && functionalFiles.length > 5)
+  const d7a = SKIP_AST ? [] : detectWithAST(functionalFiles)
+  debug(`  Detector 7a [AST Analysis - JS/TS]: ${d7a.length} finding${d7a.length !== 1 ? 's' : ''}${SKIP_AST ? ' (SKIPPED)' : ''}`)
 
   // ─── Layer 7b: Multi-Language AST Analysis (Tree-sitter) ────────
   // Uses Tree-sitter WASM parser for Python (CDN loaded)
   // Falls back to heuristic for Go, Java, Ruby, Rust, PHP
-  const d7b = detectWithTreeSitter(functionalFiles)
-  debug(`  Detector 7b [Tree-sitter ML]: ${d7b.length} finding${d7b.length !== 1 ? 's' : ''}`)
+  const d7b = SKIP_AST ? [] : detectWithTreeSitter(functionalFiles)
+  debug(`  Detector 7b [Tree-sitter ML]: ${d7b.length} finding${d7b.length !== 1 ? 's' : ''}${SKIP_AST ? ' (SKIPPED)' : ''}`)
 
   // ─── Layer 10: Mutation Susceptibility ───────────────────────────
   const d10 = detectMutationSusceptibility(functionalFiles)

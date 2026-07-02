@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mantiz Ground Truth Entry",
+  "description": "A labeled PR diff used as ground truth for calibrating Mantiz detection system",
+  "type": "object",
+  "required": [
+    "id",
+    "source",
+    "repo",
+    "pr_url",
+    "label",
+    "label_source",
+    "label_evidence",
+    "labeler",
+    "labeled_at",
+    "labeling_session",
+    "detector_version_commit"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^gt_\\d{4}$",
+      "description": "Unique ground truth identifier, e.g. gt_0001"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "github_pr",
+        "github_pr_reviewer_flagged",
+        "github_pr_ai_agent",
+        "github_bug_reemergence",
+        "controlled_experiment",
+        "academic_dataset",
+        "own_repo_history"
+      ],
+      "description": "Where this ground truth sample came from"
+    },
+    "repo": {
+      "type": "string",
+      "pattern": "^[\\w.-]+/[\\w.-]+$",
+      "description": "GitHub repository in owner/repo format, e.g. vitest-dev/vitest"
+    },
+    "pr_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to the pull request"
+    },
+    "detected_by": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^D\\d+[a-z]?_[a-z_]+$"
+      },
+      "description": "Which detectors flagged patterns in this PR"
+    },
+    "label": {
+      "type": "string",
+      "enum": [
+        "CONFIRMED_DECEPTIVE",
+        "CONFIRMED_LEGIT",
+        "AMBIGUOUS"
+      ],
+      "description": "Ground truth label assigned by human reviewer"
+    },
+    "label_source": {
+      "type": "string",
+      "enum": [
+        "reviewer_comment",
+        "manual_code_review",
+        "commit_history_analysis",
+        "revert_pattern",
+        "self_labeled"
+      ],
+      "description": "Basis for the label assignment"
+    },
+    "label_evidence": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Detailed explanation of why this label was assigned — include reviewer quotes, diff analysis, or historical context"
+    },
+    "labeler": {
+      "type": "string",
+      "description": "Name or handle of the person who labeled this entry"
+    },
+    "labeled_at": {
+      "type": "string",
+      "format": "date",
+      "description": "Date when the label was assigned, ISO 8601 format YYYY-MM-DD"
+    },
+    "labeling_session": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Session number for tracking labeling consistency over time"
+    },
+    "detector_version_commit": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{7,40}$",
+      "description": "Git commit hash of the detector version used when scanning this PR"
+    },
+    "diff_snippet": {
+      "type": "string",
+      "description": "Relevant portion of the diff (optional — can reference file path instead)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free-form notes about this entry — context, uncertainties, cross-references"
+    },
+    "review_time_seconds": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "How long the reviewer spent labeling this entry (for fatigue tracking)"
+    }
+  },
+  "if": {
+    "properties": { "label": { "const": "AMBIGUOUS" } }
+  },
+  "then": {
+    "description": "AMBIGUOUS entries must include a reason in notes",
+    "required": ["notes"]
+  },
+  "allOf": [
+    {
+      "description": "Sensitive info must be redacted from label_evidence",
+      "$comment": "Validation: ensure no emails, personal names, or internal URLs in label_evidence"
+    }
+  ]
+}

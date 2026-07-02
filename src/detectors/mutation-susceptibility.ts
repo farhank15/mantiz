@@ -33,13 +33,13 @@ const MIN_ASSERTIONS_PER_FUNCTION = 2
 const MIN_ASSERTION_DENSITY = 2 // 2 assertions per 100 lines (was 3 — lowered to reduce FP on small files)
 
 /** Minimum lines for meaningful mutation analysis */
-const MIN_LINES_FOR_MUTATION_ANALYSIS = 15 // Skip files under 15 lines entirely
+const MIN_LINES_FOR_MUTATION_ANALYSIS = 25 // Skip files under 25 lines (was 15 — raised to reduce FP on small PR diffs)
 
 /** Small file threshold — files under this get more lenient density check */
-const SMALL_FILE_LINES = 50 // Files under 50 lines use relaxed threshold
+const SMALL_FILE_LINES = 80 // Files under 80 lines use relaxed threshold (was 50)
 
 /** Relaxed density for files under SMALL_FILE_LINES */
-const RELAXED_DENSITY = 0.5 // 0.5 assertions per 100 lines for small files
+const RELAXED_DENSITY = 1.0 // 1 assertion per 100 lines for small files (was 0.5 — raised to reduce FP)
 
 // ─── Types ───────────────────────────────────────────────────────
 

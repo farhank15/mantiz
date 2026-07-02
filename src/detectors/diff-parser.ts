@@ -1,6 +1,39 @@
 import { parsePatch } from 'diff'
-import type { StructuredPatch } from 'diff'
 import type { ParsedDiff, DiffHunk } from './types'
+
+/**
+ * Quick validation: check if a diff has well-formed structure
+ * before feeding it to parsePatch (which can hang on malformed input).
+ */
+function looksValid(raw: string): boolean {
+  if (!raw || raw.trim().length < 20) return false
+
+  // Must have at least one diff --git header
+  if (!raw.includes('diff --git ')) return false
+
+  // Must have at least one valid hunk header
+  // Match proper @@ oldStart,oldLines +newStart,newLines @@ format
+  if (!/@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@/.test(raw)) return false
+
+  // Check that the diff doesn't end in the middle of a hunk
+  // A valid diff always ends with a proper line (+, -, or space)
+  const lines = raw.trimEnd().split('\n')
+  const lastLine = lines[lines.length - 1].trim()
+  if (lastLine.startsWith('@@') || lastLine.startsWith('diff --git')) {
+    return false // ends at a header = truncated mid-file or mid-hunk
+  }
+  // Reject diffs with truncation markers from older scraper versions
+  if (lastLine.includes('[truncated]')) {
+    return false
+  }
+  // Reject diffs where the last content line doesn't start with a valid diff prefix
+  // This catches cases where a diff is truncated mid-line
+  if (!lastLine.startsWith('+') && !lastLine.startsWith('-') && !lastLine.startsWith(' ')) {
+    return false
+  }
+
+  return true
+}
 
 /**
  * Attempt to manually extract diff info when parsePatch fails.
@@ -103,15 +136,22 @@ function fallbackParse(raw: string): ParsedDiff[] {
 
 /**
  * Parse a raw git diff string into structured, file-scoped hunks.
- * Gracefully handles malformed diffs by falling back to a simpler parser.
+ * Validates input structure FIRST to avoid parsePatch hanging on
+ * malformed/truncated diffs (GHSA-73rr-hh4g-fpgx related).
  */
 export function parseRawDiff(raw: string): ParsedDiff[] {
   if (!raw || !raw.trim()) {
     return []
   }
 
+  // Validate structure before calling parsePatch
+  // parsePatch can hang indefinitely on malformed/truncated diffs
+  if (!looksValid(raw)) {
+    return fallbackParse(raw)
+  }
+
   try {
-    const parsed: StructuredPatch[] = parsePatch(raw)
+    const parsed = parsePatch(raw)
 
     return parsed.map((file) => {
       const hunks: DiffHunk[] = (file.hunks ?? []).map((hunk) => ({
@@ -129,8 +169,7 @@ export function parseRawDiff(raw: string): ParsedDiff[] {
       }
     })
   } catch {
-    // parsePatch can throw on malformed diffs (e.g., mismatched hunk line counts)
-    // Fall back to a lenient manual parser
+    // parsePatch can throw on some malformed diffs
     return fallbackParse(raw)
   }
 }

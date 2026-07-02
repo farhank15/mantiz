@@ -13,7 +13,7 @@ import type { LanguageDetectionRules } from './language-registry'
 
 // ─── Types ───────────────────────────────────────────────────────
 
-type MatchPattern = 'skip' | 'skip_with_reason' | 'focus' | 'if_false' | 'comment' | 'todo'
+type MatchPattern = 'skip' | 'skip_with_reason' | 'focus' | 'if_false' | 'comment' | 'todo' | 'empty_test'
 
 interface MatchResult {
   lineIndex: number
@@ -110,6 +110,22 @@ function scanHunk(hunkContent: string, baseLine: number, lang: string | null): M
     }
   }
 
+  // Check for empty test bodies (test/it block with no expect/assert inside)
+  // Pattern: it('name', () => { }) or test('name', async () => { })
+  // These are tests that exist but don't verify anything
+  if (EMPTY_TEST_PATTERN.test(hunkContent)) {
+    // Find the specific line with the empty test
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith('+') && EMPTY_TEST_PATTERN.test(lines[i])) {
+        const lineIdx = baseLine + i
+        // Only add if not already matched by another pattern
+        if (!matches.some(m => Math.abs(m.lineIndex - lineIdx) < 3)) {
+          matches.push({ lineIndex: lineIdx, lineContent: lines[i].slice(1).trim(), pattern: 'empty_test', lang: lang || 'javascript' })
+        }
+      }
+    }
+  }
+
   return matches
 }
 
@@ -126,6 +142,8 @@ function patternToConfidence(pattern: MatchPattern): Confidence {
       return 'high'
     case 'if_false':
       return 'high'
+    case 'empty_test':
+      return 'medium'
     case 'comment':
       return 'medium'
     case 'todo':
@@ -150,10 +168,17 @@ function patternToExplanation(pattern: MatchPattern, lang: string): string {
       return `Assertion wrapped in conditional that always evaluates to false (${langName}) — the assertion will never execute.`
     case 'comment':
       return `Assertion commented out (${langName}) — the test no longer verifies the expected behavior.`
+    case 'empty_test':
+      return `Empty test body (${langName}) — the test is defined but contains no assertions, so it passes without verifying anything.`
     case 'todo':
       return `TODO comment on a test line (${langName}) — may indicate intentionally disabled verification.`
   }
 }
+
+// ─── Empty Test Body Pattern ──────────────────────────────────────
+// Tests that exist but have empty bodies — they pass without asserting anything.
+// Matches: it('name', () => { }) or test('name', async () => { })
+const EMPTY_TEST_PATTERN = /\b(it|test)\s*\(\s*['"][^'"]+['"]\s*,\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{\s*\}/m
 
 // ─── Main Detector ──────────────────────────────────────────────
 

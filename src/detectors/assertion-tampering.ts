@@ -3,9 +3,28 @@ import type { Finding, ParsedDiff, Confidence } from './types'
 /**
  * Regex to extract assertion method + expected value from a line.
  * Matches: expect(...).toBe(VALUE) / .toEqual(VALUE) / .toMatch(VALUE) / etc.
+ *
+ * SAFE regex — uses possessive/non-backtracking patterns to prevent ReDoS
+ * on inputs with deeply nested or mismatched parentheses.
+ * Old pattern had (?:[^()]*|\([^()]*\))* which caused catastrophic backtracking.
  */
 const ASSERTION_PATTERN =
-  /expect\s*\((?:[^()]*|\([^()]*\))*\)\s*\.\s*(toBe|toEqual|toMatch|toContain|toStrictEqual|toBeNull|toBeUndefined|toBeDefined|toBeTruthy|toBeFalsy)\s*\(((?:[^()]*|\([^()]*\))*)\)\s*;?\s*$/m
+  /expect\s*\([^()]*(?:\([^()]*\)[^()]*)*\)\s*\.\s*(toBe|toEqual|toMatch|toContain|toStrictEqual|toBeNull|toBeUndefined|toBeDefined|toBeTruthy|toBeFalsy)\s*\(([^()]*(?:\([^()]*\)[^()]*)*)\)\s*;?\s*$/m
+
+/** Skip regex on lines that could cause ReDoS — long lines with many parens */
+const MAX_SAFE_LINE_LENGTH = 500
+const MAX_PARENS_DEPTH = 20
+
+/** Check if a line is safe for regex matching (prevents ReDoS) */
+function isSafeForRegex(line: string): boolean {
+  if (line.length > MAX_SAFE_LINE_LENGTH) return false
+  let depth = 0
+  for (const ch of line) {
+    if (ch === '(') { depth++; if (depth > MAX_PARENS_DEPTH) return false }
+    if (ch === ')') depth--
+  }
+  return true
+}
 
 /**
  * Match a single assertion from a diff line.
@@ -24,6 +43,8 @@ function extractAssertions(line: string, lineIndex: number): AssertionMatch | nu
   const content = line.slice(1) // strip +/- prefix
   // Skip commented lines — commented-out assertions are not real changes
   if (/^\s*\/\//.test(content)) return null
+  // ReDoS guard: skip lines too long or with too many nested parens
+  if (!isSafeForRegex(content)) return null
   const match = content.match(ASSERTION_PATTERN)
   if (!match) return null
   return {

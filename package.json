@@ -23,6 +23,7 @@
     "@babel/parser": "^7.29.7",
     "@neondatabase/serverless": "^1.1.0",
     "@octokit/rest": "^22.0.1",
+    "@swc/core": "1.15.43",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-query": "^5.101.2",

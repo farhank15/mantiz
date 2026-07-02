@@ -1,8 +1,8 @@
 /**
  * Mantiz AST Analyzer
  *
- * Uses @babel/parser to parse TypeScript/JavaScript code into an AST
- * and detect cheating patterns that regex-based detectors can't catch.
+ * Uses @swc/core (Rust-based, 20-100x faster than @babel/parser) to parse
+ * TypeScript/JavaScript code into an AST and detect cheating patterns.
  *
  * For multi-language analysis (Python, Go, Java, Ruby, Rust, PHP),
  * see tree-sitter-analyzer.ts which provides Tree-sitter based parsing.
@@ -15,33 +15,10 @@
  * 5. Empty Test Shell — describe/it block with no meaningful assertions
  */
 
-import * as parser from '@babel/parser'
+import * as swc from '@swc/core'
 import type { Finding, ParsedDiff } from './types'
 
-// ─── AST Node Types ──────────────────────────────────────────────
-
-interface ASTNode {
-  type: string
-  loc: { start: { line: number; column: number }; end: { line: number; column: number } } | null
-  [key: string]: unknown
-}
-
-interface FunctionBody extends ASTNode {
-  body: ASTNode[]
-}
-
-interface ReturnStatement extends ASTNode {
-  argument: ASTNode | null
-}
-
-interface TryStatement extends ASTNode {
-  handler: ASTNode | null
-  finalizer: ASTNode | null
-}
-
-interface CatchClause extends ASTNode {
-  body: ASTNode[]
-}
+// ─── AST Finding Types ──────────────────────────────────────────
 
 interface ASTFinding {
   type: 'trivial_function' | 'async_gutted' | 'conditional_wrap' | 'empty_test_shell' | 'stripped_assertions'
@@ -52,226 +29,259 @@ interface ASTFinding {
   details: string
 }
 
-// ─── AST Walking & Analysis ─────────────────────────────────────
+// ─── AST Walking ────────────────────────────────────────────────
 
-function walkAST(node: ASTNode, findings: ASTFinding[]): void {
+function walkAST(node: Record<string, unknown>, findings: ASTFinding[]): void {
   if (!node || typeof node !== 'object') return
+  const type = node.type as string
 
-  switch (node.type) {
-    case 'FunctionDeclaration':
-    case 'FunctionExpression':
-    case 'ArrowFunctionExpression':
+  switch (type) {
+    case 'FnDecl':
+    case 'FnExpr':
+    case 'ArrowExpr':
+    case 'ClassMethod':
     case 'ObjectMethod':
       analyzeFunction(node, findings)
       break
-    case 'TryStatement':
-      analyzeTryStatement(node as unknown as TryStatement, findings)
+    case 'TryStmt':
+      analyzeTryStatement(node, findings)
       break
-    case 'IfStatement':
+    case 'IfStmt':
       analyzeIfStatement(node, findings)
       break
-    case 'SwitchStatement':
+    case 'SwitchStmt':
       analyzeSwitchStatement(node, findings)
       break
   }
 
+  // Recursively walk all child nodes (skip span/loc metadata)
   for (const key of Object.keys(node)) {
-    if (key === 'loc' || key === 'start' || key === 'end') continue
-    const child = (node as Record<string, unknown>)[key]
+    if (key === 'span' || key === 'loc' || key === 'start' || key === 'end') continue
+    const child = node[key]
     if (Array.isArray(child)) {
       for (const item of child) {
         if (item && typeof item === 'object' && 'type' in (item as object)) {
-          walkAST(item as ASTNode, findings)
+          walkAST(item as Record<string, unknown>, findings)
         }
       }
     } else if (child && typeof child === 'object' && 'type' in (child as object)) {
-      walkAST(child as ASTNode, findings)
+      walkAST(child as Record<string, unknown>, findings)
     }
   }
 }
 
-function analyzeFunction(node: ASTNode, findings: ASTFinding[]): void {
-  const body = (node as Record<string, unknown>).body as ASTNode | undefined
-  if (!body) return
+function getSpan(node: Record<string, unknown>): { start: number; end: number } {
+  const span = node.span as { start: number; end: number } | undefined
+  return span ?? { start: 0, end: 0 }
+}
 
-  let functionBody: ASTNode[]
-  if (body.type === 'BlockStatement') {
-    functionBody = (body as unknown as FunctionBody).body || []
+function analyzeFunction(node: Record<string, unknown>, findings: ASTFinding[]): void {
+  let body: Record<string, unknown> | undefined
+  const type = node.type as string
+
+  if (type === 'ArrowExpr') {
+    body = node.body as Record<string, unknown> | undefined
   } else {
-    functionBody = [body]
+    // FnDecl / FnExpr — function body is in .function.body
+    const func = node.function as Record<string, unknown> | undefined
+    body = func?.body as Record<string, unknown> | undefined
   }
 
-  const loc = node.loc
+  if (!body) return
 
-  if (functionBody.length === 1 && functionBody[0].type === 'ReturnStatement') {
-    const ret = functionBody[0] as ReturnStatement
-    if (ret.argument && ['BooleanLiteral', 'NullLiteral', 'Identifier'].includes(ret.argument.type)) {
-      const value = ret.argument.type === 'BooleanLiteral'
-        ? String((ret.argument as Record<string, unknown>).value)
-        : ret.argument.type === 'NullLiteral' ? 'null' : 'identifier'
+  let stmts: Record<string, unknown>[]
+  if (body.type === 'BlockStmt') {
+    stmts = (body.stmts as Record<string, unknown>[]) ?? []
+  } else {
+    stmts = [body]
+  }
 
-      if (ret.argument.type === 'Identifier') {
-        const name = (ret.argument as Record<string, unknown>).name as string
+  const span = getSpan(node)
+
+  // Trivial return: function body is just `return true/false/null/undefined`
+  if (stmts.length === 1 && stmts[0].type === 'ReturnStmt') {
+    const ret = stmts[0]
+    const arg = ret.argument as Record<string, unknown> | null
+    if (arg && ['Bool', 'Null', 'Ident'].includes(arg.type as string)) {
+      let value: string
+      if (arg.type === 'Bool') {
+        value = String((arg as Record<string, unknown>).value)
+      } else if (arg.type === 'Null') {
+        value = 'null'
+      } else {
+        const name = (arg as Record<string, unknown>).sym as string
         if (name !== 'undefined' && name !== 'void') return
+        value = name
       }
 
       findings.push({
         type: 'trivial_function',
-        lineStart: loc?.start.line || 0,
-        lineEnd: loc?.end.line || 0,
+        lineStart: span.start,
+        lineEnd: span.end,
         confidence: 'high',
         explanation: `Function body replaced with trivial return (${value}) — indicates test logic was gutted.`,
-        details: `Function at line ${loc?.start.line} returns ${value} unconditionally.`,
+        details: `Function at line ${span.start} returns ${value} unconditionally.`,
       })
     }
   }
 
-  if (functionBody.length === 1 && functionBody[0].type === 'TryStatement') {
-    const tryStmt = functionBody[0] as TryStatement
-    if (tryStmt.handler) {
-      const catchBody = ((tryStmt.handler as unknown as ASTNode).body || []) as ASTNode[]
-      const hasTrivialCatch = catchBody.length <= 1 &&
-        (catchBody.length === 0 ||
-          (catchBody[0].type === 'ExpressionStatement') ||
-          (catchBody[0].type === 'ReturnStatement' &&
-            (catchBody[0] as ReturnStatement).argument?.type === 'Identifier' &&
-            ((catchBody[0] as ReturnStatement).argument as Record<string, unknown>).name === 'undefined'))
+  // Async gutting: function body is just try/catch with empty catch
+  if (stmts.length === 1 && stmts[0].type === 'TryStmt') {
+    const tryStmt = stmts[0]
+    const handler = tryStmt.handler as Record<string, unknown> | null
+    if (handler) {
+      const catchBody = (handler.body as Record<string, unknown>).stmts as Record<string, unknown>[] | undefined
+      const hasTrivialCatch = !catchBody || catchBody.length <= 1
 
       if (hasTrivialCatch) {
         findings.push({
           type: 'async_gutted',
-          lineStart: loc?.start.line || 0,
-          lineEnd: loc?.end.line || 0,
+          lineStart: span.start,
+          lineEnd: span.end,
           confidence: 'high',
           explanation: 'Function body consists solely of a try/catch with empty/silent catch — all errors are swallowed.',
-          details: `Function at line ${loc?.start.line} wraps logic in try/catch with no error handling.`,
+          details: `Function at line ${span.start} wraps logic in try/catch with no error handling.`,
         })
       }
     }
   }
 
-  if (functionBody.length === 0 || (functionBody.length === 1 && functionBody[0].type === 'ExpressionStatement' &&
-    ((functionBody[0] as Record<string, unknown>).expression as ASTNode)?.type === 'Identifier')) {
+  // Empty shell: function body is empty or contains only an identifier expression
+  if (stmts.length === 0 || (stmts.length === 1 && stmts[0].type === 'ExprStmt' &&
+    (stmts[0].expression as Record<string, unknown>)?.type === 'Ident')) {
     findings.push({
       type: 'empty_test_shell',
-      lineStart: loc?.start.line || 0,
-      lineEnd: loc?.end.line || 0,
+      lineStart: span.start,
+      lineEnd: span.end,
       confidence: 'medium',
       explanation: 'Function body is empty or contains no meaningful logic — likely a placeholder.',
-      details: `Function at line ${loc?.start.line} has no meaningful body.`,
+      details: `Function at line ${span.start} has no meaningful body.`,
     })
   }
 }
 
-function analyzeTryStatement(node: TryStatement, findings: ASTFinding[]): void {
-  if (!node.handler) return
-  const catchBody = ((node.handler as unknown as CatchClause).body || []) as ASTNode[]
-  const isEmptyCatch = catchBody.length === 0
-  const isCommentOnly = catchBody.length === 1 && catchBody[0].type === 'ExpressionStatement'
+function analyzeTryStatement(node: Record<string, unknown>, findings: ASTFinding[]): void {
+  const handler = node.handler as Record<string, unknown> | null
+  if (!handler) return
 
-  if (isEmptyCatch || isCommentOnly) {
+  const catchStmts = (handler.body as Record<string, unknown>).stmts as Record<string, unknown>[] | undefined
+  const span = getSpan(node)
+
+  if (!catchStmts) return
+
+  const isEmptyCatch = catchStmts.length === 0
+  const hasCommentOnly = catchStmts.length === 1 && catchStmts[0].type === 'ExprStmt'
+
+  if (isEmptyCatch || hasCommentOnly) {
     findings.push({
       type: 'async_gutted',
-      lineStart: node.loc?.start.line || 0,
-      lineEnd: node.loc?.end.line || 0,
+      lineStart: span.start,
+      lineEnd: span.end,
       confidence: 'high',
       explanation: isEmptyCatch
         ? 'Empty catch block detected via AST — no error handling logic at all.'
-        : 'Catch block contains only expressions (likely comments) — errors are silently swallowed.',
-      details: `Try/catch at line ${node.loc?.start.line} has ${isEmptyCatch ? 'empty' : 'non-functional'} catch body.`,
+        : 'Catch block contains only comments — errors are silently swallowed.',
+      details: `Try/catch at line ${span.start} has ${isEmptyCatch ? 'empty' : 'comment-only'} catch body.`,
     })
   }
 }
 
-function analyzeIfStatement(node: ASTNode, findings: ASTFinding[]): void {
-  const test = (node as Record<string, unknown>).test as ASTNode | undefined
-  const loc = node.loc
-  if (!test || !loc) return
+function analyzeIfStatement(node: Record<string, unknown>, findings: ASTFinding[]): void {
+  const test = node.test as Record<string, unknown> | undefined
+  const span = getSpan(node)
+  if (!test) return
 
-  if (test.type === 'BooleanLiteral' && (test as Record<string, unknown>).value === false) {
+  if (test.type === 'Bool' && (test as Record<string, unknown>).value === false) {
     findings.push({
       type: 'conditional_wrap',
-      lineStart: loc.start.line,
-      lineEnd: loc.end.line,
+      lineStart: span.start,
+      lineEnd: span.end,
       confidence: 'high',
       explanation: 'Code wrapped in if(false) block — will never execute. Tests inside this block are permanently disabled.',
-      details: `if(false) block at line ${loc.start.line}`,
+      details: `if(false) block at line ${span.start}`,
     })
   }
 
-  if (test.type === 'NumericLiteral' && (test as Record<string, unknown>).value === 0) {
+  if (test.type === 'Num' && (test as Record<string, unknown>).value === 0) {
     findings.push({
       type: 'conditional_wrap',
-      lineStart: loc.start.line,
-      lineEnd: loc.end.line,
+      lineStart: span.start,
+      lineEnd: span.end,
       confidence: 'high',
       explanation: 'Code wrapped in if(0) block — will never execute. This is a known AI agent evasion pattern.',
-      details: `if(0) block at line ${loc.start.line}`,
+      details: `if(0) block at line ${span.start}`,
     })
   }
 
-  if (test.type === 'CallExpression' || test.type === 'UnaryExpression' || test.type === 'MemberExpression') {
+  if (test.type === 'CallExpr' || test.type === 'UnaryExpr' || test.type === 'MemberExpr') {
     const testStr = codeFromNode(test).substring(0, 80)
     if (/skip|SKIP|disable|DISABLE|bypass|BYPASS|mock/.test(testStr)) {
       findings.push({
         type: 'conditional_wrap',
-        lineStart: loc.start.line,
-        lineEnd: loc.end.line,
+        lineStart: span.start,
+        lineEnd: span.end,
         confidence: 'medium',
         explanation: `Code conditionally wrapped — condition references "skip/disable/bypass" semantics at AST level.`,
-        details: `Conditional at line ${loc.start.line}: ${testStr}`,
+        details: `Conditional at line ${span.start}: ${testStr}`,
       })
     }
   }
 }
 
-function analyzeSwitchStatement(node: ASTNode, findings: ASTFinding[]): void {
-  const loc = node.loc
-  if (!loc) return
-  const discriminant = (node as Record<string, unknown>).discriminant as ASTNode | undefined
-  if (!discriminant) return
-  const cases = (node as Record<string, unknown>).cases as ASTNode[] | undefined
+function analyzeSwitchStatement(node: Record<string, unknown>, findings: ASTFinding[]): void {
+  const span = getSpan(node)
+  const cases = node.cases as Record<string, unknown>[] | undefined
   if (!cases || cases.length === 0) return
 
-  const defaultCase = cases.find((c: ASTNode) => (c as Record<string, unknown>).test === null)
+  const defaultCase = cases.find((c: Record<string, unknown>) => c.test === null || c.test === undefined)
   if (defaultCase) {
-    const consequent = ((defaultCase as Record<string, unknown>).consequent || []) as ASTNode[]
+    const consequent = (defaultCase.consequent as Record<string, unknown>[]) ?? []
     if (consequent.length <= 1) {
       findings.push({
         type: 'conditional_wrap',
-        lineStart: loc.start.line,
-        lineEnd: loc.end.line,
+        lineStart: span.start,
+        lineEnd: span.end,
         confidence: 'medium',
         explanation: 'Switch statement with trivial default case — may be used to bypass test execution.',
-        details: `Switch at line ${loc.start.line}`,
+        details: `Switch at line ${span.start}`,
       })
     }
   }
 }
 
-function codeFromNode(node: ASTNode): string {
+function codeFromNode(node: Record<string, unknown>): string {
   if (!node) return ''
-  switch (node.type) {
-    case 'Identifier': return (node as Record<string, unknown>).name as string || ''
-    case 'MemberExpression': {
-      const obj = codeFromNode(((node as Record<string, unknown>).object) as ASTNode)
-      const prop = codeFromNode(((node as Record<string, unknown>).property) as ASTNode)
+  switch (node.type as string) {
+    case 'Ident':
+      return (node.sym as string) || ''
+    case 'MemberExpr': {
+      const obj = codeFromNode(node.obj as Record<string, unknown>)
+      const prop = codeFromNode(node.prop as Record<string, unknown>)
       return `${obj}.${prop}`
     }
-    case 'CallExpression': {
-      const callee = codeFromNode(((node as Record<string, unknown>).callee) as ASTNode)
-      const args = ((node as Record<string, unknown>).arguments as ASTNode[] || []).map(a => codeFromNode(a)).join(', ')
+    case 'CallExpr': {
+      const callee = codeFromNode(node.callee as Record<string, unknown>)
+      const args = ((node.arguments as Record<string, unknown>[]) || [])
+        .map((a: Record<string, unknown>) => {
+          const expr = a.expression as Record<string, unknown> | undefined
+          return codeFromNode(expr || a)
+        })
+        .join(', ')
       return `${callee}(${args})`
     }
-    case 'UnaryExpression': {
-      const op = (node as Record<string, unknown>).operator as string
-      const arg = codeFromNode(((node as Record<string, unknown>).argument) as ASTNode)
+    case 'UnaryExpr': {
+      const op = node.op as string
+      const arg = codeFromNode(node.argument as Record<string, unknown>)
       return `${op} ${arg}`
     }
-    case 'StringLiteral': return `'${(node as Record<string, unknown>).value as string}'`
-    case 'BooleanLiteral': return String((node as Record<string, unknown>).value)
-    case 'NumericLiteral': return String((node as Record<string, unknown>).value)
-    default: return `[${node.type}]`
+    case 'Str':
+      return `'${(node.value as string) || ''}'`
+    case 'Bool':
+      return String((node.value as boolean))
+    case 'Num':
+      return String((node.value as number))
+    default:
+      return `[${node.type as string}]`
   }
 }
 
@@ -305,19 +315,38 @@ function analyzeHunk(hunkContent: string): ASTFinding[] {
   const findings: ASTFinding[] = []
   const codeBlocks = extractAddedCode(hunkContent)
 
-  for (const block of codeBlocks) {
+  // Skip hunks with too many blocks
+  if (codeBlocks.length > 50) return findings
+
+  // Batch all code blocks into ONE parse call
+  const combinedCode = codeBlocks
+    .filter(b => b.code.length > 15)
+    .map(b => b.code)
+    .join('\n')
+
+  if (!combinedCode || combinedCode.length < 10) return findings
+
+  // Limit total code to 5000 chars
+  const code = combinedCode.length > 5000 ? combinedCode.slice(0, 5000) : combinedCode
+
+  try {
+    const result = swc.parseSync(code, {
+      syntax: 'typescript',
+      tsx: true,
+      decorators: true,
+    } as swc.ParseOptions)
+    for (const stmt of (result.body as unknown) as Record<string, unknown>[]) {
+      walkAST(stmt, findings)
+    }
+  } catch {
+    // Fallback: try without TS syntax
     try {
-      try {
-        const result = parser.parse(block.code, {
-          sourceType: 'module',
-          plugins: ['typescript', 'jsx', 'decorators-legacy', 'classProperties', 'optionalChaining', 'nullishCoalescingOperator'],
-        })
-        for (const stmt of result.program.body) walkAST(stmt as unknown as ASTNode, findings)
-      } catch {
-        try {
-          const result = parser.parse(block.code, { sourceType: 'script', plugins: ['jsx'] })
-          for (const stmt of result.program.body) walkAST(stmt as unknown as ASTNode, findings)
-        } catch { /* skip unparseable blocks */ }
+      const result = swc.parseSync(code, {
+        syntax: 'ecmascript',
+        jsx: true,
+      } as swc.ParseOptions)
+      for (const stmt of (result.body as unknown) as Record<string, unknown>[]) {
+        walkAST(stmt, findings)
       }
     } catch { /* skip unparseable content */ }
   }
@@ -337,23 +366,25 @@ interface SerializedNode {
 function createSerializer() {
   let nodeCounter = 0
 
-  function serializeNode(node: ASTNode): SerializedNode {
+  function serializeNode(node: Record<string, unknown>): SerializedNode {
     const idx = ++nodeCounter
     const children: SerializedNode[] = []
 
     for (const key of Object.keys(node)) {
-      if (key === 'loc' || key === 'start' || key === 'end' || key === 'type') continue
-      const child = (node as Record<string, unknown>)[key]
+      if (key === 'span' || key === 'loc' || key === 'start' || key === 'end' || key === 'type') continue
+      const child = node[key]
       if (Array.isArray(child)) {
         for (const item of child) {
-          if (item && typeof item === 'object' && 'type' in (item as object)) children.push(serializeNode(item as ASTNode))
+          if (item && typeof item === 'object' && 'type' in (item as object)) {
+            children.push(serializeNode(item as Record<string, unknown>))
+          }
         }
       } else if (child && typeof child === 'object' && 'type' in (child as object)) {
-        children.push(serializeNode(child as ASTNode))
+        children.push(serializeNode(child as Record<string, unknown>))
       }
     }
 
-    return { idx, type: node.type, text: '', children }
+    return { idx, type: node.type as string, text: '', children }
   }
 
   function formatNIT(node: SerializedNode, depth: number = 0): string {
@@ -372,8 +403,8 @@ function codeToNIT(codeBlock: string): string {
   if (!codeBlock || codeBlock.trim().length < 10) return ''
   try {
     const { serializeNode, formatNIT } = createSerializer()
-    const result = parser.parse(codeBlock, { sourceType: 'module', plugins: ['typescript', 'jsx'] })
-    const serializedRoot = serializeNode(result.program as unknown as ASTNode)
+    const result = swc.parseSync(codeBlock, { syntax: 'typescript', tsx: true } as swc.ParseOptions)
+    const serializedRoot = serializeNode((result as unknown) as Record<string, unknown>)
     return formatNIT(serializedRoot)
   } catch { return '' }
 }
@@ -394,23 +425,30 @@ export function serializeDiffToAST(diffContent: string): string {
 // ─── Main Entry Point ───────────────────────────────────────────
 
 /**
- * Run Babel AST analysis on JS/TS files.
+ * Run SWC AST analysis on JS/TS test files.
  */
 export function detectWithAST(files: ParsedDiff[]): Finding[] {
   const findings: Finding[] = []
   const TEST_FILE_PATTERN = /(\.(test|spec)\.(ts|tsx|js|jsx)$)|(\/(?:__tests__|tests?|fixtures)\/)/i
 
+  const MAX_PARSE_CALLS = 5
+  let parseCount = 0
+
   for (const file of files) {
     const filePath = file.newFile || file.oldFile || 'unknown'
     if (file.newFile === '/dev/null') continue
-    const isTestFile = TEST_FILE_PATTERN.test(filePath)
+    if (!TEST_FILE_PATTERN.test(filePath)) continue // Skip non-test files
 
     for (const hunk of file.hunks) {
+      if (parseCount >= MAX_PARSE_CALLS) return findings
+
+      const addedLines = hunk.content.split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++')).length
+      if (addedLines < 5) continue
+
       const astFindings = analyzeHunk(hunk.content)
+      parseCount++
 
       for (const af of astFindings) {
-        if (!isTestFile && (af.type === 'empty_test_shell' || af.type === 'stripped_assertions')) continue
-
         let patternType: string
         switch (af.type) {
           case 'trivial_function':

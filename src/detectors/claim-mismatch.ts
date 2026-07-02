@@ -163,11 +163,16 @@ function scanFiles(files: ParsedDiff[], prContext?: { title?: string; author?: s
   }
 
   // Flag 2: Test files changed but no meaningful logic changes
+  // ⚠️ Only flag if total changed lines > 3 to avoid FP on tiny import/comment changes
   for (const file of files) {
     const filePath = file.newFile || file.oldFile || ''
 
     // If it's a test file with changes
     if (TEST_FILE_PATTERN.test(filePath)) {
+      // Count total changed lines across all hunks
+      const totalLines = file.hunks.reduce((sum, h) => sum + h.content.split('\n').length, 0)
+      if (totalLines < 5) continue // Skip tiny test changes (<5 lines total)
+
       const hasMeaningful = file.hunks.some((h) => hasMeaningfulChanges(h.content))
       if (!hasMeaningful) {
         findings.push({
