@@ -494,7 +494,7 @@ export async function analyzeHistoricalBehavior(params: {
 
     // Convert to Finding format for display
     const findings: Finding[] = behavioralFindings.map(bf => ({
-      patternType: 'claim_diff_mismatch' as any,
+      patternType: 'historical_behavioral' as const,
       filePath: 'historical',
       lineStart: 0,
       lineEnd: 0,

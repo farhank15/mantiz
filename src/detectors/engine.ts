@@ -3,7 +3,7 @@ import { parseRawDiff } from './diff-parser'
 import { detectDisabledAssertions } from './disabled-assertion'
 import { detectAssertionTampering } from './assertion-tampering'
 import { detectMockToAvoid } from './mock-to-avoid'
-import { detectClaimDiffMismatch, isNonFunctional } from './claim-mismatch'
+import { detectClaimDiffMismatch, isNonFunctional, classifyImportance } from './claim-mismatch'
 import { detectSilentCatch } from './silent-catch'
 import { detectHallucinatedAssertions } from './hallucination'
 import { detectWithAI } from './ai-assisted'
@@ -25,17 +25,6 @@ function debug(...args: unknown[]) {
 export interface FixInstruction {
   patternType: string
   instruction: string
-}
-
-export interface ScanStatistics {
-  /** Running mean of findings per scan */
-  meanFindings: number
-  /** Running std dev of findings per scan */
-  stdFindings: number
-  /** Number of scans in history */
-  scanCount: number
-  /** Learning rate for updating statistics (0-1) */
-  learningRate: number
 }
 
 export interface ScanResult {
@@ -62,93 +51,15 @@ export interface ScanResult {
   }
 }
 
-// ─── Statistical Confidence Model ───────────────────────────────
-//
-// Replaces hardcoded CONFIDENCE_PENALTY with a statistical model:
-// 1. Z-score anomaly detection: how anomalous is this scan compared to baseline?
-// 2. Bayesian updating: adjust trust based on evidence vs prior
-// 3. Moving window statistics: adapt to changing patterns
-//
-// Academic basis:
-// - Z-score thresholds for anomaly detection (99.7% coverage at Z=3)
-// - Bayesian probability: P(cheating | findings) = P(findings | cheating) * P(cheating) / P(findings)
-// - Simple-statistics library for mean, std deviation calculations
-
-/** Global statistics tracker — persists across scans in same process */
-const scanStats: ScanStatistics = {
-  meanFindings: 0,
-  stdFindings: 0,
-  scanCount: 0,
-  learningRate: 0.1, // Exponential moving average weight
-}
-
-// ─── Bayesian Priors ────────────────────────────────────────────
-
-/** Prior probability that a scan contains cheating (from historical data) */
-const PRIOR_CHEATING = 0.3  // 30% of scans have some cheating
-
-/** Likelihood of findings GIVEN cheating (sensitivity) */
-const LIKELIHOOD_CHEATING = 0.85  // 85% of cheating scans produce findings
-
-/** Likelihood of findings GIVEN no cheating (false positive rate) */
-const LIKELIHOOD_NO_CHEATING = 0.15  // 15% of honest scans produce findings
-
-/**
- * Calculate Z-score for a value against a statistical baseline.
- * Z > 3 means the value is 3 standard deviations above mean (99.7% threshold)
- */
-function calculateZScore(value: number, meanVal: number, stdVal: number): number {
-  if (stdVal <= 0) return 0
-  return (value - meanVal) / stdVal
-}
-
-/**
- * Bayesian update: P(cheating | findings) = P(findings | cheating) * P(cheating) / P(findings)
- */
-function bayesianUpdate(
-  totalFindings: number,
-  stats: ScanStatistics,
-): number {
-  // Prior: initial belief this scan is cheating
-  const prior = PRIOR_CHEATING
-
-  // Evidence: findings count (relative to baseline)
-  const zScore = calculateZScore(totalFindings, stats.meanFindings, stats.stdFindings)
-
-  // Convert Z-score to evidence likelihood
-  const evidenceStrength = Math.min(1, Math.max(0, zScore / 5))
-
-  // P(findings | cheating): how likely are these findings if cheating?
-  const pFindingsGivenCheating = LIKELIHOOD_CHEATING * (0.5 + evidenceStrength * 0.5)
-
-  // P(findings | no cheating): how likely are these findings if honest?
-  const pFindingsGivenNoCheating = LIKELIHOOD_NO_CHEATING * (1 - evidenceStrength * 0.5)
-
-  // P(findings): total probability of these findings
-  const pFindings = pFindingsGivenCheating * prior + pFindingsGivenNoCheating * (1 - prior)
-
-  if (pFindings === 0) return prior
-
-  // P(cheating | findings) — posterior
-  return (pFindingsGivenCheating * prior) / pFindings
-}
-
-/**
- * Update running statistics with new scan data.
- * Uses exponential moving average.
- */
-function updateStatistics(totalFindings: number): void {
-  const lr = scanStats.learningRate
-
-  if (scanStats.scanCount === 0) {
-    scanStats.meanFindings = totalFindings
-    scanStats.stdFindings = Math.max(1, totalFindings)
-  } else {
-    scanStats.meanFindings = (1 - lr) * scanStats.meanFindings + lr * totalFindings
-    scanStats.stdFindings = (1 - lr) * scanStats.stdFindings + lr * Math.abs(totalFindings - scanStats.meanFindings)
-  }
-
-  scanStats.scanCount++
+// ─── File Importance Multiplier ───────────────────────────────
+// Findings in config/docs/artifact files contribute less penalty
+const IMPORTANCE_MULTIPLIER: Record<string, number> = {
+  core: 1,
+  test: 1,
+  source: 1,
+  config: 0.5,
+  docs: 0.3,
+  artifact: 0.05,
 }
 
 /**
@@ -173,30 +84,18 @@ function dedupFindings(findings: Finding[]): Finding[] {
 }
 
 /**
- * Calculate confidence penalty using statistical model.
- * Uses Z-score + Bayesian posterior instead of hardcoded values.
+ * Calculate penalty — deterministic, no global state.
+ * Uses confidence level × file importance multiplier.
+ * Same diff always gets same score (critical for "lie detector").
  */
-function calculateStatisticalPenalty(findings: Finding[], stats: ScanStatistics): number {
-  const totalFindings = findings.length
-  const highCount = findings.filter(f => f.confidence === 'high').length
-  const mediumCount = findings.filter(f => f.confidence === 'medium').length
-  const lowCount = findings.filter(f => f.confidence === 'low').length
-
-  // Base penalty from confidence levels
-  const basePenalty = highCount * 20 + mediumCount * 10 + lowCount * 3
-
-  // Z-score: how anomalous is this scan?
-  const zScore = calculateZScore(totalFindings, stats.meanFindings, stats.stdFindings)
-  const zScoreAdjustment = Math.max(0, zScore * 5)
-
-  // Bayesian: what's the probability this is cheating?
-  const posterior = bayesianUpdate(totalFindings, stats)
-  const bayesianFactor = (posterior - PRIOR_CHEATING) * 25
-
-  // Total penalty: base + statistical adjustments
-  const totalPenalty = Math.round(basePenalty + zScoreAdjustment + bayesianFactor)
-
-  return Math.max(0, totalPenalty)
+function calculatePenalty(findings: Finding[]): number {
+  let total = 0
+  for (const f of findings) {
+    const base = f.confidence === 'high' ? 20 : f.confidence === 'medium' ? 10 : 3
+    const mult = IMPORTANCE_MULTIPLIER[f.fileImportance ?? 'source'] ?? 1
+    total += base * mult
+  }
+  return Math.max(0, Math.round(total))
 }
 
 export function scanDiff(rawDiff: string, prContext?: { title?: string; author?: string }): ScanResult {
@@ -260,23 +159,23 @@ export function scanDiff(rawDiff: string, prContext?: { title?: string; author?:
     ...d1, ...d2, ...d3, ...d4, ...d5, ...d6, ...d7a, ...d7b, ...d10,
   ]
 
+  // ─── Enrich with file importance for weighted scoring ────────
+  for (const finding of findings) {
+    if (!finding.fileImportance) {
+      finding.fileImportance = classifyImportance(finding.filePath)
+    }
+  }
+
   // ─── Dedup: same file + same line = 1 finding (highest confidence) ─
   const dedupedFindings = dedupFindings(findings)
 
-  // ─── Statistical Confidence Scoring ─────────────────────────────
-  const penalty = calculateStatisticalPenalty(dedupedFindings, scanStats)
+  // ─── Deterministic Scoring ─────────────────────────────────
+  const penalty = calculatePenalty(dedupedFindings)
   const minScore = dedupedFindings.length > 0 ? 30 : 0
-  const trustScore = Math.max(minScore, 100 - penalty)
-
-  updateStatistics(dedupedFindings.length)
-
-  const zScore = calculateZScore(dedupedFindings.length, scanStats.meanFindings, scanStats.stdFindings)
-  const posterior = bayesianUpdate(dedupedFindings.length, scanStats)
-  const zScoreAdjustment = Math.max(0, zScore * 5)
-  const bayesianFactor = (posterior - PRIOR_CHEATING) * 25
+  const trustScore = Math.max(minScore, 100 - Math.min(penalty, 85)) // cap at 85 so score >= 15
 
   const elapsed = Date.now() - startTime
-  debug(`✓ Scan complete in ${elapsed}ms — Score: ${trustScore}/100, ${findings.length} total findings (Z: ${zScore.toFixed(2)}, bayes: ${(posterior * 100).toFixed(0)}%)`)
+  debug(`✓ Scan complete in ${elapsed}ms — Score: ${trustScore}/100, ${findings.length} total findings (deterministic)`)
 
   const summary = {
     totalFindings: dedupedFindings.length,
@@ -295,15 +194,13 @@ export function scanDiff(rawDiff: string, prContext?: { title?: string; author?:
     summary,
     fixInstructions,
     scoring: {
-      baseScore: 100 - (dedupedFindings.filter(f => f.confidence === 'high').length * 20 +
-                        dedupedFindings.filter(f => f.confidence === 'medium').length * 10 +
-                        dedupedFindings.filter(f => f.confidence === 'low').length * 3),
-      zScoreAdjustment,
-      bayesianFactor,
+      baseScore: 100 - penalty,
+      zScoreAdjustment: 0,
+      bayesianFactor: 0,
       finalScore: trustScore,
-      meanFindings: Math.round(scanStats.meanFindings * 10) / 10,
-      stdFindings: Math.round(scanStats.stdFindings * 10) / 10,
-      scanCount: scanStats.scanCount,
+      meanFindings: 0,
+      stdFindings: 0,
+      scanCount: 0,
     },
   }
 }
@@ -331,16 +228,18 @@ export async function scanDiffAsync(
     debug('  Detector 8 [AI-Assisted Detection]: analyzing via AI...')
 
     try {
-      const aiFindings = await detectWithAI(baseResult.files)
+      // Normalize prContext: map author → description so AI prompt can use it
+      const aiContext = prContext ? { title: prContext.title, description: prContext.author ? `Author: ${prContext.author}` : undefined } : undefined
+      const aiFindings = await detectWithAI(baseResult.files, aiContext)
       if (aiFindings.length > 0) {
         debug(`  Detector 8 [AI-Assisted Detection]: ${aiFindings.length} finding${aiFindings.length !== 1 ? 's' : ''}`)
 
         allFindings = [...allFindings, ...aiFindings]
 
-        // Recalculate with updated findings
-        const penalty = calculateStatisticalPenalty(allFindings, scanStats)
-        const minScore = allFindings.length > 0 ? 10 : 0
-        currentScore = Math.max(minScore, 100 - penalty)
+        // Recalculate with deterministic penalty (same floor as static: 30)
+        const penalty = calculatePenalty(allFindings)
+        const minScore = allFindings.length > 0 ? 30 : 0
+        currentScore = Math.max(minScore, 100 - Math.min(penalty, 85))
         currentSummary = {
           totalFindings: allFindings.length,
           highCount: allFindings.filter(f => f.confidence === 'high').length,

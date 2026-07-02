@@ -25,6 +25,22 @@ const TEST_FILE_PATTERN = /(\.(test|spec)\.(ts|tsx|js|jsx)$)|(\/(?:__tests__|tes
 const SOURCE_FILE_PATTERN = /\.(ts|tsx|js|jsx|mjs|cjs)$/i
 
 /**
+ * File importance classification for weighted scoring.
+ */
+const CONFIG_EXT_PATTERN = /\.(json|yaml|yml|toml|cfg|ini)$/i
+const DOCS_EXT_PATTERN = /\.(md|txt|css|scss|sass|less|styl|svg|png|jpg|jpeg|gif|ico|webp|avif)$/i
+
+export type FileImportance = 'core' | 'test' | 'source' | 'config' | 'artifact' | 'docs'
+
+export function classifyImportance(filePath: string): FileImportance {
+  if (TEST_FILE_PATTERN.test(filePath)) return 'test'
+  if (SOURCE_FILE_PATTERN.test(filePath)) return 'source'
+  if (CONFIG_EXT_PATTERN.test(filePath)) return 'config'
+  if (DOCS_EXT_PATTERN.test(filePath)) return 'docs'
+  return 'docs'
+}
+
+/**
  * Known bot authors whose PRs typically only touch non-functional files 
  * (dependencies, config, translations, formatting, releases).
  * When such a bot opens a PR where all changes are non-functional, 

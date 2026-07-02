@@ -60,6 +60,25 @@ const IMPORTANCE_MULTIPLIER: Record<string, number> = {
   artifact: 0.05,
 }
 
+// ─── Dedup: same file + same line = keep highest confidence ─
+// Defined at module level so both scanDiff and scanDiffAsync can use it
+function dedupFindings(findings: Finding[]): Finding[] {
+  const seen = new Map<string, Finding>()
+  for (const f of findings) {
+    const key = `${f.filePath}:${f.lineStart}`
+    const existing = seen.get(key)
+    if (!existing) {
+      seen.set(key, f)
+    } else {
+      const weight = (c: string) => c === 'high' ? 3 : c === 'medium' ? 2 : 1
+      if (weight(f.confidence) > weight(existing.confidence)) {
+        seen.set(key, f)
+      }
+    }
+  }
+  return Array.from(seen.values())
+}
+
 /**
  * Run all detection engines on a raw diff string and produce a ScanResult.
  */
@@ -82,10 +101,10 @@ export function scanDiff(rawDiff: string): ScanResult {
     }
   }
 
-  const functionalFiles = files.filter(f => !isNonFunctional(f.newFile || f.oldFile || ''))
+  const functionalFiles = files.filter((f: ParsedDiff) => !isNonFunctional(f.newFile || f.oldFile || ''))
 
   // Run all static detectors (sync)
-  const staticFindings: Finding[] = [
+  let staticFindings: Finding[] = [
     ...detectDisabledAssertions(functionalFiles),
     ...detectAssertionTampering(functionalFiles),
     ...detectMockToAvoid(functionalFiles),
@@ -93,6 +112,9 @@ export function scanDiff(rawDiff: string): ScanResult {
     ...detectSilentCatch(functionalFiles),
     ...detectHallucinatedAssertions(functionalFiles),
   ]
+
+  // Dedup: same file + same line = 1 finding
+  staticFindings = dedupFindings(staticFindings)
 
   // Enrich findings with file importance for weighted scoring
   for (const finding of staticFindings) {
@@ -108,7 +130,9 @@ export function scanDiff(rawDiff: string): ScanResult {
     const mult = IMPORTANCE_MULTIPLIER[finding.fileImportance ?? 'source'] ?? 1
     deductions += base * mult
   }
-  const trustScore = Math.max(0, Math.round(100 - deductions))
+  // minScore floor: even with findings, score stays >= 30
+  const minScore = staticFindings.length > 0 ? 30 : 0
+  const trustScore = Math.max(minScore, Math.round(100 - deductions))
 
   const summary = {
     totalFindings: staticFindings.length,
@@ -126,23 +150,27 @@ export function scanDiff(rawDiff: string): ScanResult {
 /**
  * Async version — also runs AI-assisted detection.
  * Returns the same ScanResult but may include AI findings.
+ *
+ * @param rawDiff  Raw git diff text
+ * @param prContext  Optional PR context (title, description) for AI cross-referencing
  */
-export async function scanDiffAsync(rawDiff: string): Promise<ScanResult> {
+export async function scanDiffAsync(rawDiff: string, prContext?: { title?: string; description?: string }): Promise<ScanResult> {
   const result = scanDiff(rawDiff)
 
   // Run AI detection (async, may fail silently)
   try {
-    const aiFindings = await detectWithAI(result.files)
+    const aiFindings = await detectWithAI(result.files, prContext)
     if (aiFindings.length > 0) {
       // Recalculate with AI findings
       let deductions = 0
-      const allFindings = [...result.findings, ...aiFindings]
+      const allFindings = dedupFindings([...result.findings, ...aiFindings])
       for (const finding of allFindings) {
         const base = CONFIDENCE_PENALTY[finding.confidence] ?? 5
         const mult = IMPORTANCE_MULTIPLIER[finding.fileImportance ?? 'source'] ?? 1
         deductions += base * mult
       }
-      const newTrustScore = Math.max(0, Math.round(100 - deductions))
+      const minScore = allFindings.length > 0 ? 30 : 0
+      const newTrustScore = Math.max(minScore, Math.round(100 - deductions))
 
       return {
         ...result,

@@ -1,0 +1,8 @@
+[
+  { "type": "action", "description": "Navigate to /api/mock-login?secret=mantiz_e2e_bypass_2026 to authenticate the session" },
+  { "type": "action", "description": "Navigate to /settings after authentication" },
+  { "type": "assertion", "description": "Verify the Settings page shows a threshold or Trust Score slider input control with a numeric value label" },
+  { "type": "assertion", "description": "Verify an AI Detection toggle or checkbox is visible in the settings form" },
+  { "type": "action", "description": "Click or toggle the AI Detection switch to change its current state" },
+  { "type": "assertion", "description": "Verify the AI Detection toggle reflects the new state (checked or unchecked, on or off) in the Settings panel" }
+]

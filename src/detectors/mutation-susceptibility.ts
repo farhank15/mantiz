@@ -530,9 +530,9 @@ export function detectMutationSusceptibility(files: ParsedDiff[]): Finding[] {
 
       if (analysis.vulnerabilityScore >= 60) {
         confidence = 'high'
-      } else if (analysis.vulnerabilityScore >= 35) {
+      } else if (analysis.vulnerabilityScore >= 40) {
         confidence = 'medium'
-      } else if (analysis.vulnerabilityScore >= 20) {
+      } else if (analysis.vulnerabilityScore >= 30) {
         confidence = 'low'
       } else {
         continue // Skip low vulnerability
