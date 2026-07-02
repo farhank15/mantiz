@@ -283,7 +283,7 @@ function analyzeStyleChange(
       confidence: 'medium',
       explanation: `Author "${profile.author}" suddenly changed writing style. Previous ${hashes.length - 1} scans had consistent style, current scan is significantly different.`,
       details: `Style similarity: ${Math.round(similarity * 100)}% — threshold: ${Math.round(STYLE_CHANGE_THRESHOLD * 100)}%`,
-      scoreModifier: -10,
+      scoreModifier: -3,
     }
   }
 
@@ -310,7 +310,7 @@ function analyzeOddHours(
       confidence: 'low',
       explanation: `Scan created at unusual hour (${new Date().getHours()}:00). Consistent odd-hour patterns may indicate automated or scripted behavior.`,
       details: `Current time: ${new Date().getHours()}:00 — outside normal working hours (${ODD_HOUR_START}-${ODD_HOUR_END} AM)`,
-      scoreModifier: -5,
+      scoreModifier: -3,
     }
   }
 
@@ -341,7 +341,7 @@ function analyzeScoreVolatility(
       confidence: 'high',
       explanation: `Author "${profile.author}" has highly volatile trust scores (max swing: ${maxSwing}pts within last ${scores.length} scans). This pattern is consistent with AI agent impersonation.`,
       details: `Recent scores: [${scores.join(', ')}] — max swing: ${maxSwing}pts (threshold: ${VOLATILITY_THRESHOLD}pts)`,
-      scoreModifier: -15,
+      scoreModifier: -8,
     }
   }
 
@@ -352,7 +352,7 @@ function analyzeScoreVolatility(
       confidence: 'low',
       explanation: `Author "${profile.author}" shows moderate trust score volatility (${maxSwing}pts swing).`,
       details: `Recent scores: [${scores.join(', ')}] — max swing: ${maxSwing}pts`,
-      scoreModifier: -5,
+      scoreModifier: -3,
     }
   }
 
@@ -372,7 +372,7 @@ function analyzeNewAuthor(
     confidence: 'low',
     explanation: `Author "${profile.author}" has no scan history. New authors are flagged for additional scrutiny on first interaction.`,
     details: `First scan from this author — no behavioral baseline available.`,
-    scoreModifier: -5,
+    scoreModifier: -3,
   }
 }
 
@@ -391,7 +391,7 @@ function analyzeFrequency(
       confidence: 'medium',
       explanation: `Author "${profile.author}" has ${recentEvents} scans in the last 24 hours (max: ${MAX_DAILY_FREQUENCY}). Unusually high frequency suggests automated or bot-like behavior.`,
       details: `${recentEvents} scans in 24h — threshold: ${MAX_DAILY_FREQUENCY}`,
-      scoreModifier: -10,
+      scoreModifier: -5,
     }
   }
 
@@ -401,7 +401,7 @@ function analyzeFrequency(
       confidence: 'low',
       explanation: `Author "${profile.author}" has ${recentEvents} scans today — slightly above normal.`,
       details: `${recentEvents} scans in 24h`,
-      scoreModifier: -3,
+      scoreModifier: -2,
     }
   }
 
@@ -416,7 +416,7 @@ function analyzeConsecutiveFailures(
 ): BehavioralFinding | null {
   if (profile.consecutiveFailures < 3) return null
 
-  const penalty = Math.min(profile.consecutiveFailures * 5, 25)
+  const penalty = Math.min(profile.consecutiveFailures * 3, 12)
 
   return {
     type: 'consecutive_failures',

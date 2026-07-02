@@ -27,9 +27,153 @@ import { useAuth } from "../../lib/auth-context";
 import { createToken, listTokens, revokeToken } from "../../server/tokens";
 import { getUserSettings, saveUserSettings } from "../../server/settings";
 import { testWebhook, getWebhookEvents } from "../../server/webhook";
+import { getCredits, getCreditHistory } from "../../server/credits";
 import PageHeader from "../../components/PageHeader";
 
 export const Route = createFileRoute("/settings/")({ component: SettingsPage });
+
+// ── Sub-component: Credits Usage ─────────────────────────────────
+
+function CreditsUsage() {
+  const { data: credits, isLoading } = useQuery({
+    queryKey: ["credits"],
+    queryFn: getCredits,
+    staleTime: 10_000, // 10s — credits change after each scan
+  });
+
+  const { data: history = [], isLoading: historyLoading } = useQuery({
+    queryKey: ["credit-history"],
+    queryFn: () => getCreditHistory({ data: { limit: 10 } }),
+    staleTime: 10_000,
+  });
+
+  const [showHistory, setShowHistory] = useState(false);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-ink-muted">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading credits...
+      </div>
+    );
+  }
+
+  if (!credits) return null;
+
+  const pct = Math.round((credits.balance / 30) * 100);
+  const barColor =
+    credits.balance >= 15
+      ? "bg-interactive"
+      : credits.balance >= 5
+        ? "bg-severity-medium"
+        : "bg-severity-critical";
+  const costInfo = [
+    { feature: "AI Judge", credits: 2 },
+    { feature: "AI-Assisted", credits: 2 },
+    { feature: "Full AI (both)", credits: 3 },
+    { feature: "Static scan", credits: 0 },
+  ];
+
+  return (
+    <div>
+      {/* Balance bar */}
+      <div className="mb-4">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-sm font-medium text-ink">
+            {credits.balance} credits remaining
+          </span>
+          <span className="text-xs text-ink-muted">
+            Resets in {credits.daysUntilReset} days
+          </span>
+        </div>
+        <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-2">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${pct}%` }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className={`h-full rounded-full ${barColor}`}
+          />
+        </div>
+        <p className="mt-1 text-[10px] text-ink-subdued">
+          Lifetime used: {credits.lifetimeUsed} credits · Plan resets to 30 on
+          renewal
+        </p>
+      </div>
+
+      {/* Cost table */}
+      <div className="mb-4 grid grid-cols-2 gap-2">
+        {costInfo.map((item) => (
+          <div
+            key={item.feature}
+            className="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2"
+          >
+            <span className="text-xs text-ink">{item.feature}</span>
+            <span
+              className={`text-xs font-bold ${item.credits === 0 ? "text-success" : "text-ink"}`}
+            >
+              {item.credits === 0 ? "Free" : `${item.credits} cr`}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Recent usage */}
+      <button
+        onClick={() => setShowHistory(!showHistory)}
+        className="flex items-center gap-1.5 text-xs text-ink-muted hover:text-ink transition"
+      >
+        <History className="h-3 w-3" />
+        {showHistory ? "Hide" : "Show"} recent usage
+      </button>
+
+      <AnimatePresence>
+        {showHistory && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-2 max-h-48 overflow-y-auto space-y-1.5">
+              {historyLoading ? (
+                <div className="flex items-center gap-2 py-2 text-xs text-ink-subdued">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Loading...
+                </div>
+              ) : history.length === 0 ? (
+                <p className="py-2 text-xs text-ink-subdued">No usage yet.</p>
+              ) : (
+                history.map((tx: any) => (
+                  <div
+                    key={tx.id}
+                    className="flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-2 text-xs"
+                  >
+                    {tx.amount < 0 ? (
+                      <Zap className="h-3 w-3 shrink-0 text-interactive" />
+                    ) : (
+                      <CheckCircle2 className="h-3 w-3 shrink-0 text-success" />
+                    )}
+                    <span className="flex-1 text-ink-muted">
+                      {tx.reason.replace(/_/g, " ")}
+                    </span>
+                    <span
+                      className={`font-bold ${tx.amount < 0 ? "text-severity-critical" : "text-success"}`}
+                    >
+                      {tx.amount < 0 ? tx.amount : `+${tx.amount}`}
+                    </span>
+                    <span className="text-ink-subdued">
+                      {new Date(tx.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 interface ScanSettings {
   threshold: number;
@@ -50,10 +194,7 @@ function SettingsPage() {
   const [showCreated, setShowCreated] = useState(false);
 
   // ── TanStack Query: Tokens ────────────────────────────────
-  const {
-    data: tokens = [],
-    isLoading: tokensLoading,
-  } = useQuery({
+  const { data: tokens = [], isLoading: tokensLoading } = useQuery({
     queryKey: ["tokens"],
     queryFn: listTokens,
     enabled: isAuthenticated,
@@ -82,10 +223,7 @@ function SettingsPage() {
   });
 
   // ── TanStack Query: Settings ──────────────────────────────
-  const {
-    data: serverSettings,
-    isLoading: settingsLoading,
-  } = useQuery({
+  const { data: serverSettings, isLoading: settingsLoading } = useQuery({
     queryKey: ["settings"],
     queryFn: getUserSettings,
     enabled: isAuthenticated,
@@ -107,15 +245,13 @@ function SettingsPage() {
 
   // ── TanStack Query: Webhook History ───────────────────────
   const [showWebhookHistory, setShowWebhookHistory] = useState(false);
-  const {
-    data: webhookHistory = [],
-    isFetching: webhookHistoryLoading,
-  } = useQuery({
-    queryKey: ["webhook-events"],
-    queryFn: () => getWebhookEvents({ data: { limit: 10 } }),
-    enabled: isAuthenticated && showWebhookHistory,
-    staleTime: 30_000, // 30s — webhook events can change
-  });
+  const { data: webhookHistory = [], isFetching: webhookHistoryLoading } =
+    useQuery({
+      queryKey: ["webhook-events"],
+      queryFn: () => getWebhookEvents({ data: { limit: 10 } }),
+      enabled: isAuthenticated && showWebhookHistory,
+      staleTime: 30_000, // 30s — webhook events can change
+    });
 
   // ── Mutations ─────────────────────────────────────────────
   const [settingsSaved, setSettingsSaved] = useState(false);
@@ -170,7 +306,10 @@ function SettingsPage() {
     }
   }, [testWebhookMutation.data, testWebhookMutation.isError]);
 
-  const [webhookTestResult, setWebhookTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [webhookTestResult, setWebhookTestResult] = useState<{
+    ok: boolean;
+    message: string;
+  } | null>(null);
 
   const handleCopy = () => {
     if (createdToken) {
@@ -185,8 +324,8 @@ function SettingsPage() {
 
   if (authLoading) {
     return (
-      <main className="page-wrap px-4 pb-16 pt-8 sm:pt-10">
-        <div className="mx-auto max-w-3xl pt-20 text-center">
+      <main className="page-wrap px-2 pb-16 pt-8 sm:pt-10">
+        <div className="mx-auto pt-20 text-center">
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-interactive" />
           <p className="mt-4 text-ink-muted">Loading...</p>
         </div>
@@ -196,8 +335,8 @@ function SettingsPage() {
 
   if (!isAuthenticated) {
     return (
-      <main className="page-wrap px-4 pb-16 pt-8 sm:pt-10">
-        <div className="mx-auto max-w-3xl pt-20 text-center">
+      <main className="page-wrap px-2 pb-16 pt-8 sm:pt-10">
+        <div className="mx-auto pt-20 text-center">
           <Shield className="mx-auto mb-4 h-12 w-12 text-ink-subdued" />
           <h2 className="mb-2 text-xl font-bold text-ink">Sign in Required</h2>
           <p className="mb-6 text-sm text-ink-muted">
@@ -213,8 +352,8 @@ function SettingsPage() {
   }
 
   return (
-    <main className="page-wrap px-4 pb-16 pt-8 sm:pt-10">
-      <div className="mx-auto max-w-3xl">
+    <main className="page-wrap px-2 pb-16 pt-8 sm:pt-10">
+      <div className="mx-auto">
         <PageHeader
           icon={Settings}
           title="Settings"
@@ -227,6 +366,27 @@ function SettingsPage() {
             {error}
           </div>
         )}
+
+        {/* ═══════════════ Credits & Usage ═══════════════ */}
+        <div className="mb-8 rounded-xl border border-border bg-surface-1 overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <div className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-interactive" />
+              <div>
+                <h2 className="font-bold text-ink">Credits & Usage</h2>
+                <p className="text-xs text-ink-muted">
+                  AI scans consume credits. Static scans are always free.
+                </p>
+              </div>
+            </div>
+            <span className="rounded-full bg-interactive/10 px-3 py-1 text-xs font-semibold text-interactive">
+              Free Plan
+            </span>
+          </div>
+          <div className="p-5">
+            <CreditsUsage />
+          </div>
+        </div>
 
         {/* ═══════════════ Scan Settings ═══════════════ */}
         <div className="mb-8 rounded-xl border border-border bg-surface-1 overflow-hidden">
@@ -261,7 +421,9 @@ function SettingsPage() {
                       </p>
                     </div>
                   </div>
-                  <span className={`text-lg font-bold ${settings.threshold >= 80 ? "text-success" : settings.threshold >= 50 ? "text-severity-medium" : "text-severity-critical"}`}>
+                  <span
+                    className={`text-lg font-bold ${settings.threshold >= 80 ? "text-success" : settings.threshold >= 50 ? "text-severity-medium" : "text-severity-critical"}`}
+                  >
                     {settings.threshold}
                   </span>
                 </div>
@@ -271,7 +433,12 @@ function SettingsPage() {
                   min="0"
                   max="100"
                   value={settings.threshold}
-                  onChange={(e) => setSettings({ ...settings, threshold: parseInt(e.target.value) })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      threshold: parseInt(e.target.value),
+                    })
+                  }
                   className="w-full h-2 rounded-full appearance-none cursor-pointer bg-surface-2 accent-interactive"
                 />
                 <div className="flex justify-between text-[10px] text-ink-subdued mt-1">
@@ -305,7 +472,12 @@ function SettingsPage() {
                   min="0"
                   max="50"
                   value={settings.minScore}
-                  onChange={(e) => setSettings({ ...settings, minScore: parseInt(e.target.value) })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      minScore: parseInt(e.target.value),
+                    })
+                  }
                   className="w-full h-2 rounded-full appearance-none cursor-pointer bg-surface-2 accent-interactive"
                 />
                 <div className="flex justify-between text-[10px] text-ink-subdued mt-1">
@@ -325,14 +497,19 @@ function SettingsPage() {
                         AI-Powered Detection
                       </label>
                       <p className="text-xs text-ink-muted">
-                        Uses LLM (Fireworks/Groq) for semantic cheating analysis
+                        Uses AI for semantic cheating analysis
                       </p>
                     </div>
                   </div>
                   <button
                     id="ai-detection-toggle"
                     aria-label="Toggle AI-powered detection"
-                    onClick={() => setSettings({ ...settings, aiEnabled: !settings.aiEnabled })}
+                    onClick={() =>
+                      setSettings({
+                        ...settings,
+                        aiEnabled: !settings.aiEnabled,
+                      })
+                    }
                     className={`relative h-7 w-12 rounded-full transition-colors ${
                       settings.aiEnabled ? "bg-interactive" : "bg-surface-2"
                     }`}
@@ -356,22 +533,32 @@ function SettingsPage() {
                         Webhook URL
                       </label>
                       <p className="text-xs text-ink-muted">
-                        Receive scan results as POST requests (retry 3x, HMAC signed)
+                        Receive scan results as POST requests (retry 3x, HMAC
+                        signed)
                       </p>
                     </div>
                   </div>
                   <button
                     id="webhook-enabled-toggle"
                     aria-label="Toggle webhook notifications"
-                    onClick={() => setSettings({ ...settings, webhookEnabled: !settings.webhookEnabled })}
+                    onClick={() =>
+                      setSettings({
+                        ...settings,
+                        webhookEnabled: !settings.webhookEnabled,
+                      })
+                    }
                     className={`relative h-7 w-12 rounded-full transition-colors ${
-                      settings.webhookEnabled ? "bg-interactive" : "bg-surface-2"
+                      settings.webhookEnabled
+                        ? "bg-interactive"
+                        : "bg-surface-2"
                     }`}
                     disabled={!settings.webhookUrl}
                   >
                     <span
                       className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
-                        settings.webhookEnabled ? "translate-x-5" : "translate-x-0"
+                        settings.webhookEnabled
+                          ? "translate-x-5"
+                          : "translate-x-0"
                       }`}
                     />
                   </button>
@@ -381,14 +568,21 @@ function SettingsPage() {
                     id="webhook-url-input"
                     type="url"
                     value={settings.webhookUrl || ""}
-                    onChange={(e) => setSettings({ ...settings, webhookUrl: e.target.value || null })}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        webhookUrl: e.target.value || null,
+                      })
+                    }
                     placeholder="https://hooks.slack.com/services/..."
                     className="field-input flex-1"
                   />
                   <button
                     id="webhook-test-button"
                     onClick={() => testWebhookMutation.mutate()}
-                    disabled={!settings.webhookUrl || testWebhookMutation.isPending}
+                    disabled={
+                      !settings.webhookUrl || testWebhookMutation.isPending
+                    }
                     className="btn btn-secondary text-xs"
                   >
                     {testWebhookMutation.isPending ? (
@@ -399,12 +593,16 @@ function SettingsPage() {
                   </button>
                 </div>
                 {webhookTestResult && (
-                  <p className={`mt-2 text-xs ${webhookTestResult.ok ? "text-success" : "text-severity-critical"}`}>
+                  <p
+                    className={`mt-2 text-xs ${webhookTestResult.ok ? "text-success" : "text-severity-critical"}`}
+                  >
                     {webhookTestResult.message}
                   </p>
                 )}
                 <p className="mt-2 text-[10px] text-ink-subdued">
-                  Payload signed with <code className="text-[9px]">X-Mantiz-Signature</code> (HMAC-SHA256). Retries 3x with backoff.
+                  Payload signed with{" "}
+                  <code className="text-[9px]">X-Mantiz-Signature</code>{" "}
+                  (HMAC-SHA256). Retries 3x with backoff.
                 </p>
 
                 {/* Webhook History Toggle */}
@@ -431,17 +629,24 @@ function SettingsPage() {
                             Loading...
                           </div>
                         ) : webhookHistory.length === 0 ? (
-                          <p className="py-2 text-xs text-ink-subdued">No webhook deliveries yet.</p>
+                          <p className="py-2 text-xs text-ink-subdued">
+                            No webhook deliveries yet.
+                          </p>
                         ) : (
                           webhookHistory.map((ev: any) => (
-                            <div key={ev.id} className="flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-2 text-xs">
-                              {ev.status === 'delivered' ? (
+                            <div
+                              key={ev.id}
+                              className="flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-2 text-xs"
+                            >
+                              {ev.status === "delivered" ? (
                                 <CheckCircle2 className="h-3 w-3 shrink-0 text-success" />
                               ) : (
                                 <AlertTriangle className="h-3 w-3 shrink-0 text-severity-critical" />
                               )}
                               <span className="text-ink-muted">
-                                {ev.status === 'delivered' ? `Delivered (${ev.responseCode})` : 'Failed'}
+                                {ev.status === "delivered"
+                                  ? `Delivered (${ev.responseCode})`
+                                  : "Failed"}
                               </span>
                               <span className="ml-auto text-ink-subdued">
                                 {new Date(ev.createdAt).toLocaleString()}
@@ -468,7 +673,11 @@ function SettingsPage() {
                   ) : settingsSaved ? (
                     <Check className="h-4 w-4" />
                   ) : null}
-                  {saveSettingsMutation.isPending ? "Saving..." : settingsSaved ? "Saved!" : "Save Settings"}
+                  {saveSettingsMutation.isPending
+                    ? "Saving..."
+                    : settingsSaved
+                      ? "Saved!"
+                      : "Save Settings"}
                 </button>
               </div>
             </div>
@@ -518,7 +727,9 @@ function SettingsPage() {
                       placeholder="e.g., GitHub Actions, My CLI"
                       className="field-input flex-1"
                       autoFocus
-                      onKeyDown={(e) => e.key === "Enter" && createTokenMutation.mutate()}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && createTokenMutation.mutate()
+                      }
                     />
                     <button
                       id="generate-token-button"
@@ -559,7 +770,9 @@ function SettingsPage() {
                   </p>
                   <div className="flex items-center gap-2">
                     <div className="field-input flex-1 font-mono text-sm">
-                      <span className={showCreated ? "" : "blur-sm select-none"}>
+                      <span
+                        className={showCreated ? "" : "blur-sm select-none"}
+                      >
                         {showCreated ? createdToken : "•".repeat(40)}
                       </span>
                     </div>
@@ -568,15 +781,26 @@ function SettingsPage() {
                       className="btn btn-secondary p-2"
                       title={showCreated ? "Hide" : "Show"}
                     >
-                      {showCreated ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showCreated ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                     <button onClick={handleCopy} className="btn btn-primary">
-                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      {copied ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
                       {copied ? "Copied!" : "Copy"}
                     </button>
                   </div>
                   <button
-                    onClick={() => { setShowCreated(false); setCreatedToken(null); }}
+                    onClick={() => {
+                      setShowCreated(false);
+                      setCreatedToken(null);
+                    }}
                     className="mt-3 text-xs text-ink-muted hover:text-ink transition"
                   >
                     Dismiss
@@ -596,24 +820,37 @@ function SettingsPage() {
           {!tokensLoading && activeTokens.length === 0 && !showNewToken && (
             <div className="p-8 text-center">
               <Key className="mx-auto mb-3 h-10 w-10 text-ink-subdued" />
-              <p className="text-sm text-ink-muted">No API tokens yet. Create one to integrate Mantiz with your CI/CD.</p>
+              <p className="text-sm text-ink-muted">
+                No API tokens yet. Create one to integrate Mantiz with your
+                CI/CD.
+              </p>
             </div>
           )}
 
           {!tokensLoading && activeTokens.length > 0 && (
             <div className="divide-y divide-border">
               {activeTokens.map((token) => (
-                <div key={token.id} className="flex items-center justify-between px-5 py-3.5">
+                <div
+                  key={token.id}
+                  className="flex items-center justify-between px-5 py-3.5"
+                >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-interactive/10">
                       <Key className="h-4 w-4 text-interactive" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-ink truncate">{token.name}</p>
+                      <p className="text-sm font-medium text-ink truncate">
+                        {token.name}
+                      </p>
                       <div className="flex items-center gap-2 text-xs text-ink-muted">
-                        <code className="text-[10px]">{token.tokenPrefix}••••</code>
+                        <code className="text-[10px]">
+                          {token.tokenPrefix}••••
+                        </code>
                         <span>·</span>
-                        <span>Created {new Date(token.createdAt).toLocaleDateString()}</span>
+                        <span>
+                          Created{" "}
+                          {new Date(token.createdAt).toLocaleDateString()}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -641,7 +878,9 @@ function SettingsPage() {
                 <ExternalLink className="h-4 w-4 text-interactive" />
                 GitHub Actions
               </h3>
-              <p className="mb-2 text-xs text-ink-muted">Add this step to your workflow:</p>
+              <p className="mb-2 text-xs text-ink-muted">
+                Add this step to your workflow:
+              </p>
               <pre className="code-block text-[11px]">{`- name: Mantiz Scan
   uses: farhank15/mantiz@main
   with:
@@ -654,9 +893,13 @@ function SettingsPage() {
                 <ExternalLink className="h-4 w-4 text-interactive" />
                 CLI
               </h3>
-              <p className="mb-2 text-xs text-ink-muted">Run with your token:</p>
+              <p className="mb-2 text-xs text-ink-muted">
+                Run with your token:
+              </p>
               <pre className="code-block text-[11px]">{`npx @farhank15/mantiz-cli --token your_token_here --save`}</pre>
-              <p className="mt-2 text-xs text-ink-muted">Use <code>--save</code> to persist results to your history.</p>
+              <p className="mt-2 text-xs text-ink-muted">
+                Use <code>--save</code> to persist results to your history.
+              </p>
             </div>
           </div>
         </div>
@@ -669,10 +912,17 @@ function SettingsPage() {
               </summary>
               <div className="mt-2 space-y-2">
                 {revokedTokens.map((token) => (
-                  <div key={token.id} className="flex items-center gap-3 rounded-lg border border-border bg-surface-1 px-4 py-2 opacity-50">
+                  <div
+                    key={token.id}
+                    className="flex items-center gap-3 rounded-lg border border-border bg-surface-1 px-4 py-2 opacity-50"
+                  >
                     <AlertTriangle className="h-4 w-4 text-severity-medium" />
-                    <span className="text-sm text-ink-muted line-through">{token.name}</span>
-                    <code className="text-[10px] text-ink-subdued">{token.tokenPrefix}••••</code>
+                    <span className="text-sm text-ink-muted line-through">
+                      {token.name}
+                    </span>
+                    <code className="text-[10px] text-ink-subdued">
+                      {token.tokenPrefix}••••
+                    </code>
                     <span className="text-xs text-ink-subdued">Revoked</span>
                   </div>
                 ))}

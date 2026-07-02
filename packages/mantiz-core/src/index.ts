@@ -16,3 +16,4 @@ export { detectClaimDiffMismatch, isNonFunctional } from './detectors/claim-mism
 export { detectSilentCatch } from './detectors/silent-catch'
 export { detectHallucinatedAssertions } from './detectors/hallucination'
 export { detectWithAI } from './detectors/ai-assisted'
+export { evaluateFindings, isAIJudgeEnabled } from './detectors/ai-judge'

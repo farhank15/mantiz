@@ -1,4 +1,4 @@
-import type { Finding, ParsedDiff, Confidence } from './types'
+import type { Finding, ParsedDiff, Confidence, ScoringBreakdown, Verdict, VerdictResult, BehavioralFlag } from './types'
 import { parseRawDiff } from './diff-parser'
 import { detectDisabledAssertions } from './disabled-assertion'
 import { detectAssertionTampering } from './assertion-tampering'
@@ -7,10 +7,13 @@ import { detectClaimDiffMismatch, isNonFunctional, classifyImportance } from './
 import { detectSilentCatch } from './silent-catch'
 import { detectHallucinatedAssertions } from './hallucination'
 import { detectWithAI } from './ai-assisted'
+import { evaluateFindings, isAIJudgeEnabled } from './ai-judge'
 import { detectWithAST } from './ast-analyzer'
 import { detectWithTreeSitter, detectWithTreeSitterAsync } from './tree-sitter-analyzer'
 import { analyzeHistoricalBehavior } from './historical-scoring'
 import { detectMutationSusceptibility } from './mutation-susceptibility'
+import { ensureCredits, deductCredits, CREDIT_COSTS } from '../server/credits'
+import { tryAuth } from '../server/auth-utils.server'
 
 // ─── Debug Logging ───────────────────────────────────────────────
 
@@ -39,16 +42,9 @@ export interface ScanResult {
     filesScanned: number
   }
   fixInstructions: FixInstruction[]
-  /** Statistical scoring details */
-  scoring?: {
-    baseScore: number
-    zScoreAdjustment: number
-    bayesianFactor: number
-    finalScore: number
-    meanFindings: number
-    stdFindings: number
-    scanCount: number
-  }
+  scoringBreakdown?: ScoringBreakdown
+  /** Categorical verdict — derived from evidenceScore, more honest than raw number */
+  verdict?: VerdictResult
 }
 
 // ─── File Importance Multiplier ───────────────────────────────
@@ -175,7 +171,7 @@ export function scanDiff(rawDiff: string, prContext?: { title?: string; author?:
   const trustScore = Math.max(minScore, 100 - Math.min(penalty, 85)) // cap at 85 so score >= 15
 
   const elapsed = Date.now() - startTime
-  debug(`✓ Scan complete in ${elapsed}ms — Score: ${trustScore}/100, ${findings.length} total findings (deterministic)`)
+  debug(`✓ Scan complete in ${elapsed}ms — Score: ${trustScore}/100, ${dedupedFindings.length} total findings (${findings.length} raw)`)
 
   const summary = {
     totalFindings: dedupedFindings.length,
@@ -193,15 +189,14 @@ export function scanDiff(rawDiff: string, prContext?: { title?: string; author?:
     trustScore,
     summary,
     fixInstructions,
-    scoring: {
-      baseScore: 100 - penalty,
-      zScoreAdjustment: 0,
-      bayesianFactor: 0,
-      finalScore: trustScore,
-      meanFindings: 0,
-      stdFindings: 0,
-      scanCount: 0,
+    scoringBreakdown: {
+      staticScore: trustScore,
+      rawFindings: findings.length,
+      dedupedFindings: dedupedFindings.length,
+      aiJudgeFiltered: 0,
+      aiAssistedFindings: 0,
     },
+    verdict: deriveVerdict(trustScore),
   }
 }
 
@@ -223,35 +218,108 @@ export async function scanDiffAsync(
   let currentScore = baseResult.trustScore
   let currentSummary = { ...baseResult.summary, totalFindings: allFindings.length }
 
-  // ─── Layer 8: AI-Assisted Detection ───────────────────────────────
-  if (aiEnabled) {
-    debug('  Detector 8 [AI-Assisted Detection]: analyzing via AI...')
+  // Auth for credit checks (optional — null if not logged in)
+  const auth = tryAuth()
 
-    try {
-      // Normalize prContext: map author → description so AI prompt can use it
-      const aiContext = prContext ? { title: prContext.title, description: prContext.author ? `Author: ${prContext.author}` : undefined } : undefined
-      const aiFindings = await detectWithAI(baseResult.files, aiContext)
-      if (aiFindings.length > 0) {
-        debug(`  Detector 8 [AI-Assisted Detection]: ${aiFindings.length} finding${aiFindings.length !== 1 ? 's' : ''}`)
-
-        allFindings = [...allFindings, ...aiFindings]
-
-        // Recalculate with deterministic penalty (same floor as static: 30)
-        const penalty = calculatePenalty(allFindings)
-        const minScore = allFindings.length > 0 ? 30 : 0
-        currentScore = Math.max(minScore, 100 - Math.min(penalty, 85))
-        currentSummary = {
-          totalFindings: allFindings.length,
-          highCount: allFindings.filter(f => f.confidence === 'high').length,
-          mediumCount: allFindings.filter(f => f.confidence === 'medium').length,
-          lowCount: allFindings.filter(f => f.confidence === 'low').length,
-          filesScanned: baseResult.summary.filesScanned,
-        }
-      } else {
-        debug('  Detector 8 [AI-Assisted Detection]: 0 findings (clean AI verdict)')
+  // ─── AI Judge: Review Static Findings ────────────────────────────
+  // Runs AFTER static detectors but BEFORE AI-assisted discovery.
+  // Filters false positives and downgrades contextual findings.
+  // Requires credits (cost: 2) — static-only users skip this.
+  if (isAIJudgeEnabled() && baseResult.findings.length > 0) {
+    let canAfford = true
+    if (auth) {
+      try {
+        await ensureCredits(auth.userId, CREDIT_COSTS.ai_judge)
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'Insufficient credits'
+        debug(`  AI Judge: skipped — ${msg}`)
+        canAfford = false
       }
-    } catch (err) {
-      debug('  Detector 8 [AI-Assisted Detection]: failed —', err)
+    }
+
+    if (canAfford) {
+      debug('  AI Judge: reviewing static findings...')
+      try {
+        const aiContext = prContext ? { title: prContext.title, description: prContext.author ? `Author: ${prContext.author}` : undefined } : undefined
+        const judgeFindings = await evaluateFindings(allFindings, baseResult.files, aiContext)
+
+        if (auth) {
+          await deductCredits(auth.userId, 'ai_judge', { findingCount: judgeFindings.length }).catch(() => {})
+        }
+
+        if (judgeFindings.length < allFindings.length) {
+          debug(`  AI Judge: filtered ${allFindings.length - judgeFindings.length} false positives`)
+        }
+
+        const changed = judgeFindings.length !== allFindings.length ||
+          judgeFindings.some((f, i) => f.confidence !== allFindings[i]?.confidence || f.aiVerdict !== allFindings[i]?.aiVerdict)
+
+        if (changed) {
+          const penalty = calculatePenalty(judgeFindings)
+          const minScore = judgeFindings.length > 0 ? 30 : 0
+          currentScore = Math.max(minScore, 100 - Math.min(penalty, 85))
+          currentSummary = {
+            totalFindings: judgeFindings.length,
+            highCount: judgeFindings.filter(f => f.confidence === 'high').length,
+            mediumCount: judgeFindings.filter(f => f.confidence === 'medium').length,
+            lowCount: judgeFindings.filter(f => f.confidence === 'low').length,
+            filesScanned: baseResult.summary.filesScanned,
+          }
+          allFindings = judgeFindings
+          debug(`  AI Judge: adjusted — ${judgeFindings.filter(f => f.aiVerdict === 'VALID').length} valid, ${judgeFindings.filter(f => f.aiVerdict === 'CONTEXTUAL').length} contextual`)
+        } else {
+          debug('  AI Judge: all findings confirmed as valid')
+        }
+      } catch (err) {
+        debug('  AI Judge: failed —', err)
+      }
+    }
+  }
+
+  // ─── Layer 8: AI-Assisted Detection ───────────────────────────────
+  // Requires credits (cost: 2) — static-only users skip this.
+  if (aiEnabled) {
+    let canAfford = true
+    if (auth) {
+      try {
+        await ensureCredits(auth.userId, CREDIT_COSTS.ai_assisted)
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'Insufficient credits'
+        debug(`  Detector 8 [AI-Assisted Detection]: skipped — ${msg}`)
+        canAfford = false
+      }
+    }
+
+    if (canAfford) {
+      debug('  Detector 8 [AI-Assisted Detection]: analyzing via AI...')
+      try {
+        const aiContext = prContext ? { title: prContext.title, description: prContext.author ? `Author: ${prContext.author}` : undefined } : undefined
+        const aiFindings = await detectWithAI(baseResult.files, aiContext)
+
+        if (auth) {
+          await deductCredits(auth.userId, 'ai_assisted', { findingCount: aiFindings.length }).catch(() => {})
+        }
+
+        if (aiFindings.length > 0) {
+          debug(`  Detector 8 [AI-Assisted Detection]: ${aiFindings.length} finding${aiFindings.length !== 1 ? 's' : ''}`)
+          allFindings = [...allFindings, ...aiFindings]
+
+          const penalty = calculatePenalty(allFindings)
+          const minScore = allFindings.length > 0 ? 30 : 0
+          currentScore = Math.max(minScore, 100 - Math.min(penalty, 85))
+          currentSummary = {
+            totalFindings: allFindings.length,
+            highCount: allFindings.filter(f => f.confidence === 'high').length,
+            mediumCount: allFindings.filter(f => f.confidence === 'medium').length,
+            lowCount: allFindings.filter(f => f.confidence === 'low').length,
+            filesScanned: baseResult.summary.filesScanned,
+          }
+        } else {
+          debug('  Detector 8 [AI-Assisted Detection]: 0 findings (clean AI verdict)')
+        }
+      } catch (err) {
+        debug('  Detector 8 [AI-Assisted Detection]: failed —', err)
+      }
     }
   }
 
@@ -291,9 +359,9 @@ export async function scanDiffAsync(
 
         allFindings = [...allFindings, ...historical.findings]
 
-        if (historical.modifier !== 0) {
-          currentScore = Math.max(10, Math.min(100, currentScore + historical.modifier))
-        }
+        // Behavioral flags do NOT affect evidence score.
+        // They're stored separately in scoringBreakdown.behavioralFlags.
+        // The modifier is informational only — it does not change currentScore.
 
         currentSummary = {
           totalFindings: allFindings.length,
@@ -314,12 +382,62 @@ export async function scanDiffAsync(
 
   debug(`✓ Full scan complete — Score: ${currentScore}/100, ${allFindings.length} total findings`)
 
+  // ─── Build behavioral flags from historical findings ─────────────
+  const behavioralFlags: BehavioralFlag[] = []
+  for (const f of allFindings) {
+    if (f.patternType === 'historical_behavioral') {
+      behavioralFlags.push({
+        type: f.explanation.replace('📊 [Historical] ', '').split('. ')[0] || f.explanation,
+        confidence: f.confidence,
+        note: f.evidenceExcerpt.substring(0, 150),
+      })
+    }
+  }
+
   return {
     ...baseResult,
     findings: allFindings,
     trustScore: currentScore,
     summary: currentSummary,
     fixInstructions,
+    scoringBreakdown: {
+      staticScore: baseResult.scoringBreakdown?.staticScore ?? currentScore,
+      rawFindings: baseResult.scoringBreakdown?.rawFindings ?? 0,
+      dedupedFindings: baseResult.scoringBreakdown?.dedupedFindings ?? allFindings.length,
+      aiJudgeFiltered: Math.max(0, (baseResult.scoringBreakdown?.dedupedFindings ?? 0) - allFindings.length),
+      aiAssistedFindings: 0,
+      behavioralFlags: behavioralFlags.length > 0 ? behavioralFlags : undefined,
+    },
+    verdict: deriveVerdict(currentScore),
+  }
+}
+
+// ─── Verdict Derivation ────────────────────────────────────────────
+// Transforms numeric evidenceScore into categorical verdict + confidence band.
+// Thresholds:
+//   ≥ 80  → CLEAN
+//   ≥ 50  → SUSPICIOUS
+//   < 50  → LIKELY_DECEPTIVE
+// Confidence is derived from distance from threshold boundaries.
+function deriveVerdict(score: number): VerdictResult {
+  if (score >= 80) {
+    return {
+      label: 'CLEAN' as Verdict,
+      confidence: score >= 95 ? 'high' as const : score >= 88 ? 'medium' as const : 'low' as const,
+      reason: `Evidence score ${score}/100 — no significant cheating patterns detected`,
+    }
+  }
+  if (score >= 50) {
+    return {
+      label: 'SUSPICIOUS' as Verdict,
+      confidence: score <= 60 ? 'high' as const : 'medium' as const,
+      reason: `Evidence score ${score}/100 — suspicious patterns found, manual review recommended`,
+    }
+  }
+  return {
+    label: 'LIKELY_DECEPTIVE' as Verdict,
+    confidence: score <= 30 ? 'high' as const : 'medium' as const,
+    reason: `Evidence score ${score}/100 — strong indicators of test manipulation detected`,
   }
 }
 

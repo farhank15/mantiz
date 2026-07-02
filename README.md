@@ -91,7 +91,7 @@ Configure scan behavior from the [Settings](https://mantiz-wine.vercel.app/setti
 | Setting | Default | Description |
 |---------|---------|-------------|
 | **Threshold** | 70 | Trust score threshold (0-100). Scores below this fail the check. |
-| **AI Detection** | Off | Enable LLM-powered semantic analysis (Fireworks/Groq) |
+| **AI Detection** | Off | Enable LLM-powered semantic analysis |
 | **Min Score** | 0 | Hard floor — result never goes below this score |
 | **Webhook URL** | — | Receive scan results as POST requests (HMAC signed, 3x retry) |
 

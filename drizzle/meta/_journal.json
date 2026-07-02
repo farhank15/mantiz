@@ -43,6 +43,13 @@
       "when": 1782962601002,
       "tag": "0005_chubby_earthquake",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782983240540,
+      "tag": "0006_furry_celestials",
+      "breakpoints": true
     }
   ]
 }
