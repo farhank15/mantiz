@@ -21,7 +21,10 @@ interface AssertionMatch {
  * Extract assertion calls from a diff line (prefixed with - or +).
  */
 function extractAssertions(line: string, lineIndex: number): AssertionMatch | null {
-  const match = line.slice(1).match(ASSERTION_PATTERN) // strip +/- prefix
+  const content = line.slice(1) // strip +/- prefix
+  // Skip commented lines — commented-out assertions are not real changes
+  if (/^\s*\/\//.test(content)) return null
+  const match = content.match(ASSERTION_PATTERN)
   if (!match) return null
   return {
     line,
@@ -130,19 +133,49 @@ function findTamperedAssertions(
           confidence: 'medium' as Confidence,
           explanation: `Assertion value updated from ${old.value} to ${nw.value} — source files also changed elsewhere in the PR, may be a coordinated update.`,
           evidenceExcerpt: nw.line.slice(0, 200),
-        })
-      } else {
-        // ONLY test changed — suspicious, keep HIGH confidence
-        findings.push({
-          patternType: 'assertion_tampering',
-          filePath: '',
-          lineStart: nw.lineIndex,
-          lineEnd: nw.lineIndex,
-          confidence: 'high' as Confidence,
-          explanation: `Assertion value changed from ${old.value} to ${nw.value} without any source code changes to justify it.`,
-          evidenceExcerpt: nw.line.slice(0, 200),
-        })
-      }
+        })        } else {
+          // ONLY test changed — check if this is a value swap or expansion (restructure, not tampering)
+          // Case 1: Value swap — old values reappear as new values at different positions
+          const oldValueAppearsInNew = newAssertions.some(na => na.method === old.method && na.value === old.value)
+          const nwValueExistedInOld = oldAssertions.some(oa => oa.method === nw.method && oa.value === nw.value)
+          const isValueSwap = oldValueAppearsInNew && nwValueExistedInOld
+
+          // Case 2: Test expansion — old value STILL EXISTS in new assertions (kept), AND new value is added
+          // This is an addition, not tampering: the test is being expanded, not weakened
+          const isExpansion = oldValueAppearsInNew
+
+          if (isValueSwap) {
+            findings.push({
+              patternType: 'assertion_tampering',
+              filePath: '',
+              lineStart: nw.lineIndex,
+              lineEnd: nw.lineIndex,
+              confidence: 'medium' as Confidence,
+              explanation: `Assertion value updated from ${old.value} to ${nw.value} — values appear to be swapped/restructured, indicating a coordinated test update rather than tampering.`,
+              evidenceExcerpt: nw.line.slice(0, 200),
+            })
+          } else if (isExpansion && newAssertions.length >= oldAssertions.length) {
+            findings.push({
+              patternType: 'assertion_tampering',
+              filePath: '',
+              lineStart: nw.lineIndex,
+              lineEnd: nw.lineIndex,
+              confidence: 'low' as Confidence,
+              explanation: `Assertion value updated from ${old.value} to ${nw.value} — old assertion retained and new value added, indicating test was expanded rather than tampered.`,
+              evidenceExcerpt: nw.line.slice(0, 200),
+            })
+          } else {
+            findings.push({
+              patternType: 'assertion_tampering',
+              filePath: '',
+              lineStart: nw.lineIndex,
+              lineEnd: nw.lineIndex,
+              confidence: 'high' as Confidence,
+              explanation: `Assertion value changed from ${old.value} to ${nw.value} without any source code changes to justify it.`,
+              evidenceExcerpt: nw.line.slice(0, 200),
+            })
+          }
+        }
     }
   }
 

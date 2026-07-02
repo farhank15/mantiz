@@ -39,6 +39,9 @@ const VALID_MATCHERS = new Set([
   'beforeEach', 'afterEach', 'vi', 'jest',
 
   'should', 'assert', 'expect',
+
+  // test.todo is a valid Jest/Vitest function for planned tests
+  'todo',
 ])
 
 const KNOWN_HALLUCINATED_MATCHERS = [

@@ -25,6 +25,18 @@ const VALID_MATCHERS = new Set([
   'toThrow', 'toThrowError', 'toThrowErrorMatchingSnapshot',
   'toThrowErrorMatchingInlineSnapshot',
 
+  // Jest 29+ matchers (VALID — NOT hallucinated)
+  'toHaveBeenCalledOnceWith',
+  'toHaveBeenCalled', 'toHaveBeenCalledOnce', 'toHaveBeenCalledTimes',
+  'toHaveBeenCalledWith', 'toHaveReturned', 'toHaveReturnedWith',
+
+  // Mock methods (frequently chained in tests)
+  'mock', 'mocked', 'fn', 'spyOn',
+  'mockReturnValue', 'mockReturnValueOnce', 'mockResolvedValue',
+  'mockResolvedValueOnce', 'mockRejectedValue', 'mockRejectedValueOnce',
+  'mockImplementation', 'mockImplementationOnce', 'mockRestore',
+  'mockClear', 'mockReset',
+
   // Extend matchers (from jest-extended / vitest matchers)
   'toBeArray', 'toBeArrayOfSize', 'toBeBoolean', 'toBeDate',
   'toBeEmpty', 'toBeEmptyObject', 'toBeEven', 'toBeFinite',
@@ -46,6 +58,9 @@ const VALID_MATCHERS = new Set([
 
   // Chai-style (should, assert)
   'should', 'assert', 'expect',
+
+  // test.todo is a valid Jest/Vitest function for planned tests
+  'todo',
 ])
 
 /**
@@ -62,9 +77,7 @@ const KNOWN_HALLUCINATED_MATCHERS = [
   'toExist', 'toNotExist', 'toNotBe', 'toNotEqual', 'toNotMatch',
   'toHave', 'toNotHave', 'toHas', 'toNotHas', 'toBePresent',
   'toNotBePresent', 'toIncludeAll', 'toExclude', 'toExcludeAll',
-  'toBeValid', 'toBeInvalid', 'toHaveBeenCalled', 'toHaveBeenCalledOnce',
-  'toHaveBeenCalledTimes', 'toHaveBeenCalledWith', 'toHaveReturned',
-  'toHaveReturnedWith',
+  'toBeValid', 'toBeInvalid',
 ]
 
 /**

@@ -187,12 +187,30 @@ export function detectDisabledAssertions(files: ParsedDiff[]): Finding[] {
       const baseLine = hunk.newStart
       const matches = scanHunk(hunk.content, baseLine, lang)
 
+      // Check if hunk has active (non-commented) assertions nearby
+      // If commented assertions coexist with active assertions in same hunk,
+      // the comments are likely temporary refactoring artifacts, not permanent disables
+      const hasActiveAssertions = /\bexpect\s*\(|\bassert\s*\(/.test(
+        hunk.content.split('\n')
+          .filter(l => l.startsWith('+') && !l.startsWith('+++'))
+          .map(l => l.slice(1))
+          .filter(l => !/^\s*\/\//.test(l)) // exclude commented lines
+          .join('\n')
+      )
+      const hasCommentedAssert = matches.some(m => m.pattern === 'comment' || m.pattern === 'todo')
+
       for (const match of matches) {
         let confidence = patternToConfidence(match.pattern)
 
         // Context-aware: if source code also changed, commented assertions
         // are likely refactoring artifacts (e.g., old code commented out during cleanup)
         if (match.pattern === 'comment' && hasSourceChange) {
+          confidence = 'low'
+        }
+
+        // Context-aware: if hunk has BOTH commented assertions and active assertions,
+        // the comments are temporary refactoring, not permanent disables
+        if ((match.pattern === 'comment' || match.pattern === 'todo') && hasActiveAssertions && hasCommentedAssert) {
           confidence = 'low'
         }
 
