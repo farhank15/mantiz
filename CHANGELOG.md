@@ -8,28 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- **Detection engine** with 5 pattern detectors:
-  - Disabled Assertion — detects commented-out assertions, `.skip()`, `if(false)` blocks
-  - Assertion Tampering — detects changed expected values without source logic changes
-  - Mock-to-Avoid-Failure — detects mock-heavy diffs with low real-path coverage
-  - Claim-Diff Mismatch — compares commit message intent with actual changes
-  - Silent Catch-and-Pass — detects empty `catch {}` blocks swallowing errors
-- **Diff parser** — parses unified git diffs into structured hunks using `parsePatch`
-- **Trust Score** (0-100) — weighted scoring by confidence level
-- **Scan page** — paste diff → scan → results with expandable findings
-- **Landing page** — redesigned with Detection Patterns grid, Loop Architecture section
-- **Benchmark dataset** — 3 scenarios: Honest Code, Cheating AI, Smart Evasion AI
-- **Auto-Healer remediation** — AI-agent-friendly fix instructions in scan results
+- **user_settings** table — per-user threshold, AI toggle, minScore, webhook URL
+- **webhook_events** table — delivery history tracking with retry status
+- **Settings page** — scan settings UI (threshold slider, AI toggle, minScore, webhook URL + test + history)
+- **Webhook v2** — 3x retry with exponential backoff, HMAC-SHA256 signing, event types (scan.completed/scan.failed)
+- **CLI `--save` flag** — persist scan results to cloud history (requires `--token`)
+- **CLI `--ai` flag** — enable AI-assisted detection from CLI
+- **`/api/scan` `useAi` param** — AI detection support for API scans
+- **User Verdict** — tag findings as confirmed / false_positive in history modal
+- **File importance weighting** — findings in config/docs/artifact get reduced score penalty
+- **GitHub Action `use-ai` input** — enable AI detection from reusable action
 
 ### Changed
-- **UI overhaul** — Migrated to Lucide icons throughout, bento-grid layout for detection patterns
-- **README** — Complete rewrite with badges, features table, quick start, tech stack
-- **GitHub links** — Fixed to point to farhank15/mantiz
+- **Threshold system** — moved from hardcoded 70 to per-user configurable setting
+- **Scoring** — added file importance multipliers (core/test=1.0, config=0.5, docs=0.3, artifact=0.05)
+- **`/api/scan`** — now loads user settings for threshold + AI detection + webhook delivery
+- **`testWebhook`** — converted to `createServerFn` for safe client-side invocation
 
 ### Infrastructure
-- **Deployed** to [mantiz-wine.vercel.app](https://mantiz-wine.vercel.app)
-- **PLAN.md** — Revised strategy focusing on detectors → benchmark → LOOP.md
-- **Added** standard open-source files: LICENSE, CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md, .npmrc, .editorconfig, .gitattributes, SUPPORT.md
+- **Migration 0004** — added `user_settings` + `webhook_events` tables
+- **New env var:** `WEBHOOK_SECRET` — for HMAC webhook signing
 
 ---
 

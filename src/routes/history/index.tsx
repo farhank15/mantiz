@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../../lib/auth-context";
 import { getScanHistory, getScanDetails } from "../../server/auth";
+import { updateFindingVerdict, type UserVerdict } from "../../server/verdict";
 import { createShareLink } from "../../server/share";
 import PageHeader from "../../components/PageHeader";
 import {
@@ -514,6 +515,28 @@ function HistoryPage() {
                                     ? "bg-severity-medium/10 text-severity-medium border-severity-medium/20"
                                     : "bg-severity-info/10 text-severity-info border-severity-info/20";
 
+                              const handleVerdict = async (verdict: UserVerdict) => {
+                                try {
+                                  await updateFindingVerdict({ data: { findingId: finding.id, verdict } });
+                                  finding.userVerdict = verdict;
+                                  setSelectedScanDetails({ ...selectedScanDetails });
+                                } catch (err) {
+                                  console.error("Failed to update verdict:", err);
+                                }
+                              };
+
+                              const verdictLabel = finding.userVerdict === "confirmed"
+                                ? "Confirmed"
+                                : finding.userVerdict === "false_positive"
+                                  ? "False Pos"
+                                  : null;
+
+                              const verdictColor = finding.userVerdict === "confirmed"
+                                ? "text-success border-success/30 bg-success/10"
+                                : finding.userVerdict === "false_positive"
+                                  ? "text-orange-500 border-orange-500/30 bg-orange-500/10"
+                                  : "";
+
                               return (
                                 <div
                                   key={finding.id || idx}
@@ -536,6 +559,11 @@ function HistoryPage() {
                                         {finding.filePath}:{finding.lineStart}
                                       </div>
                                     </div>
+                                    {verdictLabel && (
+                                      <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${verdictColor}`}>
+                                        {verdictLabel}
+                                      </span>
+                                    )}
                                     {isExpanded ? (
                                       <ChevronUp className="h-4 w-4 shrink-0 text-ink-muted" />
                                     ) : (
@@ -550,7 +578,8 @@ function HistoryPage() {
                                         exit={{ height: 0, opacity: 0 }}
                                         transition={{ duration: 0.2 }}
                                         className="overflow-hidden"
-                                      >                                          <div className="border-t border-border px-4 py-3 bg-surface-2/50">
+                                      >
+                                        <div className="border-t border-border px-4 py-3 bg-surface-2/50">
                                           <div className="mb-1.5 flex items-center gap-1.5 text-xs text-ink-subdued">
                                             <FileCode className="h-3 w-3" />
                                             {finding.patternType === 'ai_assisted_detection' ? 'AI analysis' : 'Evidence excerpt'}
@@ -564,6 +593,27 @@ function HistoryPage() {
                                               showHeader={false}
                                             />
                                           )}
+                                          {/* Verdict Actions */}
+                                          <div className="mt-3 flex items-center gap-2 border-t border-border pt-3">
+                                            <span className="text-[10px] font-medium uppercase tracking-wider text-ink-subdued">Verdict:</span>
+                                            {(['unreviewed', 'confirmed', 'false_positive'] as UserVerdict[]).map((v) => (
+                                              <button
+                                                key={v}
+                                                onClick={(e) => { e.stopPropagation(); handleVerdict(v); }}
+                                                className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold transition ${
+                                                  finding.userVerdict === v
+                                                    ? v === 'confirmed'
+                                                      ? 'border-success/40 bg-success/15 text-success'
+                                                      : v === 'false_positive'
+                                                        ? 'border-orange-500/40 bg-orange-500/15 text-orange-500'
+                                                        : 'border-border bg-surface-2 text-ink'
+                                                    : 'border-border text-ink-subdued hover:border-interactive/30 hover:text-ink'
+                                                }`}
+                                              >
+                                                {v === 'unreviewed' ? 'Unreviewed' : v === 'confirmed' ? '✓ Confirmed' : '✗ False Positive'}
+                                              </button>
+                                            ))}
+                                          </div>
                                         </div>
                                       </motion.div>
                                     )}

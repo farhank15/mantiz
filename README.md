@@ -82,7 +82,59 @@ Same diff (package.json + lockfile changes only):
 
 ### 🎯 Trust Score
 
-Weighted scoring: **high = 30pts**, **medium = 15pts**, **low = 5pts** deducted per finding. Minimum score is 10 when findings exist (avoids confusing 0/100). Threshold: **≥ 80 = PASS**.
+Weighted scoring: **high = 30pts**, **medium = 15pts**, **low = 5pts** deducted per finding. File importance multiplier: `core/test/source = 1.0`, `config = 0.5`, `docs = 0.3`, `artifact = 0.05`. Minimum score is 0 (rounded). Threshold: **default 70**, configurable per-user in Settings.
+
+### ⚙️ Per-User Settings
+
+Configure scan behavior from the [Settings](https://mantiz-wine.vercel.app/settings) page:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| **Threshold** | 70 | Trust score threshold (0-100). Scores below this fail the check. |
+| **AI Detection** | Off | Enable LLM-powered semantic analysis (Fireworks/Groq) |
+| **Min Score** | 0 | Hard floor — result never goes below this score |
+| **Webhook URL** | — | Receive scan results as POST requests (HMAC signed, 3x retry) |
+
+Settings apply to all scans made with your API tokens (CLI, GitHub Actions).
+
+### 🔗 Webhook System v2
+
+Receive scan results in real-time via webhook. Payload includes full findings, signed with HMAC-SHA256 for verification.
+
+**Features:**
+- 3 retry attempts with exponential backoff (1s → 4s → 15s)
+- `X-Mantiz-Signature` header for payload verification
+- Event types: `scan.completed` (pass) / `scan.failed` (fail)
+- Delivery history visible in Settings page
+- Works with Slack, Discord, Telegram, or custom endpoints
+
+**Example webhook payload:**
+```json
+{
+  "event": "scan.completed",
+  "scanId": "uuid",
+  "trustScore": 85,
+  "passed": true,
+  "threshold": 70,
+  "findings": [
+    {
+      "patternType": "disabled_assertion",
+      "filePath": "src/test.js",
+      "confidence": "high",
+      "explanation": "..."
+    }
+  ]
+}
+```
+
+### 🏷️ User Verdict
+
+Tag findings in your scan history:
+- **Confirmed** — This is a valid cheating detection ✓
+- **False Positive** — This finding was incorrect ✗
+- **Unreviewed** — Default state
+
+Helps track detection accuracy over time.
 
 ### 🔐 GitHub OAuth + Session Management
 
@@ -93,7 +145,7 @@ Weighted scoring: **high = 30pts**, **medium = 15pts**, **low = 5pts** deducted 
 
 ### 🤖 AI Detection
 
-- **Toggle:** Easily enable/disable via `AI_DETECTION_ENABLED=true`
+- **Toggle:** Easily enable/disable via Settings page or `--ai` CLI flag
 - **Smart Analysis:** Detects 5 AI-level patterns: test weakening, assertion removal, semantic bypass, hallucinated APIs, and coverage reduction.
 
 ### 📊 Routes
@@ -104,8 +156,8 @@ Weighted scoring: **high = 30pts**, **medium = 15pts**, **low = 5pts** deducted 
 | `/scan` | Paste & scan a raw git diff |
 | `/pr-scan` | Scan a GitHub PR by URL (requires auth) |
 | `/login` | GitHub OAuth sign-in |
-| `/history` | Scan history with detailed findings modal |
-| `/settings` | API token management (`mtz_*` prefix) |
+| `/history` | Scan history with detailed findings modal + user verdict tagging |
+| `/settings` | Scan settings (threshold, AI toggle, minScore) + API token management + webhook config |
 | `/benchmark` | Interactive benchmark — 39 fixtures across 4 datasets |
 
 ### 🧩 Interactive Scan Animation
@@ -161,6 +213,9 @@ SESSION_SECRET=your_random_secret_at_least_32_chars
 AI_DETECTION_ENABLED=true
 AI_API_KEY=your_ai_api_key
 
+# Webhook secret (optional — for HMAC signing webhook payloads)
+WEBHOOK_SECRET=your_random_secret_at_least_32_chars
+
 # Debug logging (optional — enables per-detector console logs)
 MANTIZ_DEBUG=true
 
@@ -183,6 +238,13 @@ npm run build
 npm run preview
 ```
 
+### 4. Apply Database Migrations
+
+```bash
+# After adding new tables (e.g., user_settings, webhook_events)
+npx drizzle-kit push
+```
+
 ---
 
 ## 🧪 How to Use
@@ -201,22 +263,63 @@ npm run preview
 3. Paste a PR URL: `https://github.com/owner/repo/pull/123`
 4. Mantiz fetches the diff, runs 11 detectors, and returns findings
 
-### 🔗 CI/CD Integration
+### 🔗 GitHub Actions (Reusable Action)
 
-Install in **GitHub Actions** — every PR is automatically scanned:
+Add to your workflow to scan every PR:
 
 ```yaml
-# .github/workflows/mantiz.yml
-name: Mantiz PR Scan
-on: [pull_request]
-jobs:
-  check-honesty:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: npx mantiz scan --pr ${{ github.event.pull_request.html_url }}
-        env:
-          MANTIZ_API_TOKEN: ${{ secrets.MANTIZ_API_TOKEN }}
+- name: Run Mantiz Scan
+  uses: farhank15/mantiz@main
+  with:
+    api-token: ${{ secrets.MANTIZ_API_TOKEN }}
+    threshold: 70          # Override default (configurable in Settings)
+    use-ai: true           # Enable AI-assisted detection
+    json-output: true      # JSON output for parsing
+```
+
+### 🔗 CLI Integration
+
+Install the CLI and scan with options:
+
+```bash
+npm install -g @mantiz/cli
+
+# Local scan (no cloud)
+mantiz-scan
+
+# Cloud scan with history persistence
+mantiz-scan --token mtz_abc123 --save --ai
+
+# JSON output for CI
+mantiz-scan --json
+```
+
+### 🔔 Webhook Integration
+
+Set up a webhook URL in [Settings](https://mantiz-wine.vercel.app/settings) to receive scan results in real-time:
+
+```bash
+# Example: Receive webhook payload
+POST /mantiz-webhook
+Content-Type: application/json
+X-Mantiz-Signature: sha256=...
+X-Mantiz-Event: scan.failed
+
+{
+  "event": "scan.failed",
+  "trustScore": 45,
+  "threshold": 70,
+  "findings": [...]
+}
+```
+
+Verify signature:
+```javascript
+const crypto = require('crypto')
+const hmac = crypto.createHmac('sha256', WEBHOOK_SECRET)
+hmac.update(JSON.stringify(req.body))
+const expected = 'sha256=' + hmac.digest('hex')
+if (req.headers['x-mantiz-signature'] !== expected) return res.status(401)
 ```
 
 ### 🩹 Auto-Heal Mode (`--fix`)
