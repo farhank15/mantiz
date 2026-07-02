@@ -39,6 +39,7 @@ function ScanPage() {
     "idle",
   );
   const [copySuccess, setCopySuccess] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [expandedFindings, setExpandedFindings] = useState<Set<number>>(
     new Set(),
@@ -140,18 +141,16 @@ function ScanPage() {
   const handleShare = async () => {
     if (!scanResult) return;
 
-    // If we already have a share URL, just copy it
     if (shareUrl) {
       try {
         await navigator.clipboard.writeText(shareUrl);
         setCopySuccess(true);
         setTimeout(() => setCopySuccess(false), 2000);
-      } catch {
-        /* fallback */
-      }
+      } catch { /* fallback */ }
       return;
     }
 
+    setIsSharing(true);
     try {
       const result = await createShareLink({
         data: {
@@ -177,15 +176,13 @@ function ScanPage() {
         },
       });
       setShareUrl(result.url);
-      try {
-        await navigator.clipboard.writeText(result.url);
-        setCopySuccess(true);
-        setTimeout(() => setCopySuccess(false), 2000);
-      } catch {
-        /* fallback */
-      }
+      await navigator.clipboard.writeText(result.url);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
     } catch (err) {
       console.error("Failed to create share link:", err);
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -563,17 +560,15 @@ index abc123..def456 100644
                   <Code2 className="h-4 w-4" />
                   Scan Another Diff
                 </button>
-                <button onClick={handleShare} className="btn btn-secondary">
-                  {copySuccess ? (
+                <button onClick={handleShare} disabled={isSharing} className="btn btn-secondary">
+                  {isSharing ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : copySuccess ? (
                     <Check className="h-4 w-4 text-success" />
                   ) : (
                     <Share2 className="h-4 w-4" />
                   )}
-                  {copySuccess
-                    ? "Link Copied!"
-                    : shareUrl
-                      ? "Copy Link"
-                      : "Share Results"}
+                  {isSharing ? "Generating..." : copySuccess ? "Link Copied!" : shareUrl ? "Copy Link" : "Share Results"}
                 </button>
               </div>
             </motion.div>

@@ -9,6 +9,8 @@ export type PatternType =
 
 export type Confidence = 'low' | 'medium' | 'high'
 
+export type FileImportance = 'core' | 'test' | 'source' | 'config' | 'artifact' | 'docs'
+
 export interface Finding {
   patternType: PatternType
   filePath: string
@@ -17,6 +19,7 @@ export interface Finding {
   confidence: Confidence
   explanation: string
   evidenceExcerpt: string
+  fileImportance?: FileImportance
 }
 
 export interface ParsedDiff {

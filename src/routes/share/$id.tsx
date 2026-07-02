@@ -1,12 +1,4 @@
-/**
- * Mantiz Share — Public scan report page
- *
- * Accessible via /share/:shareId to anyone with the URL.
- * Shows trust score, findings breakdown, and evidence.
- * No authentication required.
- */
-
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { motion } from "framer-motion"
 import {
@@ -27,7 +19,14 @@ import StatCard from "../../components/StatCard"
 import DiffViewer from "../../components/DiffViewer"
 import AiEvidenceCard from "../../components/AiEvidenceCard"
 
-export const Route = createFileRoute("/share/$id")({ component: SharePage })
+export const Route = createFileRoute("/share/$id")({
+  loader: async ({ params: { id } }) => {
+    const result = await getSharedScan({ data: { id } })
+    return result
+  },
+  errorComponent: ShareError,
+  component: SharePage,
+})
 
 interface ShareData {
   trustScore: number
@@ -47,26 +46,35 @@ interface ShareData {
   }>
 }
 
-function SharePage() {
-  const { id } = Route.useParams()
-  const [data, setData] = useState<{ scanData: ShareData; sourceType: string; sourceRef?: string; createdAt: string } | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [expandedFindings, setExpandedFindings] = useState<Set<number>>(new Set())
+function ShareError({ error }: { error: Error }) {
+  const isNotFound = error.message === "Shared scan not found or has expired"
+  return (
+    <main className="page-wrap flex min-h-[60vh] items-center justify-center px-4">
+      <div className="max-w-md text-center">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-severity-critical/10">
+          <AlertTriangle className="h-8 w-8 text-severity-critical" />
+        </div>
+        <h1 className="text-2xl font-bold text-ink">Scan Not Found</h1>
+        <p className="mt-2 text-sm text-ink-muted">
+          {isNotFound
+            ? "This shared scan link is invalid or has been removed."
+            : error.message}
+        </p>
+        <Link
+          to="/"
+          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-interactive px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-interactive/90"
+        >
+          <BugPlay className="h-4 w-4" />
+          Run Your Own Scan
+        </Link>
+      </div>
+    </main>
+  )
+}
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const result = await getSharedScan({ data: { id } })
-        setData(result as any)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load shared scan")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    load()
-  }, [id])
+function SharePage() {
+  const data = Route.useLoaderData() as { scanData: ShareData; sourceType: string; sourceRef?: string; createdAt: string }
+  const [expandedFindings, setExpandedFindings] = useState<Set<number>>(new Set())
 
   const toggleFinding = (idx: number) => {
     setExpandedFindings((prev) => {
@@ -95,50 +103,11 @@ function SharePage() {
     return "Cheating Detected"
   }
 
-  if (isLoading) {
-    return (
-      <main className="page-wrap flex min-h-[60vh] items-center justify-center px-4">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-interactive/30 border-t-interactive" />
-          <p className="text-sm text-ink-muted">Loading shared scan...</p>
-        </div>
-      </main>
-    )
-  }
-
-  if (error) {
-    return (
-      <main className="page-wrap flex min-h-[60vh] items-center justify-center px-4">
-        <div className="max-w-md text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-severity-critical/10">
-            <AlertTriangle className="h-8 w-8 text-severity-critical" />
-          </div>
-          <h1 className="text-2xl font-bold text-ink">Scan Not Found</h1>
-          <p className="mt-2 text-sm text-ink-muted">
-            {error === "Shared scan not found or has expired"
-              ? "This shared scan link is invalid or has been removed."
-              : error}
-          </p>
-          <Link
-            to="/"
-            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-interactive px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-interactive/90"
-          >
-            <BugPlay className="h-4 w-4" />
-            Run Your Own Scan
-          </Link>
-        </div>
-      </main>
-    )
-  }
-
-  if (!data) return null
-
   const { scanData, sourceType, sourceRef, createdAt } = data
 
   return (
     <main className="page-wrap px-4 pb-16 pt-8 sm:pt-10">
       <div className="mx-auto max-w-3xl">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -192,7 +161,6 @@ function SharePage() {
           </div>
         </motion.div>
 
-        {/* Trust Score */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -230,7 +198,6 @@ function SharePage() {
           </div>
         </motion.div>
 
-        {/* Stats */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -247,7 +214,6 @@ function SharePage() {
           />
         </motion.div>
 
-        {/* Findings */}
         {scanData.findings.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -339,7 +305,6 @@ function SharePage() {
           </motion.div>
         )}
 
-        {/* No findings */}
         {scanData.findings.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -355,7 +320,6 @@ function SharePage() {
           </motion.div>
         )}
 
-        {/* Footer */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

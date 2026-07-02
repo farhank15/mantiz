@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../../lib/auth-context";
 import { getScanHistory, getScanDetails } from "../../server/auth";
+import { updateFindingVerdict, type UserVerdict } from "../../server/verdict";
 import { createShareLink } from "../../server/share";
 import PageHeader from "../../components/PageHeader";
 import {
@@ -69,6 +70,7 @@ function HistoryPage() {
   const [showRawDiff, setShowRawDiff] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   const toggleModalFinding = (idx: number) => {
     setExpandedFindings((prev) => {
@@ -163,7 +165,7 @@ function HistoryPage() {
               Please sign in with GitHub to view your personal scan history.
             </p>
             <button
-              onClick={() => navigate({ to: "/login" })}
+              onClick={() => navigate({ to: "/login", search: { error: undefined } })}
               className="btn btn-primary w-full"
             >
               Sign In to Continue
@@ -513,6 +515,28 @@ function HistoryPage() {
                                     ? "bg-severity-medium/10 text-severity-medium border-severity-medium/20"
                                     : "bg-severity-info/10 text-severity-info border-severity-info/20";
 
+                              const handleVerdict = async (verdict: UserVerdict) => {
+                                try {
+                                  await updateFindingVerdict({ data: { findingId: finding.id, verdict } });
+                                  finding.userVerdict = verdict;
+                                  setSelectedScanDetails({ ...selectedScanDetails });
+                                } catch (err) {
+                                  console.error("Failed to update verdict:", err);
+                                }
+                              };
+
+                              const verdictLabel = finding.userVerdict === "confirmed"
+                                ? "Confirmed"
+                                : finding.userVerdict === "false_positive"
+                                  ? "False Pos"
+                                  : null;
+
+                              const verdictColor = finding.userVerdict === "confirmed"
+                                ? "text-success border-success/30 bg-success/10"
+                                : finding.userVerdict === "false_positive"
+                                  ? "text-orange-500 border-orange-500/30 bg-orange-500/10"
+                                  : "";
+
                               return (
                                 <div
                                   key={finding.id || idx}
@@ -535,6 +559,11 @@ function HistoryPage() {
                                         {finding.filePath}:{finding.lineStart}
                                       </div>
                                     </div>
+                                    {verdictLabel && (
+                                      <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${verdictColor}`}>
+                                        {verdictLabel}
+                                      </span>
+                                    )}
                                     {isExpanded ? (
                                       <ChevronUp className="h-4 w-4 shrink-0 text-ink-muted" />
                                     ) : (
@@ -549,7 +578,8 @@ function HistoryPage() {
                                         exit={{ height: 0, opacity: 0 }}
                                         transition={{ duration: 0.2 }}
                                         className="overflow-hidden"
-                                      >                                          <div className="border-t border-border px-4 py-3 bg-surface-2/50">
+                                      >
+                                        <div className="border-t border-border px-4 py-3 bg-surface-2/50">
                                           <div className="mb-1.5 flex items-center gap-1.5 text-xs text-ink-subdued">
                                             <FileCode className="h-3 w-3" />
                                             {finding.patternType === 'ai_assisted_detection' ? 'AI analysis' : 'Evidence excerpt'}
@@ -563,6 +593,27 @@ function HistoryPage() {
                                               showHeader={false}
                                             />
                                           )}
+                                          {/* Verdict Actions */}
+                                          <div className="mt-3 flex items-center gap-2 border-t border-border pt-3">
+                                            <span className="text-[10px] font-medium uppercase tracking-wider text-ink-subdued">Verdict:</span>
+                                            {(['unreviewed', 'confirmed', 'false_positive'] as UserVerdict[]).map((v) => (
+                                              <button
+                                                key={v}
+                                                onClick={(e) => { e.stopPropagation(); handleVerdict(v); }}
+                                                className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold transition ${
+                                                  finding.userVerdict === v
+                                                    ? v === 'confirmed'
+                                                      ? 'border-success/40 bg-success/15 text-success'
+                                                      : v === 'false_positive'
+                                                        ? 'border-orange-500/40 bg-orange-500/15 text-orange-500'
+                                                        : 'border-border bg-surface-2 text-ink'
+                                                    : 'border-border text-ink-subdued hover:border-interactive/30 hover:text-ink'
+                                                }`}
+                                              >
+                                                {v === 'unreviewed' ? 'Unreviewed' : v === 'confirmed' ? '✓ Confirmed' : '✗ False Positive'}
+                                              </button>
+                                            ))}
+                                          </div>
                                         </div>
                                       </motion.div>
                                     )}
@@ -598,6 +649,7 @@ function HistoryPage() {
                             } catch {}
                             return;
                           }
+                          setIsSharing(true);
                           try {
                             const findings = selectedScanDetails.findings.map((f: any) => ({
                               patternType: f.patternType,
@@ -623,23 +675,25 @@ function HistoryPage() {
                               },
                             }});
                             setShareUrl(result.url);
-                            try {
-                              await navigator.clipboard.writeText(result.url);
-                              setCopySuccess(true);
-                              setTimeout(() => setCopySuccess(false), 2000);
-                            } catch {}
+                            await navigator.clipboard.writeText(result.url);
+                            setCopySuccess(true);
+                            setTimeout(() => setCopySuccess(false), 2000);
                           } catch (err) {
                             console.error("Failed to share:", err);
+                          } finally {
+                            setIsSharing(false);
                           }
                         }}
                         className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-4 py-2.5 text-xs font-medium text-ink-muted transition hover:border-interactive/30 hover:text-ink"
                       >
-                        {copySuccess ? (
+                        {isSharing ? (
+                          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        ) : copySuccess ? (
                           <Check className="h-3.5 w-3.5 text-success" />
                         ) : (
                           <Share2 className="h-3.5 w-3.5" />
                         )}
-                        {copySuccess ? "Link Copied!" : shareUrl ? "Copy Link" : "Share Results"}
+                        {isSharing ? "Generating..." : copySuccess ? "Link Copied!" : shareUrl ? "Copy Link" : "Share Results"}
                       </button>
                     </div>
 

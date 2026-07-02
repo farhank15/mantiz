@@ -200,16 +200,38 @@ export async function detectWithAI(files: ParsedDiff[]): Promise<Finding[]> {
   const analysis = parseAIResponse(aiResult)
   if (!analysis || !analysis.hasCheating) return []
 
-  // Convert to Finding format
-  const findings: Finding[] = analysis.findings.map((f, idx) => ({
-    patternType: 'ai_assisted_detection' as const,
-    filePath: files[0]?.newFile || files[0]?.oldFile || 'unknown',
-    lineStart: idx + 1,
-    lineEnd: idx + 1,
-    confidence: (f.severity === 'high' ? 'high' : f.severity === 'medium' ? 'medium' : 'low') as 'high' | 'medium' | 'low',
-    explanation: `[AI Detection] ${f.explanation}`,
-    evidenceExcerpt: `Pattern: ${f.pattern}. ${f.explanation}`,
-  }))
+  // Convert to Finding format with per-file context
+  const findings: Finding[] = analysis.findings.map((f, idx) => {
+    // Map AI's generic pattern to actual modified files
+    const diffLines = diffText.split('\n')
+    const relevantFile = files.find(file => {
+      const path = file.newFile || file.oldFile || ''
+      return diffLines.some(line =>
+        line.startsWith('diff --git') && line.includes(path)
+      )
+    })
+    const filePath = relevantFile
+      ? (relevantFile.newFile || relevantFile.oldFile || 'unknown')
+      : (files[0]?.newFile || files[0]?.oldFile || 'unknown')
+
+    // Build evidence from actual diff context, not raw AI dump
+    const evidence = relevantFile
+      ? `${filePath}: ${relevantFile.hunks.map(h => {
+          const firstChange = h.content.split('\n').find(l => l.startsWith('+') || l.startsWith('-'))
+          return firstChange ? firstChange.slice(1).trim() : ''
+        }).filter(Boolean).join('; ')}`
+      : `Pattern: ${f.pattern}. ${f.explanation}`
+
+    return {
+      patternType: 'ai_assisted_detection' as const,
+      filePath,
+      lineStart: idx + 1,
+      lineEnd: idx + 1,
+      confidence: (f.severity === 'high' ? 'high' : f.severity === 'medium' ? 'medium' : 'low') as 'high' | 'medium' | 'low',
+      explanation: `[AI Detection] ${f.explanation}`,
+      evidenceExcerpt: evidence.slice(0, 200),
+    }
+  })
 
   return findings
 }

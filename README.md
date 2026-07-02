@@ -14,9 +14,6 @@
 
 <p align="center">
   <a href="https://mantiz-wine.vercel.app" target="_blank"><img src="https://img.shields.io/badge/Live%20App-mantiz--wine.vercel.app-58A6FF?style=flat-square&logo=vercel&logoColor=white" alt="Live App"></a>
-  <a href="https://www.testsprite.com/hackathon-s3" target="_blank">
-    <img src="https://img.shields.io/badge/TestSprite_S3-Hackathon-EE3124?style=flat-square" alt="Hackathon">
-  </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-3FB950?style=flat-square" alt="License">
   </a>
@@ -27,7 +24,6 @@
   <img src="https://img.shields.io/badge/Stack-TanStack_Start-FF4154?style=flat-square&logo=react&logoColor=white" alt="TanStack">
   <img src="https://img.shields.io/badge/Database-Neon--Postgres-00E59B?style=flat-square&logo=postgresql&logoColor=white" alt="Neon">
   <img src="https://img.shields.io/badge/AI-Powered-FF6B35?style=flat-square" alt="AI">
-  <img src="https://img.shields.io/badge/Tests-TestSprite_CLI-6B7280?style=flat-square" alt="TestSprite">
   <img src="https://img.shields.io/badge/OAuth-GitHub-333?style=flat-square&logo=github" alt="GitHub OAuth">
 </p>
 
@@ -39,11 +35,9 @@
 
 When an AI agent writes code, it can subtly **disable assertions, mock failing APIs, skip test suites, hallucinate matchers, or tamper with expected values** to make tests pass. Mantiz scans every line of a diff through **11 detection patterns** (10 static + AI-assisted) and produces a **Trust Score (0–100)** with ranked findings.
 
-> **Mantiz is the *honesty gate* that runs before test execution.** It doesn't replace TestSprite (which verifies behavior) — it ensures that "passing" tests actually pass because the code works, not because the agent manipulated them.
+> **Mantiz is the honesty gate for AI-generated code.** It ensures that "passing" tests actually pass because the code works, not because the agent manipulated them.
 
 > ⚠️ **Honest Accuracy:** Benchmark scores are computed dynamically by running all 11 detectors against each fixture. Dataset A uses real PRs from vitest-dev/vitest — honest code from a respected open-source project. These real PRs score 10-58/100, revealing that Mantiz still has false positive issues with legitimate test changes (D2 assertion tampering is too aggressive). The benchmark is a transparent regression test, not a claim of production readiness.
-
-> **Built for the [TestSprite Season 3 Hackathon](https://www.testsprite.com/hackathon-s3)** — the checker for the checker.
 
 ---
 
@@ -88,7 +82,59 @@ Same diff (package.json + lockfile changes only):
 
 ### 🎯 Trust Score
 
-Weighted scoring: **high = 30pts**, **medium = 15pts**, **low = 5pts** deducted per finding. Minimum score is 10 when findings exist (avoids confusing 0/100). Threshold: **≥ 80 = PASS**.
+Weighted scoring: **high = 30pts**, **medium = 15pts**, **low = 5pts** deducted per finding. File importance multiplier: `core/test/source = 1.0`, `config = 0.5`, `docs = 0.3`, `artifact = 0.05`. Minimum score is 0 (rounded). Threshold: **default 70**, configurable per-user in Settings.
+
+### ⚙️ Per-User Settings
+
+Configure scan behavior from the [Settings](https://mantiz-wine.vercel.app/settings) page:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| **Threshold** | 70 | Trust score threshold (0-100). Scores below this fail the check. |
+| **AI Detection** | Off | Enable LLM-powered semantic analysis (Fireworks/Groq) |
+| **Min Score** | 0 | Hard floor — result never goes below this score |
+| **Webhook URL** | — | Receive scan results as POST requests (HMAC signed, 3x retry) |
+
+Settings apply to all scans made with your API tokens (CLI, GitHub Actions).
+
+### 🔗 Webhook System v2
+
+Receive scan results in real-time via webhook. Payload includes full findings, signed with HMAC-SHA256 for verification.
+
+**Features:**
+- 3 retry attempts with exponential backoff (1s → 4s → 15s)
+- `X-Mantiz-Signature` header for payload verification
+- Event types: `scan.completed` (pass) / `scan.failed` (fail)
+- Delivery history visible in Settings page
+- Works with Slack, Discord, Telegram, or custom endpoints
+
+**Example webhook payload:**
+```json
+{
+  "event": "scan.completed",
+  "scanId": "uuid",
+  "trustScore": 85,
+  "passed": true,
+  "threshold": 70,
+  "findings": [
+    {
+      "patternType": "disabled_assertion",
+      "filePath": "src/test.js",
+      "confidence": "high",
+      "explanation": "..."
+    }
+  ]
+}
+```
+
+### 🏷️ User Verdict
+
+Tag findings in your scan history:
+- **Confirmed** — This is a valid cheating detection ✓
+- **False Positive** — This finding was incorrect ✗
+- **Unreviewed** — Default state
+
+Helps track detection accuracy over time.
 
 ### 🔐 GitHub OAuth + Session Management
 
@@ -99,9 +145,8 @@ Weighted scoring: **high = 30pts**, **medium = 15pts**, **low = 5pts** deducted 
 
 ### 🤖 AI Detection
 
-- **Toggle:** Easily enable/disable via `AI_DETECTION_ENABLED=true`
+- **Toggle:** Easily enable/disable via Settings page or `--ai` CLI flag
 - **Smart Analysis:** Detects 5 AI-level patterns: test weakening, assertion removal, semantic bypass, hallucinated APIs, and coverage reduction.
-
 
 ### 📊 Routes
 
@@ -111,8 +156,8 @@ Weighted scoring: **high = 30pts**, **medium = 15pts**, **low = 5pts** deducted 
 | `/scan` | Paste & scan a raw git diff |
 | `/pr-scan` | Scan a GitHub PR by URL (requires auth) |
 | `/login` | GitHub OAuth sign-in |
-| `/history` | Scan history with detailed findings modal |
-| `/settings` | API token management (`mtz_*` prefix) |
+| `/history` | Scan history with detailed findings modal + user verdict tagging |
+| `/settings` | Scan settings (threshold, AI toggle, minScore) + API token management + webhook config |
 | `/benchmark` | Interactive benchmark — 39 fixtures across 4 datasets |
 
 ### 🧩 Interactive Scan Animation
@@ -122,6 +167,10 @@ When scanning, an animated terminal log shows real-time detector progress. After
 ### 📄 Diff Viewer
 
 GitHub-style diff rendering with green/red line highlighting, line number gutter, +/- markers, copy-to-clipboard, and add/del count stats.
+
+### 🔗 Share Results
+
+Every scan generates a public shareable link (`/share/:id`) — no authentication required. Share findings with your team, post them in code reviews, or include them in CI dashboards.
 
 ---
 
@@ -164,6 +213,9 @@ SESSION_SECRET=your_random_secret_at_least_32_chars
 AI_DETECTION_ENABLED=true
 AI_API_KEY=your_ai_api_key
 
+# Webhook secret (optional — for HMAC signing webhook payloads)
+WEBHOOK_SECRET=your_random_secret_at_least_32_chars
+
 # Debug logging (optional — enables per-detector console logs)
 MANTIZ_DEBUG=true
 
@@ -186,6 +238,13 @@ npm run build
 npm run preview
 ```
 
+### 4. Apply Database Migrations
+
+```bash
+# After adding new tables (e.g., user_settings, webhook_events)
+npx drizzle-kit push
+```
+
 ---
 
 ## 🧪 How to Use
@@ -204,35 +263,63 @@ npm run preview
 3. Paste a PR URL: `https://github.com/owner/repo/pull/123`
 4. Mantiz fetches the diff, runs 11 detectors, and returns findings
 
-### 🔗 CI/CD Integration
+### 🔗 GitHub Actions (Reusable Action)
 
-Install in **GitHub Actions** — every PR is automatically scanned:
+Add to your workflow to scan every PR:
 
 ```yaml
-# .github/workflows/mantiz.yml
-name: Mantiz PR Scan
-on: [pull_request]
-jobs:
-  check-honesty:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: npx mantiz scan --pr ${{ github.event.pull_request.html_url }}
-        env:
-          MANTIZ_API_TOKEN: ${{ secrets.MANTIZ_API_TOKEN }}
+- name: Run Mantiz Scan
+  uses: farhank15/mantiz@main
+  with:
+    api-token: ${{ secrets.MANTIZ_API_TOKEN }}
+    threshold: 70          # Override default (configurable in Settings)
+    use-ai: true           # Enable AI-assisted detection
+    json-output: true      # JSON output for parsing
 ```
 
-> 💡 **Pro tip:** Combined with the Cost-Saver Gate, this workflow blocks TestSprite from running if Mantiz detects cheating — saving your cloud test credits for code that deserves it.
+### 🔗 CLI Integration
 
-### 🔄 The Loop — TestSprite Integration
+Install the CLI and scan with options:
 
-Mantiz is designed as a **fast honesty gate before the comprehensive TestSprite run**:
+```bash
+npm install -g @mantiz/cli
 
+# Local scan (no cloud)
+mantiz-scan
+
+# Cloud scan with history persistence
+mantiz-scan --token mtz_abc123 --save --ai
+
+# JSON output for CI
+mantiz-scan --json
 ```
-Agent writes code
-  → Mantiz scan (fast, free, catches obvious cheating)
-  → if PASS → TestSprite test (real browser, runs E2E tests)
-  → if FAIL → back to agent to fix honestly
+
+### 🔔 Webhook Integration
+
+Set up a webhook URL in [Settings](https://mantiz-wine.vercel.app/settings) to receive scan results in real-time:
+
+```bash
+# Example: Receive webhook payload
+POST /mantiz-webhook
+Content-Type: application/json
+X-Mantiz-Signature: sha256=...
+X-Mantiz-Event: scan.failed
+
+{
+  "event": "scan.failed",
+  "trustScore": 45,
+  "threshold": 70,
+  "findings": [...]
+}
+```
+
+Verify signature:
+```javascript
+const crypto = require('crypto')
+const hmac = crypto.createHmac('sha256', WEBHOOK_SECRET)
+hmac.update(JSON.stringify(req.body))
+const expected = 'sha256=' + hmac.digest('hex')
+if (req.headers['x-mantiz-signature'] !== expected) return res.status(401)
 ```
 
 ### 🩹 Auto-Heal Mode (`--fix`)
@@ -269,57 +356,6 @@ Behavioral findings appear with a `📊` badge in the scan output and are saved 
 
 > **Database required.** Historical scoring gracefully degrades when no database connection is available (CLI usage, CI without DB).
 
-### ⛔ Cost-Saver Gate
-
-In CI/CD, Mantiz acts as an **intelligent gate** that prevents wasteful TestSprite cloud runs on dishonest code:
-
-```yaml
-# If Mantiz score < 80 → TestSprite is SKIPPED → saves credits 💰
-- name: Mantiz Gate
-  run: |
-    SCORE=$(npx mantiz scan diff.diff --json | jq '.trustScore')
-    if [ "$SCORE" -lt 80 ]; then
-      echo "gate=fail" >> $GITHUB_OUTPUT
-      exit 1  # Blocks TestSprite from running
-    fi
-```
-
-This ensures every TestSprite credit is spent on **code that has already passed the honesty check**.
-
----
-
-## 🏆 TestSprite Journey & S3 Loop Engineering
-
-To meet the rigorous verification criteria of the TestSprite Hackathon Season 3, we implemented an continuous **Write-Verify-Fix loop** documented below.
-
-### 📅 Round Progression (Testing Iterations)
-
-We verified our codebase through 7 distinct rounds of TestSprite automation:
-
-| Round | Focus / Scenario | Initial Verdict | Issue / Discovery | Fixed In | Final Verdict |
-|:---:|---|:---:|---|:---:|:---:|
-| **1** | Landing page rendering & CTA buttons | **BLOCKED** 🔴 | Plan selector ambiguity | N/A | **PASSED** ✅ |
-| **2** | Scanner bypass on `test.skip` arguments | **FAILED** 🔴 | Regex missed `.skip('desc', fn)` | `56f14fe` | **PASSED** ✅ |
-| **3** | PR scan page & GitHub OAuth integration | **FAILED** 🔴 | Preview Vercel OAuth redirect error | `8f5b8c0` | **PASSED** ✅ |
-| **4** | Clean code scan (Claim-Diff Mismatch) | **FAILED** 🔴 | Claim mismatch trigger on source-only diffs | `bf128a1` | **PASSED** ✅ |
-| **5** | Monorepos & fixture files | **FAILED** 🔴 | False positives on fixture test directories | `9a12c8a` | **PASSED** ✅ |
-| **6** | Documentation files (README.md) scan | **FAILED** 🔴 | False positive on documentation code blocks | `ae789b1` | **PASSED** ✅ |
-| **7** | Integration history & DB synchronization | **PASSED** ✅ | DB Neon sync, cookies, and UI history list | N/A | **PASSED** ✅ |
-
-### 🐛 Bugs Found & Fixed via TestSprite Loop
-
-Every code failure detected by our TestSprite E2E test runs was analyzed, patched, and verified:
-
-| Bug / Vulnerability | Description | Detector / Layer | Fix Commit | Status |
-|-----------------------|-----------|------------------|------------|:------:|
-| **`test.skip('desc', fn)` Bypass** | `SKIP_PATTERN` only matched `.skip()` with no args — missed `.skip('desc', fn)` syntax. | *Disabled Assertion* (Bypass) | [`56f14fe`](https://github.com/farhank15/mantiz/commit/56f14fe) | **FIXED** ✅ |
-| **Vercel OAuth Domain Mismatch** | OAuth callback failed on Vercel preview deploys due to hardcoded `APP_URL`. | *Authentication* (OAuth) | [`8f5b8c0`](https://github.com/farhank15/mantiz/commit/8f5b8c0) | **FIXED** ✅ |
-| **Monorepo False Positives** | Monorepo test fixture files were incorrectly flagged as production code. | *File Exclusions* | [`9a12c8a`](https://github.com/farhank15/mantiz/commit/9a12c8a) | **FIXED** ✅ |
-| **Commented Assertion Bypass** | Plain assertion comments without parentheses were not detected. | *Commented Assertions* | [`c127fb3`](https://github.com/farhank15/mantiz/commit/c127fb3) | **FIXED** ✅ |
-| **Markdown Doc False Positives** | `.skip()` inside README/documentation files was flagged as cheating. | *File Exclusions* | [`ae789b1`](https://github.com/farhank15/mantiz/commit/ae789b1) | **FIXED** ✅ |
-| **Literal String False Positives** | `.skip` text inside unit test strings was incorrectly blocked. | *Engine Tests* | [`bf98d1a`](https://github.com/farhank15/mantiz/commit/bf98d1a) | **FIXED** ✅ |
-| **Nested Parentheses Bypass** | Nested assertions like `expect(fn()).toBe(...)` evaded tampering detection. | *Assertion Tampering* | [`8fd023a`](https://github.com/farhank15/mantiz/commit/8fd023a) | **FIXED** ✅ |
-
 ---
 
 ## 📊 Benchmark Results
@@ -329,7 +365,7 @@ Every code failure detected by our TestSprite E2E test runs was analyzed, patche
 Mantiz includes a built-in benchmark suite with **39 fixtures across 4 datasets**:
 
 | Dataset | Description | Fixtures | Source | Avg Score |
-|---------|-------------|:--------:|:------:|:---------:|
+|:---:|---|:---:|:------:|:---------:|
 | **A** — "The Honest Code" | Proper diff + valid test updates | 4 | 🔴 **Real PRs** (vitest-dev/vitest) | 27 🟡 |
 | **B** — "The Lazy/Cheating AI" | `.skip()`, `if(false)`, commented assertions | 8 | 📜 **Research-based** (DebugML/UC Berkeley) | 27 🟡 |
 | **C** — "The Smart Evasion AI" | Assertion tampering, mock + empty catch | 4 | 📜 **Research-based** (DebugML) | 32 🟡 |
@@ -359,7 +395,6 @@ Visit the [**/benchmark**](https://mantiz-wine.vercel.app/benchmark) dashboard t
 | **Diff Parsing** | [diff](https://npm.im/diff) |
 | **Rate Limiting** | In-memory sliding window (3 tiers) |
 | **GitHub API** | [Octokit](https://github.com/octokit) |
-| **Testing** | [TestSprite CLI](https://testsprite.com) + Vitest |
 | **Bundler** | [Vite 8](https://vite.dev) + TanStack Router Plugin |
 | **Deploy** | [Vercel](https://vercel.com) |
 
@@ -380,12 +415,6 @@ Visit the [**/benchmark**](https://mantiz-wine.vercel.app/benchmark) dashboard t
 MIT — see [LICENSE](LICENSE).
 
 ---
-
-<p align="center">
-  Built with ❤️ for the <a href="https://www.testsprite.com/hackathon-s3">TestSprite Season 3 Hackathon</a>
-  <br />
-  <sub><em>"A loop without a real checker doesn't fail loudly."</em></sub>
-</p>
 
 <p align="center">
   <a href="https://mantiz-wine.vercel.app">

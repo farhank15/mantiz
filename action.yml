@@ -22,6 +22,10 @@ inputs:
     description: 'Trust score threshold (0-100). Scores below this fail the build.'
     required: false
     default: '70'
+  use-ai:
+    description: 'Enable AI-assisted detection (LLM-powered semantic analysis)'
+    required: false
+    default: 'false'
   json-output:
     description: 'Output results as JSON'
     required: false
@@ -79,7 +83,7 @@ runs:
         RESPONSE=$(curl -s -X POST "$MANTIZ_API_URL/api/scan" \
           -H "Content-Type: application/json" \
           -H "Authorization: Bearer $MANTIZ_API_TOKEN" \
-          -d "{\"diff\": $(echo "$DIFF" | jq -Rs '.')}")
+          -d "{\"diff\": $(echo "$DIFF" | jq -Rs '.'), \"useAi\": ${{ inputs.use-ai }}}")
 
         TRUST_SCORE=$(echo "$RESPONSE" | jq -r '.trustScore // 100')
         FINDINGS=$(echo "$RESPONSE" | jq -r '.totalFindings // 0')

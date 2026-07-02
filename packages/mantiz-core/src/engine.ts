@@ -19,7 +19,7 @@ import { parseRawDiff } from './diff-parser'
 import { detectDisabledAssertions } from './detectors/disabled-assertion'
 import { detectAssertionTampering } from './detectors/assertion-tampering'
 import { detectMockToAvoid } from './detectors/mock-to-avoid'
-import { detectClaimDiffMismatch, isNonFunctional } from './detectors/claim-mismatch'
+import { detectClaimDiffMismatch, isNonFunctional, classifyImportance } from './detectors/claim-mismatch'
 import { detectSilentCatch } from './detectors/silent-catch'
 import { detectHallucinatedAssertions } from './detectors/hallucination'
 import { detectWithAI } from './detectors/ai-assisted'
@@ -47,6 +47,17 @@ const CONFIDENCE_PENALTY: Record<string, number> = {
   high: 30,
   medium: 15,
   low: 5,
+}
+
+// File importance multiplier — findings in core/test src = full penalty,
+// config/docs = reduced, artifacts = near-zero
+const IMPORTANCE_MULTIPLIER: Record<string, number> = {
+  core: 1,
+  test: 1,
+  source: 1,
+  config: 0.5,
+  docs: 0.3,
+  artifact: 0.05,
 }
 
 /**
@@ -83,12 +94,21 @@ export function scanDiff(rawDiff: string): ScanResult {
     ...detectHallucinatedAssertions(functionalFiles),
   ]
 
-  // Calculate trust score
+  // Enrich findings with file importance for weighted scoring
+  for (const finding of staticFindings) {
+    if (!finding.fileImportance) {
+      finding.fileImportance = classifyImportance(finding.filePath)
+    }
+  }
+
+  // Calculate trust score with file importance weighting
   let deductions = 0
   for (const finding of staticFindings) {
-    deductions += CONFIDENCE_PENALTY[finding.confidence] ?? 5
+    const base = CONFIDENCE_PENALTY[finding.confidence] ?? 5
+    const mult = IMPORTANCE_MULTIPLIER[finding.fileImportance ?? 'source'] ?? 1
+    deductions += base * mult
   }
-  const trustScore = Math.max(0, 100 - deductions)
+  const trustScore = Math.max(0, Math.round(100 - deductions))
 
   const summary = {
     totalFindings: staticFindings.length,
@@ -118,9 +138,11 @@ export async function scanDiffAsync(rawDiff: string): Promise<ScanResult> {
       let deductions = 0
       const allFindings = [...result.findings, ...aiFindings]
       for (const finding of allFindings) {
-        deductions += CONFIDENCE_PENALTY[finding.confidence] ?? 5
+        const base = CONFIDENCE_PENALTY[finding.confidence] ?? 5
+        const mult = IMPORTANCE_MULTIPLIER[finding.fileImportance ?? 'source'] ?? 1
+        deductions += base * mult
       }
-      const newTrustScore = Math.max(0, 100 - deductions)
+      const newTrustScore = Math.max(0, Math.round(100 - deductions))
 
       return {
         ...result,

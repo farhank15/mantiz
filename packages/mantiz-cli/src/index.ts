@@ -6,6 +6,7 @@
  *   mantiz-scan              # Scan local git diff
  *   mantiz-scan --diff <str> # Scan provided diff text
  *   mantiz-scan --token x    # Send to Mantiz API for cloud scan
+  mantiz-scan --token x --save  # Save results to cloud history
  *   mantiz-scan --help       # Show help
  *
  * Install:
@@ -92,6 +93,8 @@ EXAMPLES
   cat my-diff.txt | mantiz-scan --diff -
   mantiz-scan --json | jq '.trustScore'
   mantiz-scan --token mtz_abc123
+  mantiz-scan --token mtz_abc123 --save   # Save to cloud
+  mantiz-scan --token mtz_abc123 --ai      # Enable AI detection
 `)
 }
 
@@ -104,13 +107,14 @@ async function main(): Promise<void> {
   }
 
   const jsonOutput = args.includes('--json')
+  const saveToCloud = args.includes('--save')
   const tokenIndex = args.indexOf('--token')
   const token = tokenIndex !== -1 ? args[tokenIndex + 1] : process.env.MANTIZ_API_TOKEN
   const diffIndex = args.indexOf('--diff')
   const diffArg = diffIndex !== -1 ? args[diffIndex + 1] : undefined
 
   let diffText: string
-  if (diffArg) {
+  if (diffArg !== undefined) {
     diffText = diffArg === '-' ? execSync('cat', { encoding: 'utf-8' }) : diffArg
   } else {
     diffText = getGitDiff()
@@ -125,16 +129,36 @@ async function main(): Promise<void> {
     process.exit(1)
   }
 
-  if (token) {
+  if (token || saveToCloud) {
+    const apiToken = token || process.env.MANTIZ_API_TOKEN
+
+    if (!apiToken) {
+      if (jsonOutput) {
+        console.log(JSON.stringify({ error: 'No API token found. Use --token or set MANTIZ_API_TOKEN', trustScore: 0 }))
+      } else {
+        console.log('\x1b[33m⚠️  --save requires an API token. Use --token <key> or set MANTIZ_API_TOKEN env var.\x1b[0m')
+        console.log('\x1b[33m   Falling back to local scan (results not saved to cloud).\x1b[0m')
+      }
+      // Fall back to local scan
+      const result = scanDiff(diffText)
+      if (jsonOutput) {
+        console.log(JSON.stringify({ ...result, passed: result.trustScore >= PASS_THRESHOLD }, null, 2))
+      } else {
+        printResults(result)
+      }
+      process.exit(result.trustScore < PASS_THRESHOLD ? 1 : 0)
+      return
+    }
+
     const apiUrl = process.env.MANTIZ_API_URL || 'https://mantiz-wine.vercel.app'
     try {
       const res = await fetch(`${apiUrl}/api/scan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${apiToken}`,
         },
-        body: JSON.stringify({ diff: diffText }),
+        body: JSON.stringify({ diff: diffText, useAi: args.includes('--ai') }),
       })
 
       if (!res.ok) {

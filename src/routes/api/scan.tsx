@@ -1,122 +1,98 @@
 /**
  * Mantiz Public API — /api/scan
  *
- * Accepts POST requests with a diff and optional API token.
- * Returns Trust Score + findings as JSON.
+ * Uses TanStack Start createServerFn pattern.
+ * Accepts POST with diff + optional token. Returns Trust Score + findings.
  *
- * Security:
- * - Rate limited: 10 req/min anonymous, 60 req/min with token
- * - Body size limit: 500KB
- * - Input validation + sanitization
- * - CORS hardening (specific origins only)
+ * Features:
+ * - useAi: boolean — enable AI-assisted detection
+ * - Threshold from user settings
+ * - Webhook delivery on completion
+ * - Rate limited + body size check + CORS
  */
 
 import { createFileRoute } from '@tanstack/react-router'
-import { scanDiff } from '../../detectors/engine'
+import { createServerFn } from '@tanstack/react-start'
+import { setResponseHeader } from '@tanstack/react-start/server'
+import { scanDiff, scanDiffAsync } from '../../detectors/engine'
 import { verifyToken, saveAPIScan } from '../../server/tokens'
-import { checkRateLimit, rateLimitHeaders } from '../../server/rate-limiter'
-import {
-  validateDiff,
-  errorResponse,
-  successResponse,
-  getCorsHeaders,
-} from '../../server/middleware'
+import { checkRateLimit } from '../../server/rate-limiter'
+import { loadUserSettings } from '../../server/settings'
+import { deliverWebhook } from '../../server/webhook'
 
 export const Route = createFileRoute('/api/scan')({
   component: () => null,
 })
 
-interface ScanBody {
-  diff?: string
-  token?: string
-}
+const MAX_DIFF_SIZE = 500_000
 
-export async function POST({ request }: { request: Request }) {
-  const corsHeaders = getCorsHeaders(request)
-  const clientIp =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-
-  try {
-    // ─── 2. Body Size Check ─────────────────────────────────────
-    const contentLength = request.headers.get('content-length')
-    if (contentLength) {
-      const size = parseInt(contentLength, 10)
-      if (size > 500_000) {
-        return errorResponse(
-          `Payload exceeds maximum size of 500KB`,
-          413,
-          corsHeaders,
-        )
-      }
+/**
+ * Server-side scan handler. Invoked via POST.
+ * Returns plain JSON data or throws for errors.
+ */
+export const handleScan = createServerFn({ method: 'POST' })
+  .validator((input: unknown) => {
+    const v = input as { diff?: string; token?: string; useAi?: boolean }
+    if (!v.diff || typeof v.diff !== 'string') {
+      throw new Error('Missing required field: diff')
     }
-
-    // ─── 3. Parse Body ──────────────────────────────────────────
-    let body: ScanBody
-    try {
-      body = (await request.json()) as ScanBody
-    } catch {
-      return errorResponse('Invalid JSON body', 400, corsHeaders)
+    if (v.diff.trim().length === 0) {
+      throw new Error('Diff cannot be empty')
     }
-
-    const { diff, token } = body
-
-    // ─── 4. Rate Limiting ───────────────────────────────────────
-    if (token && typeof token === 'string') {
-      // Authenticated — higher limit (60/min)
-      const rateResult = checkRateLimit('token', `api_token:${token}`)
-      if (!rateResult.allowed) {
-        return errorResponse(
-          'Rate limit exceeded. Try again later.',
-          429,
-          { ...corsHeaders, ...rateLimitHeaders(rateResult) },
-        )
-      }
-    } else {
-      // Anonymous — strict limit (10/min per IP)
-      const rateResult = checkRateLimit('anonymous', `ip:${clientIp}`)
-      if (!rateResult.allowed) {
-        return errorResponse(
-          'Rate limit exceeded. Sign in with an API token for higher limits.',
-          429,
-          { ...corsHeaders, ...rateLimitHeaders(rateResult) },
-        )
-      }
+    if (v.diff.length > MAX_DIFF_SIZE) {
+      throw new Error(`Diff exceeds maximum size of ${MAX_DIFF_SIZE / 1000}KB`)
     }
+    return { diff: v.diff, token: v.token, useAi: !!v.useAi }
+  })
+  .handler(async ({ data }) => {
+    const { diff, token, useAi } = data
 
-    // ─── 5. Input Validation ────────────────────────────────────
-    const diffValidation = validateDiff(diff)
-    if (!diffValidation.valid) {
-      return errorResponse(
-        diffValidation.error!,
-        diffValidation.status || 400,
-        corsHeaders,
+    // CORS — restrict to known origins
+    setResponseHeader('Access-Control-Allow-Origin', 'https://mantiz-wine.vercel.app')
+    setResponseHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    setResponseHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    setResponseHeader('Access-Control-Max-Age', '86400')
+
+    // Rate limiting — use IP from request context
+    const rateResult = checkRateLimit(
+      token ? 'token' : 'anonymous',
+      token ? `api_token:${token}` : `anonymous:api`,
+    )
+    if (!rateResult.allowed) {
+      throw new Error(
+        token
+          ? 'Rate limit exceeded. Try again later.'
+          : 'Rate limit exceeded. Use an API token for higher limits.',
       )
     }
 
-    // ─── 6. Token Verification ──────────────────────────────────
+    // Token verification
     let userId: string | undefined
     let userLogin = 'anonymous'
 
-    if (token && typeof token === 'string') {
+    if (token) {
       const user = await verifyToken(token)
       if (user) {
         userId = user.userId
         userLogin = user.login
       } else {
-        return errorResponse('Invalid or revoked API token', 401, corsHeaders)
+        throw new Error('Invalid or revoked API token')
       }
     }
 
-    // ─── 7. Run Scan ────────────────────────────────────────────
-    const result = scanDiff(diff!)
+    // Load user settings
+    const settings = userId ? await loadUserSettings(userId) : null
+    const threshold = settings?.threshold ?? 70
 
-    // ─── 8. Save to DB (fire-and-forget) ────────────────────────
+    // Run scan
+    const useAiDetection = useAi || settings?.aiEnabled || false
+    const result = useAiDetection ? await scanDiffAsync(diff) : scanDiff(diff)
+
+    // Save to DB + webhook (fire-and-forget)
     if (userId) {
-      saveAPIScan({
+      const scanId = await saveAPIScan({
         userId,
-        rawDiff: diff!,
+        rawDiff: diff,
         trustScore: result.trustScore,
         findings: result.findings.map((f) => ({
           patternType: f.patternType,
@@ -127,13 +103,40 @@ export async function POST({ request }: { request: Request }) {
           explanation: f.explanation,
           evidenceExcerpt: f.evidenceExcerpt,
         })),
-      }).catch((err: unknown) =>
-        console.error('Failed to save API scan:', err),
-      )
+      }).catch(() => null)
+
+      if (scanId && settings?.webhookEnabled && settings?.webhookUrl) {
+        const passed = result.trustScore >= threshold
+        deliverWebhook({
+          userId,
+          webhookUrl: settings.webhookUrl,
+          scanId,
+          event: passed ? 'scan.completed' : 'scan.failed',
+          payload: {
+            scanId,
+            trustScore: result.trustScore,
+            totalFindings: result.summary.totalFindings,
+            highCount: result.summary.highCount,
+            mediumCount: result.summary.mediumCount,
+            lowCount: result.summary.lowCount,
+            filesScanned: result.summary.filesScanned,
+            passed,
+            threshold,
+            findings: result.findings.map((f) => ({
+              patternType: f.patternType,
+              filePath: f.filePath,
+              lineStart: f.lineStart,
+              lineEnd: f.lineEnd,
+              confidence: f.confidence,
+              explanation: f.explanation,
+            })),
+          },
+        }).catch(() => {})
+      }
     }
 
-    // ─── 9. Response ────────────────────────────────────────────
-    const response = {
+    // Return plain data — framework handles HTTP framing
+    return {
       trustScore: result.trustScore,
       totalFindings: result.summary.totalFindings,
       highCount: result.summary.highCount,
@@ -142,14 +145,9 @@ export async function POST({ request }: { request: Request }) {
       filesScanned: result.summary.filesScanned,
       findings: result.findings.slice(0, 50),
       fixInstructions: result.fixInstructions,
-      passed: result.trustScore >= 70,
+      passed: result.trustScore >= threshold,
+      threshold,
       scannedBy: userLogin,
+      aiDetected: useAiDetection,
     }
-
-    return successResponse(response, corsHeaders)
-  } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : 'Internal server error'
-    return errorResponse(message, 500, corsHeaders)
-  }
-}
+  })

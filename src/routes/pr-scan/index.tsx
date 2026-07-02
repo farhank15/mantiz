@@ -62,6 +62,7 @@ function PRScanPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [expandedFindings, setExpandedFindings] = useState<Set<number>>(
     new Set(),
@@ -79,6 +80,7 @@ function PRScanPage() {
       return
     }
 
+    setIsSharing(true);
     try {
       const shareResult = await createShareLink({ data: {
         sourceType: "github_pr",
@@ -103,13 +105,13 @@ function PRScanPage() {
         },
       }})
       setShareUrl(shareResult.url)
-      try {
-        await navigator.clipboard.writeText(shareResult.url)
-        setCopySuccess(true)
-        setTimeout(() => setCopySuccess(false), 2000)
-      } catch { /* fallback */ }
+      await navigator.clipboard.writeText(shareResult.url)
+      setCopySuccess(true)
+      setTimeout(() => setCopySuccess(false), 2000)
     } catch (err) {
       console.error("Failed to create share link:", err)
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -146,7 +148,7 @@ function PRScanPage() {
               requests.
             </p>
             <button
-              onClick={() => navigate({ to: "/login" })}
+              onClick={() => navigate({ to: "/login", search: { error: undefined } })}
               className="btn btn-primary w-full"
             >
               Sign In to Continue
@@ -273,6 +275,7 @@ function PRScanPage() {
             {error.includes("Not authenticated") && (
               <Link
                 to="/login"
+                search={{ error: undefined }}
                 className="mt-2 inline-flex items-center gap-1 text-sm text-interactive hover:underline"
               >
                 Login with GitHub →
@@ -491,14 +494,17 @@ function PRScanPage() {
                 </button>
                 <button
                   onClick={handleShare}
+                  disabled={isSharing}
                   className="btn btn-secondary"
                 >
-                  {copySuccess ? (
+                  {isSharing ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : copySuccess ? (
                     <Check className="h-4 w-4 text-success" />
                   ) : (
                     <Share2 className="h-4 w-4" />
                   )}
-                  {copySuccess ? "Link Copied!" : shareUrl ? "Copy Link" : "Share Results"}
+                  {isSharing ? "Generating..." : copySuccess ? "Link Copied!" : shareUrl ? "Copy Link" : "Share Results"}
                 </button>
               </div>
             </motion.div>
