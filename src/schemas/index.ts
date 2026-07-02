@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, bigint, integer, boolean, index } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, uuid, bigint, integer, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core'
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -106,4 +106,29 @@ export const apiTokens = pgTable('api_tokens', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   expiresAt: timestamp('expires_at'),
   isRevoked: boolean('is_revoked').default(false).notNull(),
+})
+
+export const userSettings = pgTable('user_settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  threshold: integer('threshold').default(70).notNull(),
+  aiEnabled: boolean('ai_enabled').default(false).notNull(),
+  minScore: integer('min_score').default(0).notNull(),
+  webhookUrl: text('webhook_url'),
+  webhookEnabled: boolean('webhook_enabled').default(false).notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: uniqueIndex('user_settings_user_id_idx').on(table.userId),
+}))
+
+export const webhookEvents = pgTable('webhook_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  scanId: uuid('scan_id').references(() => scans.id),
+  webhookUrl: text('webhook_url').notNull(),
+  status: text('status', { enum: ['pending', 'delivered', 'failed'] }).default('pending').notNull(),
+  responseCode: integer('response_code'),
+  responseBody: text('response_body'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  deliveredAt: timestamp('delivered_at'),
 })
