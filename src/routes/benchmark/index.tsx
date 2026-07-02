@@ -95,9 +95,9 @@ function BenchmarkPage() {
         <PageHeader
           icon={Beaker}
           title="Benchmark"
-          description="Running all 5 detectors against curated datasets to measure accuracy. Each dataset represents a different cheating profile."
+          description="Running all 11 detectors against curated datasets to measure accuracy. Each dataset represents a different cheating profile."
           breadcrumbs={[{ label: "Home", to: "/" }, { label: "Benchmark" }]}
-          badge={{ label: "12 fixtures · 100% accuracy", color: "success" }}
+          badge={{ label: "39 fixtures · 4 datasets", color: "success" }}
         />
 
         {/* Interactive Run Button */}
@@ -167,7 +167,7 @@ function BenchmarkPage() {
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-interactive/30 border-t-interactive" />
             </div>
             <p className="text-ink-muted">
-              Running benchmark across all 12 fixtures...
+              Running benchmark across all 39 fixtures...
             </p>
           </div>
         )}
@@ -356,9 +356,10 @@ function BenchmarkPage() {
               >
                 <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-success" />
                 <p className="text-sm text-ink-muted">
-                  All 5 detectors operational. Mantiz correctly identifies
-                  honest code (Dataset A), flags lazy cheating (Dataset B), and
-                  detects smart evasion attempts (Dataset C).
+                  All 11 detectors operational. Mantiz correctly identifies
+                  honest code (Dataset A), flags lazy cheating (Dataset B),
+                  detects smart evasion (Dataset C), and validates false
+                  positive scenarios (Dataset FP).
                 </p>
               </motion.div>
             </motion.div>

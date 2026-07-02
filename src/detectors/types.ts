@@ -6,6 +6,8 @@ export type PatternType =
   | 'silent_catch_and_pass'
   | 'hallucinated_assertion'
   | 'ai_assisted_detection'
+  | 'historical_behavioral'
+  | 'mutation_susceptibility'
 
 export type Confidence = 'low' | 'medium' | 'high'
 

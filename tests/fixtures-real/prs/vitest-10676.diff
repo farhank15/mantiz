@@ -1,0 +1,347 @@
+diff --git a/examples/fastify/test/app.test.ts b/examples/fastify/test/app.test.ts
+index e2a4549ff805..2fde55faf16c 100644
+--- a/examples/fastify/test/app.test.ts
++++ b/examples/fastify/test/app.test.ts
+@@ -26,7 +26,7 @@ test('with a running server', async () => {
+   expect(response.body).toStrictEqual(usersData)
+ })
+ 
+-test('with axios', async () => {
++test('with fetch', async () => {
+   await app.listen()
+   await app.ready()
+ 
+diff --git a/examples/projects/packages/server/test/app.test.ts b/examples/projects/packages/server/test/app.test.ts
+index e97afe11c9cb..26ba86844f21 100644
+--- a/examples/projects/packages/server/test/app.test.ts
++++ b/examples/projects/packages/server/test/app.test.ts
+@@ -26,7 +26,7 @@ test('with a running server', async () => {
+   expect(response.body).toStrictEqual(usersData)
+ })
+ 
+-test('with axios', async () => {
++test('with fetch', async () => {
+   await app.listen()
+   await app.ready()
+ 
+diff --git a/packages/vitest/src/integrations/vi.ts b/packages/vitest/src/integrations/vi.ts
+index 72895d1093a7..d06d10d820eb 100644
+--- a/packages/vitest/src/integrations/vi.ts
++++ b/packages/vitest/src/integrations/vi.ts
+@@ -294,9 +294,9 @@ export interface VitestUtils {
+    * @example
+    * ```ts
+    * vi.mock('./example.js', async () => {
+-   *  const axios = await vi.importActual<typeof import('./example.js')>('./example.js')
++   *  const original = await vi.importActual<typeof import('./example.js')>('./example.js')
+    *
+-   *  return { ...axios, get: vi.fn() }
++   *  return { ...original, get: vi.fn() }
+    * })
+    * ```
+    * @param path Path to the module. Can be aliased, if your config supports it
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 181ee739e655..ad2211b76d7c 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -1588,9 +1588,9 @@ importers:
+       '@vueuse/integrations':
+         specifier: ^14.2.1
+         version: 14.2.1(axios@1.13.4)(change-case@5.4.4)(focus-trap@7.8.0)(vue@3.5.29(typescript@5.9.3))
+-      axios:
+-        specifier: ^1.13.4
+-        version: 1.13.4
++      http-client:
++        specifier: file:./projects/http-client
++        version: file:test/unit/projects/http-client
+       immutable:
+         specifier: 5.1.5
+         version: 5.1.5
+@@ -7761,6 +7761,9 @@ packages:
+   htmlparser2@9.1.0:
+     resolution: {integrity: sha512-5zfg6mHUoaer/97TxnGpxmbR7zJtPwIYFMZ/H5ucTlPZhKvtum05yiPK3Mgai3a0DyVxv7qYqoweaEd2nrYQzQ==}
+ 
++  http-client@file:test/unit/projects/http-client:
++    resolution: {directory: test/unit/projects/http-client, type: directory}
++
+   http-deceiver@1.2.7:
+     resolution: {integrity: sha512-LmpOGxTfbpgtGVxJrj5k7asXHCgNZp5nLfp+hWc8QQRqtb7fUy6kRY3BO1h9ddF6yIPYUARgxGOwB42DnxIaNw==}
+ 
+@@ -15288,6 +15291,7 @@ snapshots:
+       proxy-from-env: 1.1.0
+     transitivePeerDependencies:
+       - debug
++    optional: true
+ 
+   b4a@1.6.4: {}
+ 
+@@ -16781,7 +16785,8 @@ snapshots:
+     dependencies:
+       tabbable: 6.4.0
+ 
+-  follow-redirects@1.15.11: {}
++  follow-redirects@1.15.11:
++    optional: true
+ 
+   for-each@0.3.5:
+     dependencies:
+@@ -17124,6 +17129,8 @@ snapshots:
+       domutils: 3.2.2
+       entities: 4.5.0
+ 
++  http-client@file:test/unit/projects/http-client: {}
++
+   http-deceiver@1.2.7: {}
+ 
+   http-errors@2.0.0:
+diff --git a/test/unit/__mocks__/axios/index.ts b/test/unit/__mocks__/http-client.ts
+similarity index 100%
+rename from test/unit/__mocks__/axios/index.ts
+rename to test/unit/__mocks__/http-client.ts
+diff --git a/test/unit/package.json b/test/unit/package.json
+index d2833584fc07..2179eaa6c280 100644
+--- a/test/unit/package.json
++++ b/test/unit/package.json
+@@ -32,7 +32,7 @@
+     "@vitest/utils": "workspace:*",
+     "@vitest/web-worker": "workspace:^",
+     "@vueuse/integrations": "^14.2.1",
+-    "axios": "^1.13.4",
++    "http-client": "file:./projects/http-client",
+     "immutable": "5.1.5",
+     "loupe": "catalog:",
+     "memfs": "^4.56.11",
+diff --git a/test/unit/projects/http-client/index.d.ts b/test/unit/projects/http-client/index.d.ts
+new file mode 100644
+index 000000000000..67906fa06199
+--- /dev/null
++++ b/test/unit/projects/http-client/index.d.ts
+@@ -0,0 +1,13 @@
++export function get(...args: any[]): void
++
++export function post(...args: any[]): void
++
++export function isHttpError(error: unknown): boolean
++
++declare const httpClient: {
++  get: typeof get
++  post: typeof post
++  isHttpError: typeof isHttpError
++}
++
++export default httpClient
+diff --git a/test/unit/projects/http-client/index.js b/test/unit/projects/http-client/index.js
+new file mode 100644
+index 000000000000..825bdd4c1df0
+--- /dev/null
++++ b/test/unit/projects/http-client/index.js
+@@ -0,0 +1,13 @@
++export function get() {}
++
++export function post() {}
++
++export function isHttpError(error) {
++  return error?.isHttpError === true
++}
++
++export default {
++  get,
++  post,
++  isHttpError,
++}
+diff --git a/test/unit/projects/http-client/package.json b/test/unit/projects/http-client/package.json
+new file mode 100644
+index 000000000000..8dbf6c9deb8f
+--- /dev/null
++++ b/test/unit/projects/http-client/package.json
+@@ -0,0 +1,6 @@
++{
++  "name": "http-client",
++  "type": "module",
++  "main": "index.js",
++  "types": "index.d.ts"
++}
+diff --git a/test/unit/src/mocks/external/external.mjs b/test/unit/src/mocks/external/external.mjs
+index b2fcb43c972f..4ed5d08e1790 100644
+--- a/test/unit/src/mocks/external/external.mjs
++++ b/test/unit/src/mocks/external/external.mjs
+@@ -1,3 +1,3 @@
+ import { vi } from 'vitest'
+ 
+-vi.doMock('axios')
++vi.doMock('http-client')
+diff --git a/test/unit/test/mocking/autospying.test.ts b/test/unit/test/mocking/autospying.test.ts
+index f4999dde98c7..442d13fa1b31 100644
+--- a/test/unit/test/mocking/autospying.test.ts
++++ b/test/unit/test/mocking/autospying.test.ts
+@@ -1,11 +1,11 @@
+-import axios from 'axios'
++import httpClient from 'http-client'
+ import { expect, test, vi } from 'vitest'
+ import { getAuthToken } from '../../src/env'
+ import * as NamespaceModule from '../../src/mocks/autospying-namespace/index.js'
+ 
+ vi.mock(import('../../src/env'), { spy: true })
+ 
+-vi.mock('axios', { spy: true })
++vi.mock('http-client', { spy: true })
+ vi.mock('../../src/mocks/autospying-namespace/index.js', { spy: true })
+ 
+ test('getAuthToken is spied', async () => {
+@@ -19,11 +19,11 @@ test('getAuthToken is spied', async () => {
+ })
+ 
+ test('package in __mocks__ has lower priority', async () => {
+-  expect(vi.isMockFunction(axios.get)).toBe(true)
++  expect(vi.isMockFunction(httpClient.get)).toBe(true)
+ 
+-  // isAxiosError is not defined in __mocks__
+-  expect(axios.isAxiosError(new Error('test'))).toBe(false)
+-  expect(axios.isAxiosError).toHaveBeenCalled()
++  // isHttpError is not defined in __mocks__
++  expect(httpClient.isHttpError(new Error('test'))).toBe(false)
++  expect(httpClient.isHttpError).toHaveBeenCalled()
+ })
+ 
+ test('spies on namespace re-exports', async () => {
+diff --git a/test/unit/test/mocking/axios-mocked.test.ts b/test/unit/test/mocking/axios-mocked.test.ts
+deleted file mode 100644
+index 11a99dc3eb00..000000000000
+--- a/test/unit/test/mocking/axios-mocked.test.ts
++++ /dev/null
+@@ -1,17 +0,0 @@
+-import axios from 'axios'
+-import { expect, test, vi } from 'vitest'
+-
+-vi.mock('axios')
+-
+-test('mocked axios', async () => {
+-  await axios.get('string')
+-
+-  expect(axios.get).toHaveBeenCalledWith('string')
+-  expect(axios.post).toBeUndefined()
+-})
+-
+-test('can get actual axios', async () => {
+-  const ax = await vi.importActual<typeof axios>('axios')
+-
+-  expect(vi.isMockFunction(ax.get)).toBe(false)
+-})
+diff --git a/test/unit/test/mocking/axios-not-mocked.test.ts b/test/unit/test/mocking/axios-not-mocked.test.ts
+deleted file mode 100644
+index e7c0db5949b5..000000000000
+--- a/test/unit/test/mocking/axios-not-mocked.test.ts
++++ /dev/null
+@@ -1,14 +0,0 @@
+-import axios from 'axios'
+-import { expect, test, vi } from 'vitest'
+-
+-test('mocked axios', async () => {
+-  const { default: ax } = await vi.importMock<any>('axios')
+-
+-  await ax.get('string')
+-
+-  expect(ax.get).toHaveBeenCalledWith('string')
+-})
+-
+-test('actual axios is not mocked', async () => {
+-  expect(vi.isMockFunction(axios.get)).toBe(false)
+-})
+diff --git a/test/unit/test/mocking/external.test.ts b/test/unit/test/mocking/external.test.ts
+index 78e93aea6f10..da7445d7a9ba 100644
+--- a/test/unit/test/mocking/external.test.ts
++++ b/test/unit/test/mocking/external.test.ts
+@@ -1,14 +1,14 @@
+ /* eslint-disable perfectionist/sort-imports */
+ import { expect, test, vi } from 'vitest'
+ import '../../src/mocks/external/external.mjs'
+-import axios from 'axios'
++import httpClient from 'http-client'
+ // @ts-expect-error mocked module
+ import defaultFunc from '../../src/mocks/external/default-function.cjs'
+ 
+ vi.mock('../../src/mocks/external/default-function.cjs')
+ 
+-test('axios is mocked', () => {
+-  expect(vi.isMockFunction(axios.get)).toBe(true)
++test('http-client is mocked', () => {
++  expect(vi.isMockFunction(httpClient.get)).toBe(true)
+ })
+ 
+ test('defaultFunc is mocked', () => {
+diff --git a/test/unit/test/mocking/factory.test.ts b/test/unit/test/mocking/factory.test.ts
+index 04be4c6ac8d4..7846f836c118 100644
+--- a/test/unit/test/mocking/factory.test.ts
++++ b/test/unit/test/mocking/factory.test.ts
+@@ -1,4 +1,4 @@
+-import axios from 'axios'
++import httpClient from 'http-client'
+ import { describe, expect, it, test, vi } from 'vitest'
+ import * as example from '../../src/mocks/example'
+ import logger from '../../src/mocks/log'
+@@ -36,7 +36,7 @@ vi.mock('../../src/mocks/moduleB', async (importOriginal) => {
+   }
+ })
+ 
+-vi.mock('axios', () => {
++vi.mock('http-client', () => {
+   return {
+     default: {
+       get: vi.fn(),
+@@ -89,10 +89,10 @@ describe('mocking with factory', () => {
+     expect((moduleB as any).C).toBe('addedC')
+   })
+ 
+-  test('mocks node_modules', () => {
+-    axios.get('./path')
++  test('mocks external package', () => {
++    httpClient.get('./path')
+ 
+-    expect(axios.get).toHaveBeenCalledTimes(1)
++    expect(httpClient.get).toHaveBeenCalledTimes(1)
+   })
+ 
+   test('logger extended', () => {
+diff --git a/test/unit/test/mocking/http-client-mocked.test.ts b/test/unit/test/mocking/http-client-mocked.test.ts
+new file mode 100644
+index 000000000000..2607d02e21e5
+--- /dev/null
++++ b/test/unit/test/mocking/http-client-mocked.test.ts
+@@ -0,0 +1,17 @@
++import httpClient from 'http-client'
++import { expect, test, vi } from 'vitest'
++
++vi.mock('http-client')
++
++test('mocked http-client', async () => {
++  await httpClient.get('string')
++
++  expect(httpClient.get).toHaveBeenCalledWith('string')
++  expect(httpClient.post).toBeUndefined()
++})
++
++test('can get actual http-client', async () => {
++  const actual = await vi.importActual<typeof httpClient>('http-client')
++
++  expect(vi.isMockFunction(actual.get)).toBe(false)
++})
+diff --git a/test/unit/test/mocking/http-client-not-mocked.test.ts b/test/unit/test/mocking/http-client-not-mocked.test.ts
+new file mode 100644
+index 000000000000..f1022b03457e
+--- /dev/null
++++ b/test/unit/test/mocking/http-client-not-mocked.test.ts
+@@ -0,0 +1,14 @@
++import httpClient from 'http-client'
++import { expect, test, vi } from 'vitest'
++
++test('mocked http-client', async () => {
++  const { default: mocked } = await vi.importMock<any>('http-client')
++
++  await mocked.get('string')
++
++  expect(mocked.get).toHaveBeenCalledWith('string')
++})
++
++test('actual http-client is not mocked', () => {
++  expect(vi.isMockFunction(httpClient.get)).toBe(false)
++})

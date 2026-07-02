@@ -335,6 +335,17 @@ export const scanPR = createServerFn({ method: "POST" })
       author: prData.user?.login,
     });
 
+    // Save historical behavioral data
+    const { saveHistoricalEvent } = await import("../detectors/historical-scoring");
+    await saveHistoricalEvent({
+      author: prData.user?.login || "unknown",
+      eventType: "pr_scan",
+      trustScore: result.trustScore,
+      totalFindings: result.summary.totalFindings,
+      filesChanged: result.summary.filesScanned,
+      title: prData.title,
+    }).catch(() => {});
+
     // ─── Database Sync ──────────────────────────────────────────────
     try {
       const repoFullName = `${owner}/${repo}`.toLowerCase();

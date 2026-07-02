@@ -20,7 +20,7 @@ The core detection engine (`src/detectors`) must implement the following 6 stati
 * **Mock Abuse Detector**: Flag newly added mock fixtures that bypass core application pathways to artificially raise test pass rates.
 * **Hallucinated Matchers Detector**: Detect nonexistent testing API matchers (like `.toExist()`) hallucinated by LLMs.
 * **Claim-Diff Mismatch Detector**: Detect pull requests where the commit message or PR title claims a bugfix or test update, but the diff only modifies documentation or configurations.
-* **AI-Assisted Audit**: Leverage an LLM reasoning pipeline (via Fireworks/Groq) to identify semantic test weakening or logical omissions.
+* **AI-Assisted Audit**: Leverage an LLM reasoning pipeline to identify semantic test weakening or logical omissions.
 
 ### 2.2 Client Interfaces
 
@@ -45,5 +45,5 @@ The core detection engine (`src/detectors`) must implement the following 6 stati
 * **Database**: Neon Postgres (Serverless driver)
 * **ORM**: Drizzle ORM
 * **Auth**: GitHub OAuth with HMAC-signed HTTP-only cookie sessions.
-* **AI Engine**: Fireworks API with fallback to Groq.
+* **AI Engine**: LLM-powered detection engine.
 * **Testing**: TestSprite CLI for automated E2E testing of all web endpoints.

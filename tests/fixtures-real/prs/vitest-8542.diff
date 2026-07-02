@@ -1,0 +1,273 @@
+diff --git a/docs/guide/projects.md b/docs/guide/projects.md
+index f51f286bbafe..20a3eb1b9820 100644
+--- a/docs/guide/projects.md
++++ b/docs/guide/projects.md
+@@ -42,7 +42,54 @@ export default defineConfig({
+ })
+ ```
+ 
+-Vitest will treat every folder in `packages` as a separate project even if it doesn't have a config file inside. If this glob pattern matches _any file_, it will be considered a Vitest config even if it doesn't have a `vitest` in its name or has an obscure file extension.
++Vitest will treat every folder in `packages` as a separate project even if it doesn't have a config file inside. If the glob pattern matches a file, it will validate that the name starts with `vitest.config`/`vite.config` or matches `(vite|vitest).*.config.*` pattern to ensure it's a Vitest configuration file. For example, these config files are valid:
++
++- `vitest.config.ts`
++- `vite.config.js`
++- `vitest.unit.config.ts`
++- `vite.e2e.config.js`
++- `vitest.config.unit.js`
++- `vite.config.e2e.js`
++
++To exclude folders and files, you can use the negation pattern:
++
++```ts [vitest.config.ts]
++import { defineConfig } from 'vitest/config'
++
++export default defineConfig({
++  test: {
++    // include all folders inside "packages" except "excluded"
++    projects: [
++      'packages/*',
++      '!packages/excluded'
++    ],
++  },
++})
++```
++
++If you have a nested structure where some folders need to be projects, but other folders have their own subfolders, you have to use brackets to avoid matching the parent folder:
++
++```ts [vitest.config.ts]
++import { defineConfig } from 'vitest/config'
++
++// For example, this will create projects:
++// packages/a
++// packages/b
++// packages/business/c
++// packages/business/d
++// Notice that "packages/business" is not a project itself
++
++export default defineConfig({
++  test: {
++    projects: [
++      // matches every folder inside "packages" except "business"
++      'packages/!(business)',
++      // matches every folder inside "packages/business"
++      'packages/business/*',
++    ],
++  },
++})
++```
+ 
+ ::: warning
+ Vitest does not treat the root `vitest.config` file as a project unless it is explicitly specified in the configuration. Consequently, the root configuration will only influence global options such as `reporters` and `coverage`. Note that Vitest will always run certain plugin hooks, like `apply`, `config`, `configResolved` or `configureServer`, specified in the root config file. Vitest also uses the same plugins to execute global setups and custom coverage provider.
+diff --git a/packages/vitest/src/node/projects/resolveProjects.ts b/packages/vitest/src/node/projects/resolveProjects.ts
+index 72406643637b..eb59b6dbc6fe 100644
+--- a/packages/vitest/src/node/projects/resolveProjects.ts
++++ b/packages/vitest/src/node/projects/resolveProjects.ts
+@@ -7,11 +7,11 @@ import type {
+   UserConfig,
+   UserWorkspaceConfig,
+ } from '../types/config'
+-import { existsSync, promises as fs } from 'node:fs'
++import { existsSync, readdirSync, statSync } from 'node:fs'
+ import os from 'node:os'
+ import { limitConcurrency } from '@vitest/runner/utils'
+ import { deepClone } from '@vitest/utils'
+-import { dirname, relative, resolve } from 'pathe'
++import { basename, dirname, relative, resolve } from 'pathe'
+ import { glob, isDynamicPattern } from 'tinyglobby'
+ import { mergeConfig } from 'vite'
+ import { configFiles as defaultConfigFiles } from '../../constants'
+@@ -20,6 +20,12 @@ import { VitestFilteredOutProjectError } from '../errors'
+ import { initializeProject, TestProject } from '../project'
+ import { withLabel } from '../reporters/renderers/utils'
+ 
++// vitest.config.*
++// vite.config.*
++// vitest.unit.config.*
++// vite.unit.config.*
++const CONFIG_REGEXP = /^vite(?:st)?(?:\.\w+)?\.config\./
++
+ export async function resolveProjects(
+   vitest: Vitest,
+   cliOptions: UserConfig,
+@@ -358,14 +364,22 @@ async function resolveTestProjectConfigs(
+           throw new Error(`${note} references a non-existing file or a directory: ${file}`)
+         }
+ 
+-        const stats = await fs.stat(file)
++        const stats = statSync(file)
+         // user can specify a config file directly
+         if (stats.isFile()) {
++          const name = basename(file)
++          if (!CONFIG_REGEXP.test(name)) {
++            throw new Error(
++              `The file "${relative(vitest.config.root, file)}" must start with "vitest.config"/"vite.config" `
++              + `or match the pattern "(vitest|vite).*.config.*" to be a valid project config.`,
++            )
++          }
++
+           projectsConfigFiles.push(file)
+         }
+         // user can specify a directory that should be used as a project
+         else if (stats.isDirectory()) {
+-          const configFile = await resolveDirectoryConfig(file)
++          const configFile = resolveDirectoryConfig(file)
+           if (configFile) {
+             projectsConfigFiles.push(configFile)
+           }
+@@ -418,11 +432,11 @@ async function resolveTestProjectConfigs(
+ 
+     const projectsFs = await glob(projectsGlobMatches, globOptions)
+ 
+-    await Promise.all(projectsFs.map(async (path) => {
++    projectsFs.forEach((path) => {
+       // directories are allowed with a glob like `packages/*`
+       // in this case every directory is treated as a project
+       if (path.endsWith('/')) {
+-        const configFile = await resolveDirectoryConfig(path)
++        const configFile = resolveDirectoryConfig(path)
+         if (configFile) {
+           projectsConfigFiles.push(configFile)
+         }
+@@ -431,9 +445,17 @@ async function resolveTestProjectConfigs(
+         }
+       }
+       else {
++        const name = basename(path)
++        if (!CONFIG_REGEXP.test(name)) {
++          throw new Error(
++            `The projects glob matched a file "${relative(vitest.config.root, path)}", `
++            + `but it should also either start with "vitest.config"/"vite.config" `
++            + `or match the pattern "(vitest|vite).*.config.*".`,
++          )
++        }
+         projectsConfigFiles.push(path)
+       }
+-    }))
++    })
+   }
+ 
+   const projectConfigFiles = Array.from(new Set(projectsConfigFiles))
+@@ -445,8 +467,8 @@ async function resolveTestProjectConfigs(
+   }
+ }
+ 
+-async function resolveDirectoryConfig(directory: string) {
+-  const files = new Set(await fs.readdir(directory))
++function resolveDirectoryConfig(directory: string) {
++  const files = new Set(readdirSync(directory))
+   // default resolution looks for vitest.config.* or vite.config.* files
+   // this simulates how `findUp` works in packages/vitest/src/node/create.ts:29
+   const configFile = defaultConfigFiles.find(file => files.has(file))
+diff --git a/test/config/fixtures/workspace/invalid-duplicate-configs/vitest1.config.js b/test/config/fixtures/workspace/invalid-duplicate-configs/vitest.config.one.js
+similarity index 100%
+rename from test/config/fixtures/workspace/invalid-duplicate-configs/vitest1.config.js
+rename to test/config/fixtures/workspace/invalid-duplicate-configs/vitest.config.one.js
+diff --git a/test/config/fixtures/workspace/invalid-duplicate-configs/vitest.config.ts b/test/config/fixtures/workspace/invalid-duplicate-configs/vitest.config.ts
+index 342854162541..dbd27e522d4d 100644
+--- a/test/config/fixtures/workspace/invalid-duplicate-configs/vitest.config.ts
++++ b/test/config/fixtures/workspace/invalid-duplicate-configs/vitest.config.ts
+@@ -3,8 +3,8 @@ import { defineConfig } from 'vitest/config'
+ export default defineConfig({
+   test: {
+     projects: [
+-      './vitest1.config.js',
+-      './vitest2.config.js',
++      './vitest.config.one.js',
++      './vitest.config.two.js',
+     ],
+   }
+ })
+\ No newline at end of file
+diff --git a/test/config/fixtures/workspace/invalid-duplicate-configs/vitest2.config.js b/test/config/fixtures/workspace/invalid-duplicate-configs/vitest.config.two.js
+similarity index 100%
+rename from test/config/fixtures/workspace/invalid-duplicate-configs/vitest2.config.js
+rename to test/config/fixtures/workspace/invalid-duplicate-configs/vitest.config.two.js
+diff --git a/test/config/test/projects.test.ts b/test/config/test/projects.test.ts
+index 373ad5330d8b..a19a9d3be379 100644
+--- a/test/config/test/projects.test.ts
++++ b/test/config/test/projects.test.ts
+@@ -1,6 +1,6 @@
+ import { resolve } from 'pathe'
+-import { expect, it } from 'vitest'
+-import { runVitest } from '../../test-utils'
++import { describe, expect, it } from 'vitest'
++import { runInlineTests, runVitest } from '../../test-utils'
+ 
+ it('runs the workspace if there are several vitest config files', async () => {
+   const { stderr, stdout } = await runVitest({
+@@ -38,11 +38,11 @@ it('fails if project names are identical with a nice error message', async () =>
+     root: 'fixtures/workspace/invalid-duplicate-configs',
+   }, [], 'test', {}, { fails: true })
+   expect(stderr).toContain(
+-    `Project name "test" from "vitest2.config.js" is not unique. The project is already defined by "vitest1.config.js".
++    `Project name "test" from "vitest.config.two.js" is not unique. The project is already defined by "vitest.config.one.js".
+ 
+ Your config matched these files:
+- - vitest1.config.js
+- - vitest2.config.js
++ - vitest.config.one.js
++ - vitest.config.two.js
+ 
+ All projects should have unique names. Make sure your configuration is correct.`,
+   )
+@@ -138,3 +138,60 @@ it('fails if workspace is filtered by the project', async () => {
+     "./vitest.config.js"
+ ].`)
+ })
++
++describe('the config file names', () => {
++  it('[glob] the name has "unit" between "vitest" and "config" and works', async () => {
++    const { exitCode } = await runInlineTests({
++      'vitest.unit.config.js': {},
++      'vitest.config.js': {
++        test: {
++          passWithNoTests: true,
++          projects: ['./vitest.*.config.js'],
++        },
++      },
++    })
++
++    expect(exitCode).toBe(0)
++  })
++
++  it('[glob] the name does not start with "vite"/"vitest" and throws an error', async () => {
++    const { stderr } = await runInlineTests({
++      'unit.config.js': {},
++      'vitest.config.js': {
++        test: {
++          projects: ['./*.config.js'],
++        },
++      },
++    }, {}, { fails: true })
++
++    expect(stderr).toContain('The projects glob matched a file "unit.config.js", but it should also either start with "vitest.config"/"vite.config" or match the pattern "(vitest|vite).*.config.*".')
++  })
++
++  it('[file] the name has "unit" between "vitest" and "config" and works', async () => {
++    const { exitCode } = await runInlineTests({
++      'vitest.unit.config.js': {},
++      'vitest.config.js': {
++        test: {
++          passWithNoTests: true,
++          projects: ['./vitest.unit.config.js'],
++        },
++      },
++    })
++
++    expect(exitCode).toBe(0)
++  })
++
++  it('[file] the name does not start with "vite"/"vitest" and throws an error', async () => {
++    const { stderr } = await runInlineTests({
++      'unit.config.js': {},
++      'vitest.config.js': {
++        test: {
++          passWithNoTests: true,
++          projects: ['./unit.config.js'],
++        },
++      },
++    }, {}, { fails: true })
++
++    expect(stderr).toContain('The file "unit.config.js" must start with "vitest.config"/"vite.config" or match the pattern "(vitest|vite).*.config.*" to be a valid project config.')
++  })
++})

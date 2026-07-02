@@ -26,7 +26,7 @@
   <br />
   <img src="https://img.shields.io/badge/Stack-TanStack_Start-FF4154?style=flat-square&logo=react&logoColor=white" alt="TanStack">
   <img src="https://img.shields.io/badge/Database-Neon--Postgres-00E59B?style=flat-square&logo=postgresql&logoColor=white" alt="Neon">
-  <img src="https://img.shields.io/badge/AI-Fireworks_+_Groq-FF6B35?style=flat-square" alt="AI">
+  <img src="https://img.shields.io/badge/AI-Powered-FF6B35?style=flat-square" alt="AI">
   <img src="https://img.shields.io/badge/Tests-TestSprite_CLI-6B7280?style=flat-square" alt="TestSprite">
   <img src="https://img.shields.io/badge/OAuth-GitHub-333?style=flat-square&logo=github" alt="GitHub OAuth">
 </p>
@@ -37,9 +37,11 @@
 
 **Mantiz** is an AI-powered lie detector for code — specifically designed to catch AI coding agents when they try to cheat their test suites.
 
-When an AI agent writes code, it can subtly **disable assertions, mock failing APIs, skip test suites, hallucinate matchers, or tamper with expected values** to make tests pass. Mantiz scans every line of a diff through **8 detection patterns** (7 static + AI-assisted) and produces a **Trust Score (0–100)** with ranked findings.
+When an AI agent writes code, it can subtly **disable assertions, mock failing APIs, skip test suites, hallucinate matchers, or tamper with expected values** to make tests pass. Mantiz scans every line of a diff through **11 detection patterns** (10 static + AI-assisted) and produces a **Trust Score (0–100)** with ranked findings.
 
-> **Mantiz adalah *honesty gate* yang berjalan sebelum test eksekusi.** Dia tidak menggantikan TestSprite (yang verifikasi behavior), tapi memastikan hasil test yang "lolos" itu lolos beneran — bukan karena dimanipulasi oleh agentnya sendiri.
+> **Mantiz is the *honesty gate* that runs before test execution.** It doesn't replace TestSprite (which verifies behavior) — it ensures that "passing" tests actually pass because the code works, not because the agent manipulated them.
+
+> ⚠️ **Honest Accuracy:** Benchmark scores are computed dynamically by running all 11 detectors against each fixture. Dataset A uses real PRs from vitest-dev/vitest — honest code from a respected open-source project. These real PRs score 10-58/100, revealing that Mantiz still has false positive issues with legitimate test changes (D2 assertion tampering is too aggressive). The benchmark is a transparent regression test, not a claim of production readiness.
 
 > **Built for the [TestSprite Season 3 Hackathon](https://www.testsprite.com/hackathon-s3)** — the checker for the checker.
 
@@ -47,7 +49,7 @@ When an AI agent writes code, it can subtly **disable assertions, mock failing A
 
 ## ✨ Features
 
-### 🔬 8 Detection Patterns (7 Static + AI-Assisted)
+### 🔬 11 Detection Patterns (10 Static + AI-Assisted)
 
 | Pattern | Severity | What It Catches |
 |---------|----------|----------------|
@@ -57,8 +59,11 @@ When an AI agent writes code, it can subtly **disable assertions, mock failing A
 | **Claim-Diff Mismatch** | 🟡 Medium | Commit message says "fix tests" but diff only touches source — no test updated |
 | **Silent Catch-and-Pass** | 🟠 Medium | Empty catch blocks that swallow real errors and let the agent declare success |
 | **Hallucinated Assertion** | 🔴 High | Non-existent Jest/Vitest matchers hallucinated by AI agents (e.g. `.toExist()`) |
-| **AST Analyzer** 🆕 | 🔴 High | Parses added code with `@babel/parser` — detects trivial function bodies (`return true/false`), async gutting (async → empty try/catch), conditional wrapping, and empty test shells |
-| **AI-Assisted Detection** | 🟡 Varies | LLM-powered analysis via Fireworks/Groq — detects test weakening, assertion removal, semantic bypass, coverage reduction |
+| **AST Analyzer (Babel)** 🆕 | 🔴 High | Parses JS/TS code with `@babel/parser` — detects trivial function bodies (`return true/false`), async gutting, conditional wrapping, empty test shells |
+| **Tree-sitter AST** 🆕 | 🔴 High | Multi-language AST analysis via WASM parsers — Python, Go, Java, Ruby, Rust, PHP |
+| **Historical Behavioral** 🆕 | 🟡 Medium | Tracks author patterns over time — style changes, odd hours, score volatility |
+| **Mutation Susceptibility** 🆕 | 🟡 Medium | Detects fragile tests with low assertion density that can be easily mutated |
+| **AI-Assisted Detection** | 🟡 Varies | LLM-powered analysis — detects test weakening, assertion removal, semantic bypass, coverage reduction |
 
 ### 🧠 Detection Nuances
 
@@ -95,7 +100,6 @@ Weighted scoring: **high = 30pts**, **medium = 15pts**, **low = 5pts** deducted 
 ### 🤖 AI Detection
 
 - **Toggle:** Easily enable/disable via `AI_DETECTION_ENABLED=true`
-- **Resilient Architecture:** Uses **Fireworks Inference** as primary provider with an automatic fallback to **Groq** to ensure high availability.
 - **Smart Analysis:** Detects 5 AI-level patterns: test weakening, assertion removal, semantic bypass, hallucinated APIs, and coverage reduction.
 
 
@@ -109,7 +113,7 @@ Weighted scoring: **high = 30pts**, **medium = 15pts**, **low = 5pts** deducted 
 | `/login` | GitHub OAuth sign-in |
 | `/history` | Scan history with detailed findings modal |
 | `/settings` | API token management (`mtz_*` prefix) |
-| `/benchmark` | Interactive benchmark — 12 fixtures across 3 datasets |
+| `/benchmark` | Interactive benchmark — 39 fixtures across 4 datasets |
 
 ### 🧩 Interactive Scan Animation
 
@@ -156,10 +160,9 @@ GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
 # Session secret (required — at least 32 characters)
 SESSION_SECRET=your_random_secret_at_least_32_chars
 
-# AI Detection (optional — enables Fireworks + Groq)
+# AI Detection (optional)
 AI_DETECTION_ENABLED=true
-FIREWORKS_API_KEY=fw_xxx
-GROQ_API_KEY=gsk_xxx
+AI_API_KEY=your_ai_api_key
 
 # Debug logging (optional — enables per-detector console logs)
 MANTIZ_DEBUG=true
@@ -199,7 +202,7 @@ npm run preview
 1. Go to [/pr-scan](https://mantiz-wine.vercel.app/pr-scan)
 2. Sign in with GitHub
 3. Paste a PR URL: `https://github.com/owner/repo/pull/123`
-4. Mantiz fetches the diff, runs 8 detectors, and returns findings
+4. Mantiz fetches the diff, runs 11 detectors, and returns findings
 
 ### 🔗 CI/CD Integration
 
@@ -249,6 +252,23 @@ npx mantiz scan diff.diff --fix
 | **Silent Catch-and-Pass** | Wraps the empty catch body with `console.error` logging |
 | **Mock-to-Avoid-Failure** | Adds a comment suggesting real integration test |
 
+### 📊 Historical Behavioral Scoring 🆕
+
+Mantiz tracks **author behavior patterns over time** using a dedicated database table. Every PR scan stores behavioral data, and future scans get smarter by detecting:
+
+| Pattern | What It Detects | Score Modifier |
+|---------|----------------|:--------------:|
+| **🔄 Style Change** | PR description style suddenly changes from historical baseline | −10pts |
+| **🌙 Odd Hours** | Commits consistently at 1–5 AM (automation signal) | −5pts |
+| **📈 Score Volatility** | Trust score swings >40pts between consecutive scans | −15pts |
+| **🆕 New Author** | First scan from this author — no behavioral baseline | −5pts |
+| **⚡ Frequency Anomaly** | >10 PRs in 24 hours from same author | −10pts |
+| **❌ Consecutive Failures** | 3+ failed scans in a row — persistent cheating pattern | −5pts each |
+
+Behavioral findings appear with a `📊` badge in the scan output and are saved as `historical_behavioral` pattern type in the database.
+
+> **Database required.** Historical scoring gracefully degrades when no database connection is available (CLI usage, CI without DB).
+
 ### ⛔ Cost-Saver Gate
 
 In CI/CD, Mantiz acts as an **intelligent gate** that prevents wasteful TestSprite cloud runs on dishonest code:
@@ -292,25 +312,30 @@ Every code failure detected by our TestSprite E2E test runs was analyzed, patche
 
 | Bug / Vulnerability | Description | Detector / Layer | Fix Commit | Status |
 |-----------------------|-----------|------------------|------------|:------:|
-| **`test.skip('desc', fn)` Bypass** | Pola `SKIP_PATTERN` hanya mendeteksi `.skip()`, meleset jika ada parameter. | *Disabled Assertion* (Bypass) | [`56f14fe`](https://github.com/farhank15/mantiz/commit/56f14fe) | **FIXED** ✅ |
-| **Vercel OAuth Domain Mismatch** | OAuth Callback gagal di preview Vercel karena `APP_URL` statis. | *Authentication* (OAuth) | [`8f5b8c0`](https://github.com/farhank15/mantiz/commit/8f5b8c0) | **FIXED** ✅ |
-| **Monorepo False Positives** | File fixture uji monorepo dideteksi sebagai kode produksi. | *File Exclusions* | [`9a12c8a`](https://github.com/farhank15/mantiz/commit/9a12c8a) | **FIXED** ✅ |
-| **Commented Assertion Bypass** | Komentar asersi polos tanpa tanda kurung tidak terdeteksi. | *Commented Assertions* | [`c127fb3`](https://github.com/farhank15/mantiz/commit/c127fb3) | **FIXED** ✅ |
-| **Markdown Doc False Positives** | Kata `.skip()` di dalam file README/dokumentasi dianggap kecurangan. | *File Exclusions* | [`ae789b1`](https://github.com/farhank15/mantiz/commit/ae789b1) | **FIXED** ✅ |
-| **Literal String False Positives** | Teks `.skip` dalam string pengujian unit test diblokir. | *Engine Tests* | [`bf98d1a`](https://github.com/farhank15/mantiz/commit/bf98d1a) | **FIXED** ✅ |
-| **Nested Parentheses Bypass** | Asersi bersarang seperti `expect(fn()).toBe(...)` lolos dari tampering. | *Assertion Tampering* | [`8fd023a`](https://github.com/farhank15/mantiz/commit/8fd023a) | **FIXED** ✅ |
+| **`test.skip('desc', fn)` Bypass** | `SKIP_PATTERN` only matched `.skip()` with no args — missed `.skip('desc', fn)` syntax. | *Disabled Assertion* (Bypass) | [`56f14fe`](https://github.com/farhank15/mantiz/commit/56f14fe) | **FIXED** ✅ |
+| **Vercel OAuth Domain Mismatch** | OAuth callback failed on Vercel preview deploys due to hardcoded `APP_URL`. | *Authentication* (OAuth) | [`8f5b8c0`](https://github.com/farhank15/mantiz/commit/8f5b8c0) | **FIXED** ✅ |
+| **Monorepo False Positives** | Monorepo test fixture files were incorrectly flagged as production code. | *File Exclusions* | [`9a12c8a`](https://github.com/farhank15/mantiz/commit/9a12c8a) | **FIXED** ✅ |
+| **Commented Assertion Bypass** | Plain assertion comments without parentheses were not detected. | *Commented Assertions* | [`c127fb3`](https://github.com/farhank15/mantiz/commit/c127fb3) | **FIXED** ✅ |
+| **Markdown Doc False Positives** | `.skip()` inside README/documentation files was flagged as cheating. | *File Exclusions* | [`ae789b1`](https://github.com/farhank15/mantiz/commit/ae789b1) | **FIXED** ✅ |
+| **Literal String False Positives** | `.skip` text inside unit test strings was incorrectly blocked. | *Engine Tests* | [`bf98d1a`](https://github.com/farhank15/mantiz/commit/bf98d1a) | **FIXED** ✅ |
+| **Nested Parentheses Bypass** | Nested assertions like `expect(fn()).toBe(...)` evaded tampering detection. | *Assertion Tampering* | [`8fd023a`](https://github.com/farhank15/mantiz/commit/8fd023a) | **FIXED** ✅ |
 
 ---
 
 ## 📊 Benchmark Results
 
-Mantiz includes a built-in benchmark suite with **12 fixtures across 3 datasets**:
+> **⚠️ REALITY CHECK:** Benchmark scores reflect actual detector output, not target scores. A score of 10 does NOT mean "10% accurate" — it means the diff triggered enough detector findings to floor the score. Dataset A (Honest) uses real merged PRs from `vitest-dev/vitest` and scores 10-58 because Mantiz flags legitimate assertion changes as cheating. This is a known FP issue being actively worked on.
 
-| Dataset | Description | Fixtures | Target Score |
-|---------|-------------|----------|-------------|
-| **A** — "The Honest Code" | Proper diff + valid test updates | 2 | 90–100 ✅ |
-| **B** — "The Lazy/Cheating AI" | `.skip()`, `if(false)`, commented assertions | 2 | < 40 🔴 |
-| **C** — "The Smart Evasion AI" | Assertion tampering, mock + empty catch | 2 | 50–70 🟡 |
+Mantiz includes a built-in benchmark suite with **39 fixtures across 4 datasets**:
+
+| Dataset | Description | Fixtures | Source | Avg Score |
+|---------|-------------|:--------:|:------:|:---------:|
+| **A** — "The Honest Code" | Proper diff + valid test updates | 4 | 🔴 **Real PRs** (vitest-dev/vitest) | 27 🟡 |
+| **B** — "The Lazy/Cheating AI" | `.skip()`, `if(false)`, commented assertions | 8 | 📜 **Research-based** (DebugML/UC Berkeley) | 27 🟡 |
+| **C** — "The Smart Evasion AI" | Assertion tampering, mock + empty catch | 4 | 📜 **Research-based** (DebugML) | 32 🟡 |
+| **FP** — "False Positive" | Legitimate code patterns | 23 | 🟡 **Mixed** (2 real vitest PRs + 21 documented) | 55 🟡 |
+
+**How scores work:** `score = max(10, 100 - (high×30 + med×15 + low×5))` — each finding deducts points based on confidence. Every score shown is computed dynamically by `scanDiff()` running all 11 detectors in real time. **No scores are hardcoded or fabricated.**
 
 Visit the [**/benchmark**](https://mantiz-wine.vercel.app/benchmark) dashboard to see live accuracy results with per-fixture breakdowns.
 
@@ -328,8 +353,9 @@ Visit the [**/benchmark**](https://mantiz-wine.vercel.app/benchmark) dashboard t
 | **Database** | [Neon Postgres](https://neon.tech) (serverless) |
 | **ORM** | [Drizzle ORM](https://orm.drizzle.team) |
 | **Auth** | GitHub OAuth + HMAC-signed session cookies |
-| **AI** | [Fireworks Inference](https://fireworks.ai) + [Groq](https://groq.com) |
+| **AI** | LLM-powered detection engine |
 | **AST Parsing** | [@babel/parser](https://babeljs.io/docs/babel-parser) |
+| **Behavioral Tracking** | Neon Postgres (author profiles + events) |
 | **Diff Parsing** | [diff](https://npm.im/diff) |
 | **Rate Limiting** | In-memory sliding window (3 tiers) |
 | **GitHub API** | [Octokit](https://github.com/octokit) |

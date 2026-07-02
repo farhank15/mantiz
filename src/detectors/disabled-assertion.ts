@@ -1,24 +1,46 @@
-import type { Finding, ParsedDiff, Confidence } from './types'
-
 /**
- * Patterns that indicate a disabled assertion.
+ * Mantiz Disabled Assertion Detector — Multi-Language
+ *
+ * Detects tests that have been disabled or skipped across multiple languages.
+ * Uses the Language Registry for per-language patterns.
+ *
+ * Supported: JavaScript/TypeScript, Python, Go, Java, Ruby, Rust
  */
-const COMMENTED_ASSERTION = /\/\/\s*(assert\s*\(|assert\.|expect\s*\(|should\s*\(|should\.|\.should\b|\.toBe|\.toEqual|\.toMatch|\.toContain|\.toThrow|\.resolves|\.rejects)/i
-const SKIP_PATTERN = /\.skip\s*\(/
-const IF_FALSE_PATTERN = /if\s*\(\s*(?:false|0)\s*\)\s*\{/
-const COMMENTED_TEST = /\/\/\s*(?:it|test|describe)\s*\(/
-const TODO_PREFIX = /\/\/\s*TODO/i
+
+import type { Finding, ParsedDiff, Confidence } from './types'
+import { detectLanguage, isTestFile, LANGUAGE_CONFIG } from './language-registry'
+import type { LanguageDetectionRules } from './language-registry'
+
+// ─── Types ───────────────────────────────────────────────────────
+
+type MatchPattern = 'skip' | 'skip_with_reason' | 'focus' | 'if_false' | 'comment' | 'todo'
 
 interface MatchResult {
   lineIndex: number
   lineContent: string
-  pattern: 'comment' | 'skip' | 'if_false' | 'todo' | 'focus'
+  pattern: MatchPattern
+  lang: string
+}
+
+// ─── Multi-Language Scan ─────────────────────────────────────────
+
+/**
+ * Get detection rules for a given language, falling back to JS/TS if unknown.
+ */
+function getRules(lang: string | null): LanguageDetectionRules {
+  if (lang && LANGUAGE_CONFIG[lang]) {
+    return LANGUAGE_CONFIG[lang].detectionRules
+  }
+  // Default to JavaScript/TypeScript rules
+  return LANGUAGE_CONFIG.javascript.detectionRules
 }
 
 /**
  * Scan a single hunk's content lines and return matches for disabled assertions.
+ * Uses language-specific patterns from the Language Registry.
  */
-function scanHunk(hunkContent: string, baseLine: number): MatchResult[] {
+function scanHunk(hunkContent: string, baseLine: number, lang: string | null): MatchResult[] {
+  const rules = getRules(lang)
   const lines = hunkContent.split('\n')
   const matches: MatchResult[] = []
 
@@ -28,46 +50,63 @@ function scanHunk(hunkContent: string, baseLine: number): MatchResult[] {
     // Skip unchanged context lines
     if (line.startsWith(' ')) continue
 
-    // Check for commented-out assertions
-    if (COMMENTED_ASSERTION.test(line)) {
-      matches.push({ lineIndex: baseLine + i, lineContent: line.trim(), pattern: 'comment' })
-      continue
+    const content = line.slice(1).trim()
+    const lineIdx = baseLine + i
+    let matched = false
+
+    // Check skip patterns (language-specific)
+    if (!matched) {
+      for (const pattern of rules.disabledAssertion.skipPatterns) {
+        if (pattern.test(line) || pattern.test(content)) {
+          // Check if the skip has a reason/description string
+          // e.g. `.skip("reason")` vs `.skip()` or `xit`
+          const hasReason = /\.skip\s*\(\s*['"`]/.test(line)
+            || /@pytest\.mark\.skip\s*\(/.test(line)
+            || /@pytest\.mark\.skipif\s*\(/.test(line)
+            || /@unittest\.skip\(/.test(line)
+          matches.push({
+            lineIndex: lineIdx,
+            lineContent: content,
+            pattern: hasReason ? 'skip_with_reason' : 'skip',
+            lang: lang || 'javascript',
+          })
+          matched = true
+          break
+        }
+      }
     }
 
-    // Check for .skip()
-    if (SKIP_PATTERN.test(line) && (line.includes('it') || line.includes('describe') || line.includes('test'))) {
-      matches.push({ lineIndex: baseLine + i, lineContent: line.trim(), pattern: 'skip' })
-      continue
+    // Check focus patterns
+    if (!matched) {
+      for (const pattern of rules.disabledAssertion.focusPatterns) {
+        if (pattern.test(line) || pattern.test(content)) {
+          matches.push({ lineIndex: lineIdx, lineContent: content, pattern: 'focus', lang: lang || 'javascript' })
+          matched = true
+          break
+        }
+      }
     }
 
-    // Check for xit/xtest/xdescribe addition
-    if (line.startsWith('+') && /^\+\s*(?:xit|xtest|xdescribe)\b/.test(line)) {
-      matches.push({ lineIndex: baseLine + i, lineContent: line.trim(), pattern: 'skip' })
-      continue
+    // Check conditional disable (if(false), if(0), etc.)
+    if (!matched) {
+      for (const pattern of rules.disabledAssertion.conditionalDisable) {
+        if (pattern.test(line) || pattern.test(content)) {
+          matches.push({ lineIndex: lineIdx, lineContent: content, pattern: 'if_false', lang: lang || 'javascript' })
+          matched = true
+          break
+        }
+      }
     }
 
-    // Check for fit/fdescribe addition
-    if (line.startsWith('+') && /^\+\s*(?:fit|fdescribe)\b/.test(line)) {
-      matches.push({ lineIndex: baseLine + i, lineContent: line.trim(), pattern: 'focus' })
-      continue
-    }
-
-    // Check for if(false) wrapping
-    if (IF_FALSE_PATTERN.test(line)) {
-      matches.push({ lineIndex: baseLine + i, lineContent: line.trim(), pattern: 'if_false' })
-      continue
-    }
-
-    // Check for commented-out test blocks
-    if (COMMENTED_TEST.test(line)) {
-      matches.push({ lineIndex: baseLine + i, lineContent: line.trim(), pattern: 'comment' })
-      continue
-    }
-
-    // Check for TODO comments on test lines (weaker signal)
-    if (TODO_PREFIX.test(line) && (line.includes('test') || line.includes('assert') || line.includes('expect'))) {
-      matches.push({ lineIndex: baseLine + i, lineContent: line.trim(), pattern: 'todo' })
-      continue
+    // Check commented-out assertions
+    if (!matched) {
+      for (const pattern of rules.disabledAssertion.commentPatterns) {
+        if (pattern.test(line) || pattern.test(content)) {
+          matches.push({ lineIndex: lineIdx, lineContent: content, pattern: 'comment', lang: lang || 'javascript' })
+          matched = true
+          break
+        }
+      }
     }
   }
 
@@ -77,10 +116,12 @@ function scanHunk(hunkContent: string, baseLine: number): MatchResult[] {
 /**
  * Map match pattern to confidence level.
  */
-function patternToConfidence(pattern: MatchResult['pattern']): Confidence {
+function patternToConfidence(pattern: MatchPattern): Confidence {
   switch (pattern) {
     case 'skip':
-      return 'high'
+      return 'high'        // Skip without reason — clear bypass
+    case 'skip_with_reason':
+      return 'medium'      // Skip with reason — possibly legitimate
     case 'focus':
       return 'high'
     case 'if_false':
@@ -93,29 +134,42 @@ function patternToConfidence(pattern: MatchResult['pattern']): Confidence {
 }
 
 /**
- * Map match pattern to a human-readable explanation.
+ * Map match pattern + language to a human-readable explanation.
  */
-function patternToExplanation(pattern: MatchResult['pattern']): string {
+function patternToExplanation(pattern: MatchPattern, lang: string): string {
+  const langName = LANGUAGE_CONFIG[lang]?.name || lang
+
   switch (pattern) {
     case 'skip':
-      return 'Test or test suite marked with .skip() — will be silently ignored by the test runner.'
+      return `Test or test suite skipped without reason (${langName}) — will be silently ignored by the test runner.`
+    case 'skip_with_reason':
+      return `Test or test suite skipped with a reason (${langName}) — may be legitimate but still disables the assertion.`
     case 'focus':
-      return 'Focused test or test suite (fit/fdescribe) — will cause the runner to skip all other tests in the project.'
+      return `Focused test or test suite (${langName}) — will cause the runner to skip all other tests in the project.`
     case 'if_false':
-      return 'Assertion wrapped in if(false) — the assertion will never execute.'
+      return `Assertion wrapped in conditional that always evaluates to false (${langName}) — the assertion will never execute.`
     case 'comment':
-      return 'Assertion commented out — the test no longer verifies the expected behavior.'
+      return `Assertion commented out (${langName}) — the test no longer verifies the expected behavior.`
     case 'todo':
-      return 'TODO comment on a test line — may indicate intentionally disabled verification.'
+      return `TODO comment on a test line (${langName}) — may indicate intentionally disabled verification.`
   }
 }
 
+// ─── Main Detector ──────────────────────────────────────────────
+
 /**
  * Run the disabled-assertion detector across all parsed files/hunks.
+ * Supports multiple languages via the Language Registry.
  */
 export function detectDisabledAssertions(files: ParsedDiff[]): Finding[] {
   const findings: Finding[] = []
-  const TEST_FILE_PATTERN = /(\.(test|spec)\.(ts|tsx|js|jsx)$)|(\/(?:__tests__|tests?|fixtures)\/)/i
+
+  // Compute once: did any source file change? (for context-aware comment confidence)
+  const hasSourceChange = files.some(f => {
+    const fp = f.newFile || f.oldFile || ''
+    if (fp === '/dev/null' || !fp) return false
+    return !isTestFile(fp) && detectLanguage(fp) !== null
+  })
 
   for (const file of files) {
     const filePath = file.newFile || file.oldFile || 'unknown'
@@ -123,22 +177,32 @@ export function detectDisabledAssertions(files: ParsedDiff[]): Finding[] {
     // Ignore deleted files
     if (file.newFile === '/dev/null') continue
 
-    // Only scan test files
-    if (!TEST_FILE_PATTERN.test(filePath)) continue
+    // Detect language from file path
+    const lang = detectLanguage(filePath)
+
+    // Only scan test files (using universal test file detection)
+    if (!isTestFile(filePath)) continue
 
     for (const hunk of file.hunks) {
-      // Base line number for added lines starts at newStart
       const baseLine = hunk.newStart
-      const matches = scanHunk(hunk.content, baseLine)
+      const matches = scanHunk(hunk.content, baseLine, lang)
 
       for (const match of matches) {
+        let confidence = patternToConfidence(match.pattern)
+
+        // Context-aware: if source code also changed, commented assertions
+        // are likely refactoring artifacts (e.g., old code commented out during cleanup)
+        if (match.pattern === 'comment' && hasSourceChange) {
+          confidence = 'low'
+        }
+
         findings.push({
           patternType: 'disabled_assertion',
           filePath,
           lineStart: match.lineIndex,
           lineEnd: match.lineIndex,
-          confidence: patternToConfidence(match.pattern),
-          explanation: patternToExplanation(match.pattern),
+          confidence,
+          explanation: `${patternToExplanation(match.pattern, match.lang)} [${match.lang.toUpperCase()}]`,
           evidenceExcerpt: match.lineContent.slice(0, 200),
         })
       }

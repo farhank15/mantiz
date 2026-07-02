@@ -12,7 +12,7 @@ import { execSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { scanDiff } from '../detectors/engine'
+import { scanDiffAsync } from '../detectors/engine'
 import { generatePatches, applyPatchesToFiles } from '../detectors/heal-engine'
 import type { CodePatch } from '../detectors/heal-engine'
 
@@ -172,7 +172,7 @@ function handleAutoFix(patches: CodePatch[], args: string[]): void {
 /**
  * Main entry point.
  */
-function main(): void {
+async function main(): Promise<void> {
   const startTime = Date.now()
   const args = process.argv.slice(2)
 
@@ -184,8 +184,8 @@ function main(): void {
     process.exit(0)
   }
 
-  // 2. Run all detectors
-  const result = scanDiff(diff)
+  // 2. Run all detectors (async for AI + historical)
+  const result = await scanDiffAsync(diff)
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(2)
 
   // 3. Generate patches (for auto-fix)
@@ -206,19 +206,25 @@ function main(): void {
     console.log(`\x1b[36m🔬  ${astCount} AST-level finding(s) — structural manipulation detected\x1b[0m`)
   }
 
-  // 6. Handle auto-fix if --fix flag is passed
+  // 6. Print Historical findings badge
+  const histCount = result.findings.filter(f => f.explanation.startsWith('📊')).length
+  if (histCount > 0) {
+    console.log(`\x1b[35m📊  ${histCount} Historical behavioral finding(s) — author pattern anomalies detected\x1b[0m`)
+  }
+
+  // 7. Handle auto-fix if --fix flag is passed
   if (patches.length > 0) {
     handleAutoFix(patches, args)
   }
 
-  // 7. Log to LOOP.md
+  // 8. Log to LOOP.md
   const iteration = getCurrentIteration() + 1
   const status = result.trustScore >= PASS_THRESHOLD ? 'PASSED' : 'BLOCKED'
   appendToLOOPMD(iteration, result.trustScore, result.findings.length, result.summary.highCount, status)
   console.log(`\x1b[2m📝 LOOP.md updated — iteration ${iteration} logged\x1b[0m`)
   console.log(`\x1b[2m⚡ Scan completed in ${elapsed}s\x1b[0m\n`)
 
-  // 8. Show fix instructions if score is low
+  // 9. Show fix instructions if score is low
   if (result.trustScore < PASS_THRESHOLD && result.fixInstructions.length > 0) {
     console.log('\x1b[33m📋 Suggested fixes for AI agent:\x1b[0m')
     for (const fix of result.fixInstructions) {
@@ -227,7 +233,7 @@ function main(): void {
     console.log('')
   }
 
-  // 9. Exit with appropriate code
+  // 10. Exit with appropriate code
   if (result.trustScore < PASS_THRESHOLD) {
     console.log('\x1b[31m✗ BUILD FAILED — Trust score below 70 threshold\x1b[0m\n')
     process.exit(1)

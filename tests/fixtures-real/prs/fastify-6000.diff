@@ -1,0 +1,13 @@
+diff --git a/package.json b/package.json
+index 91c1f96a130..d19593eb8de 100644
+--- a/package.json
++++ b/package.json
+@@ -193,7 +193,7 @@
+     "split2": "^4.2.0",
+     "tap": "^21.0.0",
+     "tsd": "^0.31.0",
+-    "typescript": "~5.7.2",
++    "typescript": "~5.8.2",
+     "undici": "^6.13.0",
+     "vary": "^1.1.2",
+     "yup": "^1.4.0"

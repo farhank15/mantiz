@@ -4,21 +4,21 @@
  * Uses @babel/parser to parse TypeScript/JavaScript code into an AST
  * and detect cheating patterns that regex-based detectors can't catch.
  *
+ * For multi-language analysis (Python, Go, Java, Ruby, Rust, PHP),
+ * see tree-sitter-analyzer.ts which provides Tree-sitter based parsing.
+ *
  * Patterns detected:
  * 1. Trivial Function Body — function body replaced with `return true;` / `return false;`
  * 2. Async Function Gutting — async function wrapped in try/catch that always returns success
  * 3. Conditional Wrapping — entire test body wrapped in if/switch condition
  * 4. Assertion Removal at Block Level — expect/assert calls stripped from test blocks
  * 5. Empty Test Shell — describe/it block with no meaningful assertions
- *
- * This is NOT a replacement for static detectors — it's an additional layer
- * that catches structural manipulation that regex patterns miss.
  */
 
 import * as parser from '@babel/parser'
 import type { Finding, ParsedDiff } from './types'
 
-// ─── AST Node Types (minimal subset for our analysis) ───────────
+// ─── AST Node Types ──────────────────────────────────────────────
 
 interface ASTNode {
   type: string
@@ -43,8 +43,6 @@ interface CatchClause extends ASTNode {
   body: ASTNode[]
 }
 
-// ─── AST Analysis ───────────────────────────────────────────────
-
 interface ASTFinding {
   type: 'trivial_function' | 'async_gutted' | 'conditional_wrap' | 'empty_test_shell' | 'stripped_assertions'
   lineStart: number
@@ -54,9 +52,8 @@ interface ASTFinding {
   details: string
 }
 
-/**
- * Walk AST nodes recursively and collect findings.
- */
+// ─── AST Walking & Analysis ─────────────────────────────────────
+
 function walkAST(node: ASTNode, findings: ASTFinding[]): void {
   if (!node || typeof node !== 'object') return
 
@@ -78,7 +75,6 @@ function walkAST(node: ASTNode, findings: ASTFinding[]): void {
       break
   }
 
-  // Recurse into all child nodes
   for (const key of Object.keys(node)) {
     if (key === 'loc' || key === 'start' || key === 'end') continue
     const child = (node as Record<string, unknown>)[key]
@@ -94,9 +90,6 @@ function walkAST(node: ASTNode, findings: ASTFinding[]): void {
   }
 }
 
-/**
- * Analyze a function node for trivial body or async gutting.
- */
 function analyzeFunction(node: ASTNode, findings: ASTFinding[]): void {
   const body = (node as Record<string, unknown>).body as ASTNode | undefined
   if (!body) return
@@ -105,13 +98,11 @@ function analyzeFunction(node: ASTNode, findings: ASTFinding[]): void {
   if (body.type === 'BlockStatement') {
     functionBody = (body as unknown as FunctionBody).body || []
   } else {
-    // Arrow function with expression body
     functionBody = [body]
   }
 
   const loc = node.loc
 
-  // Detect: function body is just `return true;` or `return false;` or `return null;`
   if (functionBody.length === 1 && functionBody[0].type === 'ReturnStatement') {
     const ret = functionBody[0] as ReturnStatement
     if (ret.argument && ['BooleanLiteral', 'NullLiteral', 'Identifier'].includes(ret.argument.type)) {
@@ -119,7 +110,6 @@ function analyzeFunction(node: ASTNode, findings: ASTFinding[]): void {
         ? String((ret.argument as Record<string, unknown>).value)
         : ret.argument.type === 'NullLiteral' ? 'null' : 'identifier'
 
-      // Skip if it's returning a meaningful identifier (not trivial)
       if (ret.argument.type === 'Identifier') {
         const name = (ret.argument as Record<string, unknown>).name as string
         if (name !== 'undefined' && name !== 'void') return
@@ -136,7 +126,6 @@ function analyzeFunction(node: ASTNode, findings: ASTFinding[]): void {
     }
   }
 
-  // Detect: function body is single try/catch that returns success
   if (functionBody.length === 1 && functionBody[0].type === 'TryStatement') {
     const tryStmt = functionBody[0] as TryStatement
     if (tryStmt.handler) {
@@ -161,7 +150,6 @@ function analyzeFunction(node: ASTNode, findings: ASTFinding[]): void {
     }
   }
 
-  // Detect: empty function body (shell with no logic)
   if (functionBody.length === 0 || (functionBody.length === 1 && functionBody[0].type === 'ExpressionStatement' &&
     ((functionBody[0] as Record<string, unknown>).expression as ASTNode)?.type === 'Identifier')) {
     findings.push({
@@ -175,12 +163,8 @@ function analyzeFunction(node: ASTNode, findings: ASTFinding[]): void {
   }
 }
 
-/**
- * Analyze try/catch statements for silent error swallowing.
- */
 function analyzeTryStatement(node: TryStatement, findings: ASTFinding[]): void {
   if (!node.handler) return
-
   const catchBody = ((node.handler as unknown as CatchClause).body || []) as ASTNode[]
   const isEmptyCatch = catchBody.length === 0
   const isCommentOnly = catchBody.length === 1 && catchBody[0].type === 'ExpressionStatement'
@@ -199,15 +183,11 @@ function analyzeTryStatement(node: TryStatement, findings: ASTFinding[]): void {
   }
 }
 
-/**
- * Analyze if statements that might wrap test content.
- */
 function analyzeIfStatement(node: ASTNode, findings: ASTFinding[]): void {
   const test = (node as Record<string, unknown>).test as ASTNode | undefined
   const loc = node.loc
   if (!test || !loc) return
 
-  // Check for: if (false), if (0), if (process.env.SKIP), if (typeof jest === 'undefined')
   if (test.type === 'BooleanLiteral' && (test as Record<string, unknown>).value === false) {
     findings.push({
       type: 'conditional_wrap',
@@ -230,7 +210,6 @@ function analyzeIfStatement(node: ASTNode, findings: ASTFinding[]): void {
     })
   }
 
-  // Check for: if (process.env.SKIP) or if (typeof ... === 'undefined')
   if (test.type === 'CallExpression' || test.type === 'UnaryExpression' || test.type === 'MemberExpression') {
     const testStr = codeFromNode(test).substring(0, 80)
     if (/skip|SKIP|disable|DISABLE|bypass|BYPASS|mock/.test(testStr)) {
@@ -246,23 +225,15 @@ function analyzeIfStatement(node: ASTNode, findings: ASTFinding[]): void {
   }
 }
 
-/**
- * Analyze switch statements that might bypass test execution.
- */
 function analyzeSwitchStatement(node: ASTNode, findings: ASTFinding[]): void {
   const loc = node.loc
   if (!loc) return
-
   const discriminant = (node as Record<string, unknown>).discriminant as ASTNode | undefined
   if (!discriminant) return
-
   const cases = (node as Record<string, unknown>).cases as ASTNode[] | undefined
   if (!cases || cases.length === 0) return
 
-  // Check if switch has a default case that's empty or just returns
-  const defaultCase = cases.find((c: ASTNode) =>
-    (c as Record<string, unknown>).test === null
-  )
+  const defaultCase = cases.find((c: ASTNode) => (c as Record<string, unknown>).test === null)
   if (defaultCase) {
     const consequent = ((defaultCase as Record<string, unknown>).consequent || []) as ASTNode[]
     if (consequent.length <= 1) {
@@ -278,14 +249,10 @@ function analyzeSwitchStatement(node: ASTNode, findings: ASTFinding[]): void {
   }
 }
 
-/**
- * Convert an AST node back to a rough code string (for evidence).
- */
 function codeFromNode(node: ASTNode): string {
   if (!node) return ''
   switch (node.type) {
-    case 'Identifier':
-      return (node as Record<string, unknown>).name as string || ''
+    case 'Identifier': return (node as Record<string, unknown>).name as string || ''
     case 'MemberExpression': {
       const obj = codeFromNode(((node as Record<string, unknown>).object) as ASTNode)
       const prop = codeFromNode(((node as Record<string, unknown>).property) as ASTNode)
@@ -293,9 +260,7 @@ function codeFromNode(node: ASTNode): string {
     }
     case 'CallExpression': {
       const callee = codeFromNode(((node as Record<string, unknown>).callee) as ASTNode)
-      const args = ((node as Record<string, unknown>).arguments as ASTNode[] || [])
-        .map(a => codeFromNode(a))
-        .join(', ')
+      const args = ((node as Record<string, unknown>).arguments as ASTNode[] || []).map(a => codeFromNode(a)).join(', ')
       return `${callee}(${args})`
     }
     case 'UnaryExpression': {
@@ -303,24 +268,15 @@ function codeFromNode(node: ASTNode): string {
       const arg = codeFromNode(((node as Record<string, unknown>).argument) as ASTNode)
       return `${op} ${arg}`
     }
-    case 'StringLiteral':
-      return `'${(node as Record<string, unknown>).value as string}'`
-    case 'BooleanLiteral':
-      return String((node as Record<string, unknown>).value)
-    case 'NumericLiteral':
-      return String((node as Record<string, unknown>).value)
-    default:
-      return `[${node.type}]`
+    case 'StringLiteral': return `'${(node as Record<string, unknown>).value as string}'`
+    case 'BooleanLiteral': return String((node as Record<string, unknown>).value)
+    case 'NumericLiteral': return String((node as Record<string, unknown>).value)
+    default: return `[${node.type}]`
   }
 }
 
-// ─── Main Analyzer ──────────────────────────────────────────────
+// ─── Hunk Parsing ────────────────────────────────────────────────
 
-/**
- * Extract code from a diff's added lines for AST analysis.
- * Returns only NEW added lines (+ prefix) since we're analyzing
- * what the AI agent is introducing.
- */
 function extractAddedCode(hunkContent: string): { code: string; lineOffset: number }[] {
   const results: { code: string; lineOffset: number }[] = []
   const lines = hunkContent.split('\n')
@@ -330,91 +286,115 @@ function extractAddedCode(hunkContent: string): { code: string; lineOffset: numb
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
-
-    // Start collecting when we see an added line that looks like code
     if (line.startsWith('+') && !line.startsWith('+++')) {
       const code = line.slice(1)
-      if (!currentBlock) {
-        currentOffset = i
-      }
+      if (!currentBlock) currentOffset = i
       currentBlock += code + '\n'
       inBlock = true
     } else if (inBlock) {
-      // End of added block — flush
-      if (currentBlock.trim()) {
-        results.push({ code: currentBlock.trim(), lineOffset: currentOffset })
-      }
+      if (currentBlock.trim()) results.push({ code: currentBlock.trim(), lineOffset: currentOffset })
       currentBlock = ''
       inBlock = false
     }
   }
-
-  // Flush last block
-  if (inBlock && currentBlock.trim()) {
-    results.push({ code: currentBlock.trim(), lineOffset: currentOffset })
-  }
-
+  if (inBlock && currentBlock.trim()) results.push({ code: currentBlock.trim(), lineOffset: currentOffset })
   return results
 }
 
-/**
- * Run AST analysis on a single hunk's added lines.
- */
 function analyzeHunk(hunkContent: string): ASTFinding[] {
   const findings: ASTFinding[] = []
-
-  // Extract individual code blocks from added lines
   const codeBlocks = extractAddedCode(hunkContent)
 
   for (const block of codeBlocks) {
     try {
-      // Try parsing as TypeScript first, then fall back to JavaScript
       try {
         const result = parser.parse(block.code, {
           sourceType: 'module',
-          plugins: [
-            'typescript',
-            'jsx',
-            'decorators-legacy',
-            'classProperties',
-            'optionalChaining',
-            'nullishCoalescingOperator',
-          ],
+          plugins: ['typescript', 'jsx', 'decorators-legacy', 'classProperties', 'optionalChaining', 'nullishCoalescingOperator'],
         })
-        // Walk the top-level statements from the parsed program
-        for (const stmt of result.program.body) {
-          walkAST(stmt as unknown as ASTNode, findings)
-        }
+        for (const stmt of result.program.body) walkAST(stmt as unknown as ASTNode, findings)
       } catch {
-        // Fallback: try parsing as JavaScript (JSX only)
         try {
-          const result = parser.parse(block.code, {
-            sourceType: 'script',
-            plugins: ['jsx'],
-          })
-          for (const stmt of result.program.body) {
-            walkAST(stmt as unknown as ASTNode, findings)
-          }
-        } catch {
-          // Silently skip blocks that can't be parsed
-        }
+          const result = parser.parse(block.code, { sourceType: 'script', plugins: ['jsx'] })
+          for (const stmt of result.program.body) walkAST(stmt as unknown as ASTNode, findings)
+        } catch { /* skip unparseable blocks */ }
       }
-    } catch {
-      // Silently skip blocks that can't be parsed (non-code content)
-    }
+    } catch { /* skip unparseable content */ }
   }
 
   return findings
 }
 
+// ─── AST Serialization (NIT format for LLM context) ─────────────
+
+interface SerializedNode {
+  idx: number
+  type: string
+  text: string
+  children: SerializedNode[]
+}
+
+function createSerializer() {
+  let nodeCounter = 0
+
+  function serializeNode(node: ASTNode): SerializedNode {
+    const idx = ++nodeCounter
+    const children: SerializedNode[] = []
+
+    for (const key of Object.keys(node)) {
+      if (key === 'loc' || key === 'start' || key === 'end' || key === 'type') continue
+      const child = (node as Record<string, unknown>)[key]
+      if (Array.isArray(child)) {
+        for (const item of child) {
+          if (item && typeof item === 'object' && 'type' in (item as object)) children.push(serializeNode(item as ASTNode))
+        }
+      } else if (child && typeof child === 'object' && 'type' in (child as object)) {
+        children.push(serializeNode(child as ASTNode))
+      }
+    }
+
+    return { idx, type: node.type, text: '', children }
+  }
+
+  function formatNIT(node: SerializedNode, depth: number = 0): string {
+    const indent = '  '.repeat(depth)
+    const childRefs = node.children.length > 0 ? ` [${node.children.map(c => `N${c.idx}`).join(',')}]` : ''
+    const text = node.text ? ` "${node.text.replace(/["]/g, '\\"').substring(0, 40)}"` : ''
+    let result = `${indent}N${node.idx}:${node.type}${text}${childRefs}`
+    for (const child of node.children) result += '\n' + formatNIT(child, depth + 1)
+    return result
+  }
+
+  return { serializeNode, formatNIT }
+}
+
+function codeToNIT(codeBlock: string): string {
+  if (!codeBlock || codeBlock.trim().length < 10) return ''
+  try {
+    const { serializeNode, formatNIT } = createSerializer()
+    const result = parser.parse(codeBlock, { sourceType: 'module', plugins: ['typescript', 'jsx'] })
+    const serializedRoot = serializeNode(result.program as unknown as ASTNode)
+    return formatNIT(serializedRoot)
+  } catch { return '' }
+}
+
 /**
- * Main entry point — run AST analysis on all functional files.
- *
- * Unlike regex detectors that look at line-level patterns,
- * AST Analyzer understands code STRUCTURE:
- * - Function body replacement
- * - Control flow manipulation
- * - Block-level assertion stripping
+ * Serialize diff content to NIT format AST for LLM context.
+ */
+export function serializeDiffToAST(diffContent: string): string {
+  const blocks = extractAddedCode(diffContent)
+  const serialized: string[] = []
+  for (const block of blocks) {
+    const nit = codeToNIT(block.code)
+    if (nit) serialized.push(nit)
+  }
+  return serialized.join('\n---\n')
+}
+
+// ─── Main Entry Point ───────────────────────────────────────────
+
+/**
+ * Run Babel AST analysis on JS/TS files.
  */
 export function detectWithAST(files: ParsedDiff[]): Finding[] {
   const findings: Finding[] = []
@@ -422,35 +402,24 @@ export function detectWithAST(files: ParsedDiff[]): Finding[] {
 
   for (const file of files) {
     const filePath = file.newFile || file.oldFile || 'unknown'
-
-    // Ignore deleted files
     if (file.newFile === '/dev/null') continue
-
-    // Focus on test files (AST analysis is most valuable there)
-    // Also analyze source files for function gutting
     const isTestFile = TEST_FILE_PATTERN.test(filePath)
 
     for (const hunk of file.hunks) {
       const astFindings = analyzeHunk(hunk.content)
 
       for (const af of astFindings) {
-        // For non-test files, only flag trivial function and async gutting
         if (!isTestFile && (af.type === 'empty_test_shell' || af.type === 'stripped_assertions')) continue
 
-        // Map AST finding type to pattern type
         let patternType: string
         switch (af.type) {
           case 'trivial_function':
+          case 'conditional_wrap':
+          case 'empty_test_shell':
             patternType = 'disabled_assertion'
             break
           case 'async_gutted':
             patternType = 'silent_catch_and_pass'
-            break
-          case 'conditional_wrap':
-            patternType = 'disabled_assertion'
-            break
-          case 'empty_test_shell':
-            patternType = 'disabled_assertion'
             break
           case 'stripped_assertions':
             patternType = 'assertion_tampering'

@@ -41,6 +41,8 @@ export const findings = pgTable('findings', {
       'silent_catch_and_pass',
       'hallucinated_assertion',
       'ai_assisted_detection',
+      'historical_behavioral',
+      'mutation_susceptibility',
     ],
   }).notNull(),
   filePath: text('file_path').notNull(),
@@ -58,6 +60,35 @@ export const sharedScans = pgTable('shared_scans', {
   sourceType: text('source_type', { enum: ['manual', 'github_pr'] }).notNull(),
   sourceRef: text('source_ref'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+export const authorProfiles = pgTable('author_profiles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  githubAuthor: text('github_author').notNull().unique(),
+  firstSeen: timestamp('first_seen').defaultNow().notNull(),
+  lastSeen: timestamp('last_seen').defaultNow().notNull(),
+  totalScans: integer('total_scans').default(0).notNull(),
+  avgTrustScore: integer('avg_trust_score').default(100).notNull(),
+  avgFilesChanged: integer('avg_files_changed').default(1).notNull(),
+  writingStyleHashes: text('writing_style_hashes').array().default([]).notNull(),
+  suspicionScore: integer('suspicion_score').default(0).notNull(),
+  lastFlaggedAt: timestamp('last_flagged_at'),
+  consecutiveFailures: integer('consecutive_failures').default(0).notNull(),
+  peakDailyFrequency: integer('peak_daily_frequency').default(0).notNull(),
+})
+
+export const authorEvents = pgTable('author_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  authorId: uuid('author_id').references(() => authorProfiles.id).notNull(),
+  scanId: uuid('scan_id').references(() => scans.id),
+  eventType: text('event_type', { enum: ['pr_scan', 'manual_scan', 'api_scan'] }).notNull(),
+  trustScore: integer('trust_score').notNull(),
+  totalFindings: integer('total_findings').default(0).notNull(),
+  filesChanged: integer('files_changed').default(0).notNull(),
+  titleStyleHash: text('title_style_hash'),
+  commitHour: integer('commit_hour').notNull(),
+  metadata: text('metadata'), // JSON stringified extra data
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
 })
 
 export const apiTokens = pgTable('api_tokens', {

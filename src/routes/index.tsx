@@ -282,8 +282,7 @@ function App() {
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[
               { label: "Diffs Scanned", value: 142, suffix: "" },
-              { label: "Cheats Flagged", value: 37, suffix: "" },
-              { label: "Detection Patterns", value: 8, suffix: "" },
+              { label: "Cheats Flagged", value: 37, suffix: "" },                  { label: "Detection Patterns", value: 11, suffix: "" },
               { label: "False Positive Rate", value: 3, suffix: "%" },
             ].map((stat) => (
               <div
@@ -459,11 +458,11 @@ function App() {
                 <div className="mb-2 flex items-center gap-2 md:justify-center">
                   <Brain className="hidden h-5 w-5 text-severity-medium md:block" />
                   <h3 className="text-lg font-bold text-ink">
-                    8 Detection Engines
+                    11 Detection Engines
                   </h3>
                 </div>
                 <p className="mb-3 text-sm text-ink-muted">
-                  Each line is scanned against 8 patterns. Findings are ranked
+                  Each line is scanned against 11 patterns. Findings are ranked
                   by confidence and severity.
                 </p>
                 {/* Detector badges */}
@@ -480,6 +479,9 @@ function App() {
                     { label: "Coverage Cliff", color: "severity-info" },
                     { label: "Empty Try-Catch", color: "severity-high" },
                     { label: "Skipped Suite", color: "severity-critical" },
+                    { label: "Tree-sitter AST", color: "severity-high" },
+                    { label: "Hist. Behavioral", color: "severity-info" },
+                    { label: "Mutation Suscpt.", color: "severity-medium" },
                   ].map((d) => (
                     <span
                       key={d.label}
