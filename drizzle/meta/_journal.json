@@ -15,6 +15,20 @@
       "when": 1782887141804,
       "tag": "0001_zippy_bill_hollister",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782959142397,
+      "tag": "0002_lovely_patch",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782959482073,
+      "tag": "0003_slim_blur",
+      "breakpoints": true
     }
   ]
 }

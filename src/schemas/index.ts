@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, bigint, integer, boolean } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, uuid, bigint, integer, boolean, index } from 'drizzle-orm/pg-core'
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -27,7 +27,10 @@ export const scans = pgTable('scans', {
   status: text('status', { enum: ['pending', 'complete', 'failed'] }).notNull().default('pending'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   completedAt: timestamp('completed_at'),
-})
+}, (table) => ({
+  userIdCreatedAtIdx: index('scans_user_id_created_at_idx').on(table.userId, table.createdAt),
+  createdAtIdx: index('scans_created_at_idx').on(table.createdAt),
+}))
 
 export const findings = pgTable('findings', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -52,7 +55,9 @@ export const findings = pgTable('findings', {
   explanation: text('explanation').notNull(),
   evidenceExcerpt: text('evidence_excerpt').notNull(),
   userVerdict: text('user_verdict', { enum: ['unreviewed', 'confirmed', 'false_positive'] }).default('unreviewed').notNull(),
-})
+}, (table) => ({
+  scanIdIdx: index('findings_scan_id_idx').on(table.scanId),
+}))
 
 export const sharedScans = pgTable('shared_scans', {
   id: text('id').primaryKey(), // random short ID

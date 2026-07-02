@@ -69,6 +69,7 @@ function HistoryPage() {
   const [showRawDiff, setShowRawDiff] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   const toggleModalFinding = (idx: number) => {
     setExpandedFindings((prev) => {
@@ -163,7 +164,7 @@ function HistoryPage() {
               Please sign in with GitHub to view your personal scan history.
             </p>
             <button
-              onClick={() => navigate({ to: "/login" })}
+              onClick={() => navigate({ to: "/login", search: { error: undefined } })}
               className="btn btn-primary w-full"
             >
               Sign In to Continue
@@ -598,6 +599,7 @@ function HistoryPage() {
                             } catch {}
                             return;
                           }
+                          setIsSharing(true);
                           try {
                             const findings = selectedScanDetails.findings.map((f: any) => ({
                               patternType: f.patternType,
@@ -623,23 +625,25 @@ function HistoryPage() {
                               },
                             }});
                             setShareUrl(result.url);
-                            try {
-                              await navigator.clipboard.writeText(result.url);
-                              setCopySuccess(true);
-                              setTimeout(() => setCopySuccess(false), 2000);
-                            } catch {}
+                            await navigator.clipboard.writeText(result.url);
+                            setCopySuccess(true);
+                            setTimeout(() => setCopySuccess(false), 2000);
                           } catch (err) {
                             console.error("Failed to share:", err);
+                          } finally {
+                            setIsSharing(false);
                           }
                         }}
                         className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-4 py-2.5 text-xs font-medium text-ink-muted transition hover:border-interactive/30 hover:text-ink"
                       >
-                        {copySuccess ? (
+                        {isSharing ? (
+                          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        ) : copySuccess ? (
                           <Check className="h-3.5 w-3.5 text-success" />
                         ) : (
                           <Share2 className="h-3.5 w-3.5" />
                         )}
-                        {copySuccess ? "Link Copied!" : shareUrl ? "Copy Link" : "Share Results"}
+                        {isSharing ? "Generating..." : copySuccess ? "Link Copied!" : shareUrl ? "Copy Link" : "Share Results"}
                       </button>
                     </div>
 

@@ -1,7 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import ThemeToggle from "./ThemeToggle";
+
 import { useAuth } from "../lib/auth-context";
 
 // ─── Icons (inline SVG to avoid importing heavy icon sets) ──────
@@ -45,18 +45,6 @@ const GithubIcon = ({ className }: { className?: string }) => (
     height="18"
   >
     <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
-  </svg>
-);
-
-const XIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 16 16"
-    fill="currentColor"
-    width="18"
-    height="18"
-  >
-    <path d="M12.6 1h2.2L10 6.48 15.64 15h-4.41L7.78 9.82 3.23 15H1l5.14-5.84L.72 1h4.52l3.12 4.73L12.6 1zm-.77 12.67h1.22L4.57 2.26H3.26l8.57 11.41z" />
   </svg>
 );
 
@@ -175,7 +163,9 @@ function AuthButton({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -4 }}
               transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              className="absolute right-0 top-full mt-2 w-56 overflow-hidden rounded-xl border border-border bg-surface-1 shadow-2xl shadow-black/30"
+              className={`absolute top-full mt-2 w-56 overflow-hidden rounded-xl border border-border bg-surface-1 shadow-2xl shadow-black/30 ${
+                variant === "mobile" ? "left-0" : "right-0"
+              }`}
             >
               <div className="border-b border-border px-4 py-3">
                 <p className="text-sm font-semibold text-ink truncate">
@@ -257,9 +247,14 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const { isAuthenticated } = useAuth();
+  const location = useLocation();
 
   const visibleLinks = NAV_LINKS.filter((link) => {
-    if (link.to === "/pr-scan" || link.to === "/history" || link.to === "/settings") {
+    if (
+      link.to === "/pr-scan" ||
+      link.to === "/history" ||
+      link.to === "/settings"
+    ) {
       return isAuthenticated;
     }
     return true;
@@ -290,7 +285,7 @@ export default function Header() {
   }, [isMobileMenuOpen]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-var(--header-bg)] backdrop-blur-xl supports-backdrop-filter:bg-[rgba(13,17,23,0.75)]">
+    <header className="top-0 z-50 border-b border-border bg-surface-1/80 backdrop-blur-xl supports-backdrop-filter:bg-[rgba(13,17,23,0.75)] sticky rounded-b-2xl">
       <nav className="page-wrap mx-auto flex h-14 sm:h-16 items-center gap-4">
         {/* Logo */}
         <Link
@@ -324,26 +319,13 @@ export default function Header() {
           >
             <GithubIcon />
           </a>
-          <a
-            href="https://x.com/TestSprite"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-lg p-2 text-ink-muted transition hover:bg-surface-2 hover:text-ink"
-            aria-label="Follow TestSprite on X"
-          >
-            <XIcon />
-          </a>
-
           <div className="h-5 w-px bg-border mx-0.5" />
-
-          <ThemeToggle />
 
           <AuthButton />
         </div>
 
         {/* Mobile Right Section */}
         <div className="flex md:hidden items-center gap-1.5 ml-auto">
-          <ThemeToggle />
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="rounded-lg p-2 text-ink-muted transition hover:bg-surface-2 hover:text-ink"
@@ -355,100 +337,71 @@ export default function Header() {
         </div>
       </nav>
 
-      {/* Mobile Drawer Menu */}
+      {/* Mobile Menu Dropdown */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
-              onClick={() => setIsMobileMenuOpen(false)}
-            />
-
-            {/* Slide-in drawer */}
             <motion.div
               ref={mobileMenuRef}
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="fixed right-0 top-0 z-50 h-full w-70 border-l border-border bg-surface-1 shadow-2xl md:hidden"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute left-0 right-0 top-full z-50 border-b border-border bg-surface-1 shadow-2xl shadow-black/20 md:hidden"
             >
-              <div className="flex h-full flex-col">
-                {/* Drawer header */}
-                <div className="flex items-center justify-between border-b border-border px-5 py-4">
-                  <span className="text-sm font-semibold text-ink">Menu</span>
-                  <button
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="rounded-lg p-1.5 text-ink-muted transition hover:bg-surface-2 hover:text-ink"
-                    aria-label="Close menu"
-                  >
-                    <CloseIcon />
-                  </button>
-                </div>
-
-                {/* Drawer navigation links */}
-                <div className="flex-1 overflow-y-auto px-3 py-4">
-                  <div className="space-y-1">
-                    <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-widest text-ink-subdued">
-                      Navigation
-                    </p>
-                    {visibleLinks.map((link) => (
+              <div className="px-4 py-3">
+                <div className="space-y-1">
+                  {visibleLinks.map((link) => {
+                    const isActive =
+                      location.pathname === link.to ||
+                      (link.to !== "/" &&
+                        location.pathname.startsWith(link.to));
+                    return (
                       <Link
                         key={link.to}
                         to={link.to as any}
                         onClick={closeMobileMenu}
-                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-muted transition hover:bg-surface-2 hover:text-ink"
-                        activeProps={{
-                          className: "text-ink bg-interactive/10 font-semibold",
-                        }}
+                        className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
+                          isActive
+                            ? "bg-interactive/10 text-ink"
+                            : "text-ink-muted hover:bg-surface-2 hover:text-ink"
+                        }`}
                       >
                         {link.label}
                       </Link>
-                    ))}
-                  </div>
-
-                  <div className="mt-6 border-t border-border pt-5 px-3">
-                    <p className="pb-3 text-[11px] font-semibold uppercase tracking-widest text-ink-subdued">
-                      Account
-                    </p>
-                    <AuthButton variant="mobile" />
-
-                    {/* Mobile social links */}
-                    <div className="mt-4 flex items-center gap-3">
-                      <a
-                        href="https://github.com/farhank15/mantiz"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-ink-muted transition hover:bg-surface-2 hover:text-ink"
-                      >
-                        <GithubIcon className="h-4 w-4" />
-                        GitHub
-                      </a>
-                      <a
-                        href="https://x.com/TestSprite"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-ink-muted transition hover:bg-surface-2 hover:text-ink"
-                      >
-                        <XIcon className="h-4 w-4" />X / Twitter
-                      </a>
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
 
-                {/* Drawer footer */}
-                <div className="border-t border-border px-5 py-3">
+                <div className="mt-3 border-t border-border pt-3">
+                  <AuthButton variant="mobile" />
+                </div>
+
+                <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+                  <a
+                    href="https://github.com/farhank15/mantiz"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-ink-muted transition hover:bg-surface-2 hover:text-ink"
+                  >
+                    <GithubIcon className="h-3.5 w-3.5" />
+                    GitHub
+                  </a>
                   <p className="text-[10px] text-ink-subdued">
-                    Built for TestSprite S3
+                    AI Coding Agent Lie Detector
                   </p>
                 </div>
               </div>
             </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-40 bg-black/40 md:hidden"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
           </>
         )}
       </AnimatePresence>

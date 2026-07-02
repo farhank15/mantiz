@@ -5,7 +5,7 @@ export default function Footer() {
     <footer className="mt-20 border-t border-[var(--border)] px-4 pb-14 pt-10 text-[var(--ink-muted)]">
       <div className="page-wrap flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left">
         <p className="m-0 text-sm">
-          &copy; {year} Mantiz — Built for TestSprite Season 3
+          &copy; {year} Mantiz — AI Coding Agent Lie Detector
         </p>
         <p className="kicker m-0">
           <span className="h-2 w-2 inline-block rounded-full bg-red-500 mr-1.5" />
@@ -13,20 +13,7 @@ export default function Footer() {
         </p>
       </div>
       <div className="mt-4 flex justify-center gap-4">
-        <a
-          href="https://x.com/TestSprite"
-          target="_blank"
-          rel="noreferrer"
-          className="rounded-xl p-2 text-[var(--ink-muted)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--ink)]"
-        >
-          <span className="sr-only">Follow TestSprite on X</span>
-          <svg viewBox="0 0 16 16" aria-hidden="true" width="32" height="32">
-            <path
-              fill="currentColor"
-              d="M12.6 1h2.2L10 6.48 15.64 15h-4.41L7.78 9.82 3.23 15H1l5.14-5.84L.72 1h4.52l3.12 4.73L12.6 1zm-.77 12.67h1.22L4.57 2.26H3.26l8.57 11.41z"
-            />
-          </svg>
-        </a>          <a
+          <a
             href="https://github.com/farhank15/mantiz"
             target="_blank"
             rel="noreferrer"

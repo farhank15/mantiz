@@ -177,7 +177,7 @@ function App() {
             className="mb-6 inline-flex items-center gap-2 rounded-full border border-severity-critical/25 bg-severity-critical/10 px-4 py-1.5 text-sm font-medium text-severity-critical"
           >
             <span className="live-dot" />
-            TestSprite S3 Hackathon Project
+            AI Coding Agent Lie Detector
           </motion.div>
 
           {/* Main headline */}
@@ -799,7 +799,7 @@ function App() {
       </section>
 
       {/* =============================================
-          6. LOOP ARCHITECTURE — How Mantiz + TestSprite Work Together
+          6. HOW IT WORKS — Detection Pipeline
            ============================================= */}
       <section className="page-wrap px-4 py-20">
         <div className="mx-auto max-w-5xl">
@@ -813,25 +813,23 @@ function App() {
           >
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-success/20 bg-success/8 px-4 py-1.5 text-xs font-semibold text-success">
               <Zap className="h-3.5 w-3.5" />
-              The Loop
+              Pipeline
             </div>
             <h2 className="text-3xl font-bold text-ink sm:text-4xl">
-              Built for the{" "}
-              <AnimatedGradientText>TestSprite Loop</AnimatedGradientText>
+              How <AnimatedGradientText>Detection</AnimatedGradientText> Works
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-ink-muted">
-              Mantiz is the <strong className="text-ink">checker</strong> in an
-              AI coding loop: agent writes code, Mantiz scans for cheating,
-              TestSprite runs real tests, and the loop closes with fixes.
+              Mantiz analyzes diffs through a multi-stage pipeline: static pattern
+              matching, AST parsing, behavioral analysis, and optional AI-powered
+              detection.
             </p>
           </motion.div>
 
-          {/* Loop Flow Diagram */}
+          {/* Pipeline Flow Diagram */}
           <div className="relative flex flex-col items-center gap-8 md:flex-row md:items-start md:gap-0">
-            {/* Connecting line */}
             <div className="absolute left-4.5 top-0 h-full w-px bg-linear-to-b from-severity-critical/30 via-interactive/40 to-success/50 md:left-0 md:top-15 md:h-px md:w-full md:bg-linear-to-r" />
 
-            {/* Step 1: Agent Writes Code */}
+            {/* Step 1: Diff Input */}
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -844,21 +842,20 @@ function App() {
               </div>
               <div className="flex-1 md:px-3">
                 <h3 className="mb-1.5 text-base font-bold text-ink">
-                  Agent Writes Code
+                  Diff Input
                 </h3>
                 <p className="text-sm text-ink-muted">
-                  AI coding agent generates a diff to fix a test or implement a
-                  feature.
+                  Paste a raw git diff or provide a GitHub PR URL. Mantiz parses
+                  every changed file and line.
                 </p>
               </div>
             </motion.div>
 
-            {/* Arrow */}
             <div className="hidden md:flex md:w-8 md:items-center md:justify-center md:pt-12.5">
               <ArrowRight className="h-4 w-4 text-severity-critical/50" />
             </div>
 
-            {/* Step 2: Mantiz Scans */}
+            {/* Step 2: Static Analysis */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -871,21 +868,20 @@ function App() {
               </div>
               <div className="flex-1 md:px-3">
                 <h3 className="mb-1.5 text-base font-bold text-ink">
-                  Mantiz Scans
+                  Static Analysis
                 </h3>
                 <p className="text-sm text-ink-muted">
-                  8 detection patterns scan every line. Findings ranked by
-                  severity and confidence.
+                  10 detection patterns scan every line. Findings ranked by
+                  severity and confidence in milliseconds.
                 </p>
               </div>
             </motion.div>
 
-            {/* Arrow */}
             <div className="hidden md:flex md:w-8 md:items-center md:justify-center md:pt-12.5">
               <ArrowRight className="h-4 w-4 text-interactive/50" />
             </div>
 
-            {/* Step 3: TestSprite Tests */}
+            {/* Step 3: AI + Behavioral */}
             <motion.div
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -898,21 +894,20 @@ function App() {
               </div>
               <div className="flex-1 md:px-3">
                 <h3 className="mb-1.5 text-base font-bold text-ink">
-                  TestSprite Tests
+                  AI + Behavioral
                 </h3>
                 <p className="text-sm text-ink-muted">
-                  Real tests run against the deployed app. Results determine if
-                  the agent passes or fails.
+                  Optional LLM-powered analysis detects semantic bypass and coverage
+                  reduction. Historical tracking catches author pattern anomalies.
                 </p>
               </div>
             </motion.div>
 
-            {/* Arrow */}
             <div className="hidden md:flex md:w-8 md:items-center md:justify-center md:pt-12.5">
               <ArrowRight className="h-4 w-4 text-severity-medium/50" />
             </div>
 
-            {/* Step 4: Loop Closes */}
+            {/* Step 4: Trust Score */}
             <motion.div
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -925,17 +920,16 @@ function App() {
               </div>
               <div className="flex-1 md:px-3">
                 <h3 className="mb-1.5 text-base font-bold text-ink">
-                  Verdict → Fix
+                  Trust Score
                 </h3>
                 <p className="text-sm text-ink-muted">
-                  Agent reads Mantiz + TestSprite results and fixes. The loop
-                  iterates until all tests pass.
+                  Weighted scoring: findings deduct points based on confidence
+                  level. Score ≥ 80 means the code passes the honesty check.
                 </p>
               </div>
             </motion.div>
           </div>
 
-          {/* Callout box */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -993,41 +987,21 @@ function App() {
                   Scan Your First Diff
                 </ShimmerButton>
               </Link>
-              <ShimmerButton
-                as="a"
-                href="https://www.testsprite.com/hackathon-s3"
-                target="_blank"
-                rel="noopener noreferrer"
-                shimmerColor="rgba(255,255,255,0.1)"
-                background="rgba(33,38,45,0.9)"
-              >
-                <Zap className="h-4 w-4" />
-                Learn About the Loop
-              </ShimmerButton>
+              <Link to="/benchmark">
+                <ShimmerButton
+                  shimmerColor="rgba(255,255,255,0.1)"
+                  background="rgba(33,38,45,0.9)"
+                  as="span"
+                >
+                  <Zap className="h-4 w-4" />
+                  View Benchmark
+                </ShimmerButton>
+              </Link>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* =============================================
-          Footer note
-           ============================================= */}
-      <section className="border-t border-border px-4 py-8">
-        <div className="page-wrap text-center text-sm text-ink-subdued">
-          <p>
-            Built for{" "}
-            <a
-              href="https://www.testsprite.com/hackathon-s3"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-interactive underline underline-offset-2 hover:text-interactive-hover"
-            >
-              TestSprite Season 3
-            </a>{" "}
-            — a loop without a real checker doesn't fail loudly.
-          </p>
-        </div>
-      </section>
     </main>
   );
 }
