@@ -266,6 +266,7 @@ function SettingsPage() {
                   </span>
                 </div>
                 <input
+                  id="threshold-slider"
                   type="range"
                   min="0"
                   max="100"
@@ -299,6 +300,7 @@ function SettingsPage() {
                   </span>
                 </div>
                 <input
+                  id="min-score-slider"
                   type="range"
                   min="0"
                   max="50"
@@ -328,6 +330,8 @@ function SettingsPage() {
                     </div>
                   </div>
                   <button
+                    id="ai-detection-toggle"
+                    aria-label="Toggle AI-powered detection"
                     onClick={() => setSettings({ ...settings, aiEnabled: !settings.aiEnabled })}
                     className={`relative h-7 w-12 rounded-full transition-colors ${
                       settings.aiEnabled ? "bg-interactive" : "bg-surface-2"
@@ -357,6 +361,8 @@ function SettingsPage() {
                     </div>
                   </div>
                   <button
+                    id="webhook-enabled-toggle"
+                    aria-label="Toggle webhook notifications"
                     onClick={() => setSettings({ ...settings, webhookEnabled: !settings.webhookEnabled })}
                     className={`relative h-7 w-12 rounded-full transition-colors ${
                       settings.webhookEnabled ? "bg-interactive" : "bg-surface-2"
@@ -372,6 +378,7 @@ function SettingsPage() {
                 </div>
                 <div className="flex gap-2">
                   <input
+                    id="webhook-url-input"
                     type="url"
                     value={settings.webhookUrl || ""}
                     onChange={(e) => setSettings({ ...settings, webhookUrl: e.target.value || null })}
@@ -379,6 +386,7 @@ function SettingsPage() {
                     className="field-input flex-1"
                   />
                   <button
+                    id="webhook-test-button"
                     onClick={() => testWebhookMutation.mutate()}
                     disabled={!settings.webhookUrl || testWebhookMutation.isPending}
                     className="btn btn-secondary text-xs"
@@ -450,6 +458,7 @@ function SettingsPage() {
               {/* Save button */}
               <div className="px-5 py-4 flex justify-end">
                 <button
+                  id="save-settings-button"
                   onClick={() => saveSettingsMutation.mutate()}
                   disabled={saveSettingsMutation.isPending}
                   className="btn btn-primary"
@@ -479,6 +488,7 @@ function SettingsPage() {
               </div>
             </div>
             <button
+              id="new-token-button"
               onClick={() => setShowNewToken(true)}
               className="btn btn-primary text-sm"
             >
@@ -501,6 +511,7 @@ function SettingsPage() {
                   </label>
                   <div className="flex gap-2">
                     <input
+                      id="new-token-name-input"
                       type="text"
                       value={newTokenName}
                       onChange={(e) => setNewTokenName(e.target.value)}
@@ -510,6 +521,7 @@ function SettingsPage() {
                       onKeyDown={(e) => e.key === "Enter" && createTokenMutation.mutate()}
                     />
                     <button
+                      id="generate-token-button"
                       onClick={() => createTokenMutation.mutate()}
                       disabled={!newTokenName.trim()}
                       className="btn btn-primary"
@@ -517,6 +529,7 @@ function SettingsPage() {
                       Generate
                     </button>
                     <button
+                      id="cancel-token-button"
                       onClick={() => setShowNewToken(false)}
                       className="btn btn-secondary"
                     >
@@ -604,7 +617,12 @@ function SettingsPage() {
                       </div>
                     </div>
                   </div>
-                  <button onClick={() => revokeTokenMutation.mutate(token.id)} className="btn btn-danger text-xs p-2" title="Revoke token">
+                  <button
+                    id={`revoke-token-button-${token.id}`}
+                    onClick={() => revokeTokenMutation.mutate(token.id)}
+                    className="btn btn-danger text-xs p-2"
+                    title="Revoke token"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
