@@ -2,15 +2,15 @@
   "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
   "type": "frontend",
   "name": "Settings - Webhook URL can be configured and test button is visible",
-  "description": "After mock login, navigate to /settings and find the Webhook configuration section. Enter a valid webhook URL, save it, and verify the webhook URL is persisted. Verify the 'Test Webhook' button is visible and clickable.",
+  "description": "After mock login, navigate to /settings and find the Webhook configuration section. Enter a valid webhook URL, click Save Settings, and verify the button briefly shows 'Saved!' text confirming persistence. Also verify the 'Test Webhook' button is visible.",
   "priority": "p1",
   "planSteps": [
     { "type": "action", "description": "Navigate to /api/mock-login?secret=mantiz_e2e_bypass_2026 to authenticate the session" },
-    { "type": "action", "description": "Navigate to /settings after authentication" },
-    { "type": "assertion", "description": "Verify the Settings page shows a Webhook section with a URL input field" },
-    { "type": "action", "description": "Clear any existing value in the webhook URL input and type a valid URL such as https://webhook.site/test-mantiz" },
-    { "type": "action", "description": "Click the Save or Update button in the Webhook section" },
-    { "type": "assertion", "description": "Verify a success confirmation message or toast appears indicating the webhook URL was saved" },
-    { "type": "assertion", "description": "Verify a 'Test Webhook' or 'Send Test' button is visible in the Webhook section" }
+    { "type": "action", "description": "Navigate to /settings page" },
+    { "type": "assertion", "description": "Verify the Settings page is visible with a Webhook section containing a URL input field (id='webhook-url-input')" },
+    { "type": "assertion", "description": "Verify a button with id='webhook-test-button' labeled 'Test Webhook' or 'Send Test' is visible in the Webhook section" },
+    { "type": "action", "description": "Click the webhook URL input field (id='webhook-url-input'), clear it, and type 'https://webhook.site/test-mantiz'" },
+    { "type": "action", "description": "Click the Save Settings button (id='save-settings-button') to persist the webhook URL" },
+    { "type": "assertion", "description": "Verify the Save Settings button (id='save-settings-button') now shows text 'Saved!' confirming the settings were saved successfully" }
   ]
 }

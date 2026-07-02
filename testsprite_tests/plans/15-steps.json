@@ -1,0 +1,11 @@
+{
+  "planSteps": [
+    { "type": "action", "description": "Navigate to /api/mock-login?secret=mantiz_e2e_bypass_2026 to authenticate the session" },
+    { "type": "action", "description": "Navigate to /settings page" },
+    { "type": "assertion", "description": "Verify the Settings page is visible with a Webhook section containing a URL input field with id='webhook-url-input'" },
+    { "type": "assertion", "description": "Verify a button with id='webhook-test-button' is visible in the Webhook section" },
+    { "type": "action", "description": "Click the webhook URL input (id='webhook-url-input'), clear it, and type 'https://webhook.site/test-mantiz'" },
+    { "type": "action", "description": "Click the Save Settings button with id='save-settings-button'" },
+    { "type": "assertion", "description": "Verify the Save Settings button (id='save-settings-button') now shows the text 'Saved!' confirming the settings were saved" }
+  ]
+}

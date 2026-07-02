@@ -53,6 +53,7 @@ interface PRScanResult {
       evidenceExcerpt: string;
     }>;
   };
+  totalDiffLines: number;
 }
 
 function PRScanPage() {
@@ -232,7 +233,7 @@ function PRScanPage() {
             <ScanAnimation
               isScanning={scanPRMutation.isPending}
               scanPhase="static"
-              lineCount={prUrl.length}
+              lineCount={result?.totalDiffLines || 100}
               onComplete={() => {}}
               findings={result?.scan.findings.map((f) => ({
                 patternType: f.patternType as any,
@@ -381,7 +382,6 @@ function PRScanPage() {
                     return (
                       <motion.div
                         key={idx}
-                        layout
                         className={`rounded-xl border ${borderColor} bg-surface-1 overflow-hidden transition hover:bg-surface-2/30`}
                       >
                         <button
@@ -417,13 +417,11 @@ function PRScanPage() {
                           </div>
                         </button>
 
-                        <AnimatePresence>
-                          {isExpanded && (
+                        {isExpanded && (
                             <motion.div
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2 }}
+                              transition={{ duration: 0.15 }}
                               className="overflow-hidden"
                             >
                               <div className="border-t border-border px-4 py-3 space-y-2">
@@ -444,7 +442,6 @@ function PRScanPage() {
                               </div>
                             </motion.div>
                           )}
-                        </AnimatePresence>
                       </motion.div>
                     );
                   })}

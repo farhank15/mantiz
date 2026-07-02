@@ -219,7 +219,7 @@ function SharePage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="mt-6 grid gap-3"
+            className="mt-6 space-y-4"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-ink">
@@ -229,6 +229,54 @@ function SharePage() {
                 {scanData.highCount} high · {scanData.mediumCount} med · {scanData.lowCount} low
               </span>
             </div>
+
+            {/* ─── Per-Detector Breakdown ─────────────────────── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {(() => {
+                const byDetector = new Map<string, { count: number; high: number; med: number; low: number }>()
+                for (const f of scanData.findings) {
+                  const key = f.patternType.replace(/_/g, ' ')
+                  const entry = byDetector.get(key) || { count: 0, high: 0, med: 0, low: 0 }
+                  entry.count++
+                  if (f.confidence === 'high') entry.high++
+                  else if (f.confidence === 'medium') entry.med++
+                  else entry.low++
+                  byDetector.set(key, entry)
+                }
+                return Array.from(byDetector.entries()).map(([label, stats]) => (
+                  <motion.div
+                    key={label}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className={`rounded-lg border p-3 ${
+                      stats.high > 0
+                        ? 'border-severity-critical/25 bg-severity-critical/5'
+                        : stats.med > 0
+                          ? 'border-severity-medium/25 bg-severity-medium/5'
+                          : 'border-border bg-surface-1'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-ink capitalize">{label}</span>
+                      <span className={`text-xs font-bold ${
+                        stats.high > 0 ? 'text-severity-critical' : stats.med > 0 ? 'text-severity-medium' : 'text-ink-muted'
+                      }`}>
+                        {stats.count}
+                      </span>
+                    </div>
+                    <div className="flex gap-2 text-[10px] text-ink-subdued">
+                      {stats.high > 0 && <span className="text-severity-critical">{stats.high} high</span>}
+                      {stats.med > 0 && <span className="text-severity-medium">{stats.med} med</span>}
+                      {stats.low > 0 && <span className="text-ink-muted">{stats.low} low</span>}
+                    </div>
+                  </motion.div>
+                ))
+              })()}
+            </div>
+
+            {/* ─── Individual Findings ────────────────────────── */}
+            <div className="grid gap-3">
             {scanData.findings.map((finding, idx) => {
               const isExpanded = expandedFindings.has(idx)
               const isHigh = finding.confidence === "high"
@@ -247,7 +295,6 @@ function SharePage() {
               return (
                 <motion.div
                   key={idx}
-                  layout
                   className={`rounded-xl border ${borderColor} bg-surface-1 overflow-hidden transition hover:bg-surface-2/30`}
                 >
                   <button
@@ -302,6 +349,7 @@ function SharePage() {
                 </motion.div>
               )
             })}
+            </div>
           </motion.div>
         )}
 

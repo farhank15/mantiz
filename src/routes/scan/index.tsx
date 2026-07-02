@@ -458,7 +458,6 @@ index abc123..def456 100644
                     return (
                       <motion.div
                         key={idx}
-                        layout
                         className={`rounded-xl border ${borderColor} bg-surface-1 overflow-hidden transition hover:bg-surface-2/30`}
                       >
                         {/* Card Header — always visible */}
@@ -505,13 +504,11 @@ index abc123..def456 100644
                         </button>
 
                         {/* Expanded Evidence */}
-                        <AnimatePresence>
-                          {isExpanded && (
+                        {isExpanded && (
                             <motion.div
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2 }}
+                              transition={{ duration: 0.15 }}
                               className="overflow-hidden"
                             >
                               <div className="border-t border-border px-4 py-3 space-y-2">
@@ -536,7 +533,6 @@ index abc123..def456 100644
                               </div>
                             </motion.div>
                           )}
-                        </AnimatePresence>
                       </motion.div>
                     );
                   })}

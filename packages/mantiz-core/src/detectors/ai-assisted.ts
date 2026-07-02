@@ -60,6 +60,25 @@ Study these BEFORE analyzing the diff:
 - No PR description explaining the value change
 - Verdict: SUSPICIOUS — assertion tampering without justification
 
+## CHEATING — Flag as HIGH
+**Test wrapped in if(false) to bypass execution:**
+- Change: added \`if (false) { ... }\` wrapper around existing assertions
++ if (false) {
++   expect(result).toBe(42)
++ }
+- Context: No source code changed. if(false) guarantees test code never runs.
+- No PR description
+- Verdict: SUSPICIOUS — conditional bypass hiding test failure
+
+## CHEATING — Flag as HIGH
+**Assertion replaced with mock — no real test remains:**
+- Change: expect(service.calculateTotal(invoice)).toBe(245.50)
++ vi.spyOn(service, 'calculateTotal').mockReturnValue(245.50)
+- Context: Assertion replaced with mock that bypasses actual logic. Test passes without testing anything real.
+- No source code changed to justify the mock.
+- No PR description
+- Verdict: SUSPICIOUS — mock replacing assertion, test no longer validates real behavior
+
 ## LEGITIMATE — Do NOT flag
 **Empty catch with console.error for non-critical monitoring:**
 - Change: try { await sendToDashboard(metrics) } catch (err) { console.error(err) }

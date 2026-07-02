@@ -66,6 +66,50 @@
         "packages/mantiz-cli/package.json",
         "packages/mantiz-core/package.json"
       ]
+    ],
+    [
+      "nitro",
+      [
+        "LOOP.md",
+        "package.json",
+        "vite.config.ts",
+        "vite.config.ts"
+      ]
+    ],
+    [
+      "mock-login",
+      [
+        "LOOP.md",
+        "LOOP.md",
+        "LOOP.md",
+        "LOOP.md",
+        "LOOP.md",
+        "LOOP.md",
+        "src/routeTree.gen.ts",
+        "src/routeTree.gen.ts",
+        "src/routeTree.gen.ts",
+        "src/routeTree.gen.ts",
+        "src/routeTree.gen.ts",
+        "src/routeTree.gen.ts",
+        "src/routeTree.gen.ts",
+        "src/routeTree.gen.ts",
+        "src/routeTree.gen.ts",
+        "src/routeTree.gen.ts",
+        "src/routeTree.gen.ts",
+        "src/routeTree.gen.ts",
+        "src/routeTree.gen.ts",
+        "testsprite_tests/plans/08-pr-scan-public-repo.json",
+        "testsprite_tests/plans/09-pr-scan-detect-patterns.json",
+        "testsprite_tests/plans/10-pr-scan-invalid-url.json",
+        "testsprite_tests/plans/11-settings-generate-token.json",
+        "testsprite_tests/plans/12-settings-revoke-token.json",
+        "testsprite_tests/plans/14-history-user-verdict.json",
+        "testsprite_tests/plans/15-settings-webhook-config.json",
+        "testsprite_tests/plans/16-settings-threshold-ai-toggle.json",
+        "testsprite_tests/plans/17-history-source-tracking-label.json",
+        "testsprite_tests/plans/authenticated-pr-scan-mock.json",
+        "testsprite_tests/plans/authenticated-pr-scan-mock.json"
+      ]
     ]
   ],
   "dependencyGraph": [],
@@ -197,6 +241,55 @@
         "filesScanned": 30
       },
       "timestamp": 1782960931604
+    },
+    {
+      "toolName": "project_structure",
+      "params": {
+        "depth": 3,
+        "folderOnly": false
+      },
+      "timestamp": 1782972196690
+    },
+    {
+      "toolName": "static_analysis",
+      "params": {
+        "tool": "all",
+        "autoFix": false
+      },
+      "timestamp": 1782972219546
+    },
+    {
+      "toolName": "smart_grep",
+      "params": {
+        "query": "nitro",
+        "matchCount": 4,
+        "filesScanned": 215
+      },
+      "timestamp": 1782972240710
+    },
+    {
+      "toolName": "smart_grep",
+      "params": {
+        "query": "mock-login",
+        "matchCount": 30,
+        "filesScanned": 110
+      },
+      "timestamp": 1782972481526
+    },
+    {
+      "toolName": "project_structure",
+      "params": {
+        "depth": 3,
+        "folderOnly": false
+      },
+      "timestamp": 1782974019955
+    },
+    {
+      "toolName": "git_log",
+      "params": {
+        "maxCount": 3
+      },
+      "timestamp": 1782974172115
     }
   ],
   "conventions": {

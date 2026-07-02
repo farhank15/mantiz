@@ -416,6 +416,7 @@ export const scanPR = createServerFn({ method: "POST" })
         filesScanned: result.summary.filesScanned,
         findings: result.findings.slice(0, 20), // Limit findings
       },
+      totalDiffLines: diffText.split('\n').length,
     };
   });
 

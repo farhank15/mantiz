@@ -1,9 +1,4 @@
 {
-  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
-  "type": "frontend",
-  "name": "Settings - Threshold slider and AI detection toggle are functional",
-  "description": "After mock login, navigate to /settings. Verify the Trust Score threshold slider input (id='threshold-slider') is visible with a numeric label showing its current value. Verify the AI detection toggle (id='ai-detection-toggle') is visible. Click the toggle to change state, then save. Verify the Save Settings button shows 'Saved!'.",
-  "priority": "p1",
   "planSteps": [
     { "type": "action", "description": "Navigate to /api/mock-login?secret=mantiz_e2e_bypass_2026 to authenticate the session" },
     { "type": "action", "description": "Navigate to /settings page" },
@@ -11,6 +6,6 @@
     { "type": "assertion", "description": "Verify a toggle button with id='ai-detection-toggle' is visible on the settings page" },
     { "type": "action", "description": "Click the toggle button with id='ai-detection-toggle' to change its current state" },
     { "type": "action", "description": "Click the Save Settings button with id='save-settings-button'" },
-    { "type": "assertion", "description": "Verify the Save Settings button now shows the text 'Saved!' confirming that settings including the AI detection toggle were persisted" }
+    { "type": "assertion", "description": "Verify the Save Settings button (id='save-settings-button') shows the text 'Saved!' confirming settings were persisted" }
   ]
 }

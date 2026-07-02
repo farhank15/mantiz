@@ -246,10 +246,12 @@ function HistoryPage() {
                     const isPassed = score !== null && score >= 80;
                     const formattedDate = new Date(
                       item.createdAt,
-                    ).toLocaleDateString("en-US", {
+                    ).toLocaleString("en-US", {
                       year: "numeric",
                       month: "short",
                       day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
                     });
 
                     return (
@@ -411,7 +413,14 @@ function HistoryPage() {
                       Scanned on{" "}
                       {new Date(
                         selectedScanDetails.scan.createdAt,
-                      ).toLocaleString()}
+                      ).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        timeZoneName: "short",
+                      })}
                     </p>
                   )}
                 </div>
