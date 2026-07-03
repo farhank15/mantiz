@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { useAuth } from "../../lib/auth-context";
@@ -78,6 +78,13 @@ function HistoryPage() {
   const [selectedScanId, setSelectedScanId] = useState<string | null>(null);
   const [expandedFindings, setExpandedFindings] = useState<Set<number>>(new Set());
   const [showRawDiff, setShowRawDiff] = useState(false);
+
+  // Reset share state when switching between different scans
+  useEffect(() => {
+    setShareUrl(null);
+    setCopySuccess(false);
+    createShareMutation.reset();
+  }, [selectedScanId]);
 
   const {
     data: selectedScanDetails,
