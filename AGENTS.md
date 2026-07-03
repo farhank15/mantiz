@@ -1,3 +1,105 @@
+# Mantiz — Project Context untuk AI Agent
+
+> **Auto-generated.** Update file ini saat ada perubahan besar pada arsitektur atau roadmap.
+
+## 🎯 Project Overview
+
+**Mantiz** adalah automated "AI coding agent lie detector" — nge-scan git diff buat deteksi pola kecurangan AI coding agents (Claude Code, Cursor, Aider, dkk).
+
+## 📦 Package Structure
+
+| Package | Path | Deskripsi |
+|---------|------|-----------|
+| **App (Web)** | `src/` | TanStack Start web app — dashboard, scan by PR URL, auth, history |
+| **Detectors** | `src/detectors/` | D1-D10 detection engine (multi-language) |
+| **Server** | `src/server/` | Auth, credits, API tokens, rate limiter |
+| **CLI** | `packages/mantiz-cli/` | `mantiz-scan` — CLI lokal, no server deps |
+| **Core (legacy)** | `packages/mantiz-core/` | Mirror package, outdated — jangan dipake langsung |
+
+## 🔬 Detectors (D1-D10)
+
+| Det | Nama | Precision | Recall | F1 |
+|:---:|:-----|:---------:|:------:|:--:|
+| D1 | DisabledAssertion | 62.5% | 29.4% | 40.0 |
+| D2 | AssertionTampering | 100% | 11.8% | 21.1 |
+| D3 | MockToAvoid | 100% | 5.9% | 11.1 |
+| D4 | ClaimDiffMismatch | 0% | 0% | 0.0 |
+| D5 | SilentCatch | 40% | 11.8% | 18.2 |
+| D6 | HallucinatedAssertion | 73.7% | 82.4% | 77.8 |
+| D10 | MutationSusceptibility | 34.5% | 58.8% | 43.5 |
+
+> **Verdict Accuracy:** 89.9% (preliminary, N=17 DECEPTIVE dari 135 total)
+
+## 📊 Validation Dataset
+
+| Item | Value |
+|------|-------|
+| Total PR | 180 (scraped) |
+| Labeled | 135 (17 DECEPTIVE, 117 LEGIT, 1 AMBIGUOUS) |
+| Source | GitHub public PRs + AI agent PRs |
+| Script | `scripts/eval/standalone-scan.ts` — scan D1-D6 + D10 |
+| Matrix | `scripts/eval/confusion-matrix.ts` — per-detector TP/FP/FN/TN |
+
+## 🔧 Key Files
+
+| File | Fungsi |
+|------|--------|
+| `src/detectors/engine.ts` | App engine — sync scanDiff() + async scanDiffAsync() |
+| `packages/mantiz-cli/src/cli-engine.ts` | CLI engine — standalone, no server deps |
+| `packages/mantiz-cli/src/index.ts` | CLI entry — `mantiz-scan` |
+| `scripts/eval/standalone-scan.ts` | Batch scanner buat dataset validation |
+| `src/detectors/claim-mismatch.ts` | D4 — udah fix: addedLines threshold + hapus 'check' |
+| `src/detectors/mutation-susceptibility.ts` | D10 — udah fix: MIN_LINES 15→25 |
+| `src/detectors/disabled-assertion.ts` | D1 — udah fix: empty_test pattern |
+| `VALIDATION-ROADMAP.md` | Full roadmap, methodology, dataset info |
+
+## 🚧 Current Status
+
+### ✅ Selesai
+- [x] D1-D10 detection engine (multi-language)
+- [x] D10 fix: MIN_LINES 15→25, RELAXED_DENSITY 0.5→1.0
+- [x] D4 fix: addedLines threshold + hapus 'check' dari TEST_CLAIM_KEYWORDS
+- [x] D1 fix: empty_test pattern detection
+- [x] Validation dataset: 135 labels (17 DECEPTIVE)
+- [x] Confusion matrix: per-detector precision/recall/F1
+- [x] CLI Scanner (`packages/mantiz-cli/`) — lokal, no server deps
+- [x] Web skeleton (TanStack Start) — routes, auth, history
+
+### 🟡 In Progress / Pending
+
+| Item | Prioritas | Effort | Notes |
+|:-----|:---------:|:------:|:------|
+| **Weight Kalibrasi** (Fase 3) | 🥇 | 3-4 jam | Bikin `calibrate-weights.ts` dari precision data. Tapi N=17 DECEPTIVE masih kecil — hasil preliminary |
+| **Fix False Negatives** | 🥇 | 4-6 jam | Python/Go skip (Tree-sitter), D2 evasion, D3 mock override — butuh dataset lebih besar |
+| **Fix False Positives** | 🥈 | 2-3 jam | D6 custom matcher (`toBeString`), D10 integration test |
+| **Holdout Test** (Fase 5) | 🥈 | 2-3 jam | 70/30 split per-repo, validasi precision/recall |
+| **CI Integration** (Fase 6) | 🥉 | 2-3 jam | Auto-run confusion matrix tiap PR detector |
+
+## 🎯 Next Steps (Rekomendasi)
+
+1. **Web Dashboard** — fitur scan by PR URL (biar bisa didemo ke user)
+2. **Publish CLI ke npm** — biar bisa `npx mantiz-scan` dari mana aja
+3. **Weight Kalibrasi** — lanjut Fase 3 kalo dataset dah cukup
+
+## ⚙️ Cara Jalanin
+
+```bash
+# CLI Scanner (local)
+npx tsx packages/mantiz-cli/src/index.ts --diff "$(git diff)"
+
+# Web App (dev)
+npm run dev
+
+# Validation scan
+npx tsx scripts/eval/standalone-scan.ts
+
+# Confusion matrix
+npx tsx scripts/eval/confusion-matrix.ts --input eval/ground-truth/labeled_v4_labeled.jsonl
+```
+
+---
+
+
 <!-- intent-skills:start -->
 # TanStack Intent - before editing files, run the matching guidance command.
 tanstackIntent:
