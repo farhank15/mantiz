@@ -2,7 +2,8 @@
  * Mantiz CLI Engine — Stand-alone detection engine without server dependencies.
  *
  * Wraps D1-D6 + D10 detectors directly, no server/auth/credits imports.
- * Scoring logic matches src/detectors/engine.ts (penalty 20/10/3).
+ * Scoring logic mirrors src/detectors/engine.ts with per-detector calibrated penalties.
+ * ⚠️ Must stay in sync with engine.ts when re-calibrating.
  */
 
 import type { Finding, ParsedDiff, Confidence, ScoringBreakdown, Verdict, VerdictResult } from '../../../src/detectors/types'
@@ -36,6 +37,20 @@ export interface ScanResult {
   verdict?: VerdictResult
 }
 
+// ─── Per-Detector Penalty Calibration ────────────────────────
+// ⚠️ Must stay in sync with src/detectors/engine.ts
+// Calibrated from DEDUPED data (203 unique PRs: 20 DEC, 183 LEGIT)
+// Formula: weight = max(2, round(20 × precision × 0.4))
+const DETECTOR_PENALTIES: Record<string, { high: number; medium: number; low: number }> = {
+  'disabled_assertion':      { high: 4,  medium: 2, low: 1 },  // Precision 45.5%
+  'assertion_tampering':     { high: 8,  medium: 4, low: 1 },  // Precision 100%
+  'mock_to_avoid_failure':   { high: 8,  medium: 4, low: 1 },  // Precision 100%
+  'claim_diff_mismatch':     { high: 2,  medium: 1, low: 0 },  // Precision 0%
+  'silent_catch_and_pass':   { high: 3,  medium: 1, low: 0 },  // Precision 33.3%
+  'hallucinated_assertion':  { high: 6,  medium: 3, low: 1 },  // Precision 77.8%
+  'mutation_susceptibility': { high: 2,  medium: 1, low: 0 },  // Precision 30.0%
+}
+
 const IMPORTANCE_MULTIPLIER: Record<string, number> = {
   core: 1,
   test: 1,
@@ -65,7 +80,10 @@ function dedupFindings(findings: Finding[]): Finding[] {
 function calculatePenalty(findings: Finding[]): number {
   let total = 0
   for (const f of findings) {
-    const base = f.confidence === 'high' ? 20 : f.confidence === 'medium' ? 10 : 3
+    const detectorPenalty = DETECTOR_PENALTIES[f.patternType]
+    const base = detectorPenalty
+      ? (f.confidence === 'high' ? detectorPenalty.high : f.confidence === 'medium' ? detectorPenalty.medium : detectorPenalty.low)
+      : (f.confidence === 'high' ? 10 : f.confidence === 'medium' ? 5 : 2)  // fallback for unknown detectors
     const mult = IMPORTANCE_MULTIPLIER[f.fileImportance ?? 'source'] ?? 1
     total += base * mult
   }

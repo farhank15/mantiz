@@ -280,8 +280,8 @@ function analyzeStyleChange(
   if (similarity < (1 - STYLE_CHANGE_THRESHOLD)) {
     return {
       type: 'style_change',
-      confidence: 'medium',
-      explanation: `Author "${profile.author}" suddenly changed writing style. Previous ${hashes.length - 1} scans had consistent style, current scan is significantly different.`,
+      confidence: 'low',
+      explanation: `Author "${profile.author}" has a different writing style compared to their previous ${hashes.length - 1} scans.`,
       details: `Style similarity: ${Math.round(similarity * 100)}% — threshold: ${Math.round(STYLE_CHANGE_THRESHOLD * 100)}%`,
       scoreModifier: -3,
     }
@@ -301,15 +301,11 @@ function analyzeOddHours(
   const currentOdd = isOddHour()
 
   if (currentOdd) {
-    // Check if this is a pattern (multiple odd-hour commits)
-    // For now, we flag if the current scan is at an odd hour
-    // The pattern detection comes from the cumulative suspicion score
-
     return {
       type: 'odd_hours',
       confidence: 'low',
-      explanation: `Scan created at unusual hour (${new Date().getHours()}:00). Consistent odd-hour patterns may indicate automated or scripted behavior.`,
-      details: `Current time: ${new Date().getHours()}:00 — outside normal working hours (${ODD_HOUR_START}-${ODD_HOUR_END} AM)`,
+      explanation: `Scan created at unusual hour (${new Date().getHours()}:00).`,
+      details: `Current time: ${new Date().getHours()}:00 — outside ${ODD_HOUR_START}-${ODD_HOUR_END} AM window`,
       scoreModifier: -3,
     }
   }
@@ -338,8 +334,8 @@ function analyzeScoreVolatility(
   if (maxSwing >= VOLATILITY_THRESHOLD) {
     return {
       type: 'score_volatility',
-      confidence: 'high',
-      explanation: `Author "${profile.author}" has highly volatile trust scores (max swing: ${maxSwing}pts within last ${scores.length} scans). This pattern is consistent with AI agent impersonation.`,
+      confidence: 'low',
+      explanation: `Author "${profile.author}" has volatile trust scores (max swing: ${maxSwing}pts within last ${scores.length} scans).`,
       details: `Recent scores: [${scores.join(', ')}] — max swing: ${maxSwing}pts (threshold: ${VOLATILITY_THRESHOLD}pts)`,
       scoreModifier: -8,
     }
@@ -388,8 +384,8 @@ function analyzeFrequency(
   if (recentEvents > MAX_DAILY_FREQUENCY) {
     return {
       type: 'frequency_anomaly',
-      confidence: 'medium',
-      explanation: `Author "${profile.author}" has ${recentEvents} scans in the last 24 hours (max: ${MAX_DAILY_FREQUENCY}). Unusually high frequency suggests automated or bot-like behavior.`,
+      confidence: 'low',
+      explanation: `Author "${profile.author}" has ${recentEvents} scans in the last 24 hours (max: ${MAX_DAILY_FREQUENCY}).`,
       details: `${recentEvents} scans in 24h — threshold: ${MAX_DAILY_FREQUENCY}`,
       scoreModifier: -5,
     }
@@ -420,9 +416,9 @@ function analyzeConsecutiveFailures(
 
   return {
     type: 'consecutive_failures',
-    confidence: profile.consecutiveFailures >= 5 ? 'high' : 'medium',
-    explanation: `Author "${profile.author}" has ${profile.consecutiveFailures} consecutive failed scans. This pattern indicates persistent attempts to push dishonest code.`,
-    details: `${profile.consecutiveFailures} consecutive failures — penalty: -${penalty}pts`,
+    confidence: 'low',
+    explanation: `Author "${profile.author}" has ${profile.consecutiveFailures} consecutive scans flagged as suspicious. Note: this is an informational behavioral pattern, not direct evidence of cheating.`,
+    details: `${profile.consecutiveFailures} consecutive flagged scans — modifier: -${penalty}pts`,
     scoreModifier: -penalty,
   }
 }

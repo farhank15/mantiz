@@ -84,6 +84,13 @@ const KNOWN_BOTS = new Set([
 const HONEST_DEP_TITLE_PATTERN = /^(build|chore|ci|fix|refactor)\s*:.*(depend|update|bump|upgrade|pin|roll|lock|unlock|migrate)/i
 
 /**
+ * PR title keywords that suggest test-related claims.
+ * Shared by Flag 1 (all non-functional + claims tests) and Flag 3 (source changed, no tests).
+ * Extracted to module level to avoid hoisting issues.
+ */
+const TEST_CLAIM_KEYWORDS = /\b(test|spec|assert|expect|coverage|validation|smoke)\b/i
+
+/**
  * Check if a PR context suggests a legitimate dependency update.
  * Only called when ALL files are already confirmed non-functional (Flag 1 context),
  * so no need to re-check files — just check author + title signals.
@@ -140,26 +147,29 @@ function scanFiles(files: ParsedDiff[], prContext?: { title?: string; author?: s
   })
 
   // Flag 1: All changes are non-functional
+  // REQUIRES prContext with title that mentions test-related keywords.
+  // Uses SAME regex as Flag 3 (TEST_CLAIM_KEYWORDS) for consistency.
+  // Without a claim that tests were modified, changing only docs/config is NOT suspicious.
   if (nonFunctionalChanges.length > 0 && functionalChanges.length === 0) {
-    const paths = nonFunctionalChanges
-      .map((f) => f.newFile || f.oldFile)
-      .filter(Boolean)
-      .join(', ')
+    const paths = nonFunctionalChanges.map(f => f.newFile || f.oldFile).filter(Boolean).join(', ')
 
-    // Check if this is a legitimate dependency update (bot author or honest title)
-    const isLegitDep = isLegitimateDepUpdate(prContext)
+    // Only flag if prContext exists AND title mentions test-related keywords
+    const claimsTests = prContext?.title ? TEST_CLAIM_KEYWORDS.test(prContext.title) : false
 
-    findings.push({
-      patternType: 'claim_diff_mismatch',
-      filePath: paths,
-      lineStart: 0,
-      lineEnd: 0,
-      confidence: isLegitDep ? 'low' : 'high',
-      explanation: isLegitDep
-        ? `All changes are in non-functional files (${paths}) — likely a legitimate dependency update.`
-        : `All changes are in non-functional files (${paths}). No test or source code was modified.`,
-      evidenceExcerpt: `Non-functional files: ${paths}`,
-    })
+    if (claimsTests) {
+      const isLegitDep = isLegitimateDepUpdate(prContext)
+      findings.push({
+        patternType: 'claim_diff_mismatch',
+        filePath: paths,
+        lineStart: 0,
+        lineEnd: 0,
+        confidence: isLegitDep ? 'low' : 'medium',
+        explanation: isLegitDep
+          ? `All changes are in non-functional files (${paths}) — likely a legitimate dependency update, despite claiming tests.`
+          : `PR claims '${prContext?.title || ''}' but all changes are in non-functional files (${paths}). No test or source code was modified.`,
+        evidenceExcerpt: `Non-functional files: ${paths}`,
+      })
+    }
   }
 
   // Flag 2: Test files changed but no meaningful logic changes
@@ -200,7 +210,6 @@ function scanFiles(files: ParsedDiff[], prContext?: { title?: string; author?: s
     return TEST_FILE_PATTERN.test(path)
   })
 
-  const TEST_CLAIM_KEYWORDS = /\b(test|spec|assert|expect|coverage|validation|smoke)\b/i
   const claimsTestMod = prContext?.title ? TEST_CLAIM_KEYWORDS.test(prContext.title) : false
 
   if (hasSourceChanges && !hasTestChanges && functionalChanges.length > 0 && claimsTestMod) {

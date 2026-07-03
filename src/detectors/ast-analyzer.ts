@@ -15,8 +15,24 @@
  * 5. Empty Test Shell — describe/it block with no meaningful assertions
  */
 
-import * as swc from '@swc/core'
+import type swc from '@swc/core'
 import type { Finding, ParsedDiff } from './types'
+
+let _swc: typeof swc | null = null
+let _swcLoaded = false
+function getSwc(): typeof swc | null {
+  if (!_swcLoaded) {
+    _swcLoaded = true
+    try {
+      // Dynamic require for Node.js only — browser never loads this
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      _swc = require('@swc/core')
+    } catch {
+      _swc = null
+    }
+  }
+  return _swc
+}
 
 // ─── AST Finding Types ──────────────────────────────────────────
 

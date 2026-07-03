@@ -70,18 +70,19 @@ jobs:
 
 ## Precision / Recall
 
-Mantiz has been empirically validated against 135 labeled pull requests:
+Mantiz has been empirically validated against **203 unique pull requests** (20 DECEPTIVE, 183 LEGIT), deduplicated from 795 raw scans:
 
 | Detector | Precision | Recall | F1 |
 |:---------|:---------:|:------:|:--:|
-| D6 HallucinatedAssertion | 73.7% | 82.4% | 77.8 |
-| D1 DisabledAssertion | 62.5% | 29.4% | 40.0 |
-| D5 SilentCatch | 40.0% | 11.8% | 18.2 |
-| D10 MutationSusceptibility | 34.5% | 58.8% | 43.5 |
-| D2 AssertionTampering | 100% | 11.8% | 21.1 |
-| D3 MockToAvoid | 100% | 5.9% | 11.1 |
+| D6 HallucinatedAssertion | 77.8% | 70.0% | 73.7 |
+| D2 AssertionTampering | 100% | 15.0% | 26.1 |
+| D3 MockToAvoid | 100% | 5.0% | 9.5 |
+| D1 DisabledAssertion | 45.5% | 25.0% | 32.3 |
+| D5 SilentCatch | 33.3% | 10.0% | 15.4 |
+| D10 MutationSusceptibility | 30.0% | 60.0% | 40.0 |
+| D4 ClaimDiffMismatch | 0.0% | 0.0% | 0.0 |
 
-**Verdict Accuracy: 89.9%** (preliminary, N=17 DECEPTIVE)
+**Verdict Accuracy: 97.0%** (preliminary, N=20 DECEPTIVE — confidence interval ±15-25%)
 
 ## Features
 

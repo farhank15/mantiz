@@ -1,0 +1,181 @@
+{
+  "seed": 42,
+  "train": {
+    "entries": 125,
+    "deceptive": 18,
+    "legit": 107,
+    "accuracy": 93.6
+  },
+  "holdout": {
+    "entries": 54,
+    "deceptive": 9,
+    "legit": 45,
+    "accuracy": 100
+  },
+  "verdictGap": 6.400000000000006,
+  "detectors": [
+    {
+      "detector": "D1_DisabledAssertion",
+      "train": {
+        "detector": "D1_DisabledAssertion",
+        "tp": 6,
+        "fp": 6,
+        "tn": 101,
+        "fn": 12,
+        "precision": 50,
+        "recall": 33.3,
+        "f1": 40
+      },
+      "holdout": {
+        "detector": "D1_DisabledAssertion",
+        "tp": 0,
+        "fp": 0,
+        "tn": 45,
+        "fn": 9,
+        "precision": 0,
+        "recall": 0,
+        "f1": 0
+      }
+    },
+    {
+      "detector": "D2_AssertionTampering",
+      "train": {
+        "detector": "D2_AssertionTampering",
+        "tp": 0,
+        "fp": 0,
+        "tn": 107,
+        "fn": 18,
+        "precision": 0,
+        "recall": 0,
+        "f1": 0
+      },
+      "holdout": {
+        "detector": "D2_AssertionTampering",
+        "tp": 4,
+        "fp": 0,
+        "tn": 45,
+        "fn": 5,
+        "precision": 100,
+        "recall": 44.4,
+        "f1": 61.5
+      }
+    },
+    {
+      "detector": "D3_MockToAvoid",
+      "train": {
+        "detector": "D3_MockToAvoid",
+        "tp": 1,
+        "fp": 0,
+        "tn": 107,
+        "fn": 17,
+        "precision": 100,
+        "recall": 5.6,
+        "f1": 10.5
+      },
+      "holdout": {
+        "detector": "D3_MockToAvoid",
+        "tp": 0,
+        "fp": 0,
+        "tn": 45,
+        "fn": 9,
+        "precision": 0,
+        "recall": 0,
+        "f1": 0
+      }
+    },
+    {
+      "detector": "D4_ClaimDiffMismatch",
+      "train": {
+        "detector": "D4_ClaimDiffMismatch",
+        "tp": 0,
+        "fp": 0,
+        "tn": 107,
+        "fn": 18,
+        "precision": 0,
+        "recall": 0,
+        "f1": 0
+      },
+      "holdout": {
+        "detector": "D4_ClaimDiffMismatch",
+        "tp": 0,
+        "fp": 0,
+        "tn": 45,
+        "fn": 9,
+        "precision": 0,
+        "recall": 0,
+        "f1": 0
+      }
+    },
+    {
+      "detector": "D5_SilentCatch",
+      "train": {
+        "detector": "D5_SilentCatch",
+        "tp": 2,
+        "fp": 2,
+        "tn": 105,
+        "fn": 16,
+        "precision": 50,
+        "recall": 11.1,
+        "f1": 18.2
+      },
+      "holdout": {
+        "detector": "D5_SilentCatch",
+        "tp": 2,
+        "fp": 1,
+        "tn": 44,
+        "fn": 7,
+        "precision": 66.7,
+        "recall": 22.2,
+        "f1": 33.3
+      }
+    },
+    {
+      "detector": "D6_HallucinatedAssertion",
+      "train": {
+        "detector": "D6_HallucinatedAssertion",
+        "tp": 16,
+        "fp": 3,
+        "tn": 104,
+        "fn": 2,
+        "precision": 84.2,
+        "recall": 88.9,
+        "f1": 86.5
+      },
+      "holdout": {
+        "detector": "D6_HallucinatedAssertion",
+        "tp": 7,
+        "fp": 4,
+        "tn": 41,
+        "fn": 2,
+        "precision": 63.6,
+        "recall": 77.8,
+        "f1": 70
+      }
+    },
+    {
+      "detector": "D10_MutationSusceptibility",
+      "train": {
+        "detector": "D10_MutationSusceptibility",
+        "tp": 9,
+        "fp": 27,
+        "tn": 80,
+        "fn": 9,
+        "precision": 25,
+        "recall": 50,
+        "f1": 33.3
+      },
+      "holdout": {
+        "detector": "D10_MutationSusceptibility",
+        "tp": 7,
+        "fp": 1,
+        "tn": 44,
+        "fn": 2,
+        "precision": 87.5,
+        "recall": 77.8,
+        "f1": 82.4
+      }
+    }
+  ],
+  "passed": false,
+  "note": "PRELIMINARY — N_DECEPTIVE small, confidence intervals wide"
+}

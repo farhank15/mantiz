@@ -1,6 +1,6 @@
 {
   "name": "@farhank15/mantiz-core",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Mantiz detection engine — AI lie detector for coding agents",
   "type": "module",
   "main": "./src/index.ts",

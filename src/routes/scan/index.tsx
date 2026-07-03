@@ -129,6 +129,7 @@ function ScanPage() {
               explanation: f.explanation,
               evidenceExcerpt: f.evidenceExcerpt,
             })),
+            scoringBreakdown: scanResult.scoringBreakdown,
           },
         },
       });

@@ -13,7 +13,6 @@ import { requireAuth } from './auth-utils.server'
 
 export interface UserSettingsData {
   threshold: number
-  aiEnabled: boolean
   minScore: number
   webhookUrl: string | null
   webhookEnabled: boolean
@@ -21,7 +20,6 @@ export interface UserSettingsData {
 
 const DEFAULT_SETTINGS: UserSettingsData = {
   threshold: 70,
-  aiEnabled: false,
   minScore: 0,
   webhookUrl: null,
   webhookEnabled: false,
@@ -44,7 +42,6 @@ export const getUserSettings = createServerFn({ method: 'POST' }).handler(async 
 
   return {
     threshold: settings.threshold,
-    aiEnabled: settings.aiEnabled,
     minScore: settings.minScore,
     webhookUrl: settings.webhookUrl,
     webhookEnabled: settings.webhookEnabled,
@@ -98,7 +95,6 @@ export const saveUserSettings = createServerFn({ method: 'POST' })
       await db.insert(userSettings).values({
         userId: session.dbUserId,
         threshold: data.threshold ?? DEFAULT_SETTINGS.threshold,
-        aiEnabled: data.aiEnabled ?? DEFAULT_SETTINGS.aiEnabled,
         minScore: data.minScore ?? DEFAULT_SETTINGS.minScore,
         webhookUrl: data.webhookUrl ?? DEFAULT_SETTINGS.webhookUrl,
         webhookEnabled: data.webhookEnabled ?? DEFAULT_SETTINGS.webhookEnabled,
@@ -119,7 +115,6 @@ export async function loadUserSettings(userId: string): Promise<UserSettingsData
     if (!settings) return DEFAULT_SETTINGS
     return {
       threshold: settings.threshold,
-      aiEnabled: settings.aiEnabled,
       minScore: settings.minScore,
       webhookUrl: settings.webhookUrl,
       webhookEnabled: settings.webhookEnabled,

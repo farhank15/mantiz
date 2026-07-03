@@ -52,6 +52,14 @@ interface PRScanResult {
       explanation: string;
       evidenceExcerpt: string;
     }>;
+    scoringBreakdown?: {
+      staticScore?: number;
+      rawFindings?: number;
+      dedupedFindings?: number;
+      aiJudgeFiltered?: number;
+      aiAssistedFindings?: number;
+      behavioralFlags?: Array<{ type: string; confidence: string; note: string }>;
+    };
   };
   totalDiffLines: number;
 }
@@ -99,6 +107,7 @@ function PRScanPage() {
               explanation: f.explanation,
               evidenceExcerpt: f.evidenceExcerpt,
             })),
+            scoringBreakdown: result.scan.scoringBreakdown,
           },
         },
       });

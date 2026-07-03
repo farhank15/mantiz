@@ -14,7 +14,6 @@ import {
   Eye,
   EyeOff,
   Sliders,
-  Brain,
   Webhook,
   Gauge,
   Loader2,
@@ -177,7 +176,6 @@ function CreditsUsage() {
 
 interface ScanSettings {
   threshold: number;
-  aiEnabled: boolean;
   minScore: number;
   webhookUrl: string | null;
   webhookEnabled: boolean;
@@ -232,7 +230,6 @@ function SettingsPage() {
 
   const [settings, setSettings] = useState<ScanSettings>({
     threshold: 70,
-    aiEnabled: false,
     minScore: 0,
     webhookUrl: null,
     webhookEnabled: false,
@@ -487,41 +484,7 @@ function SettingsPage() {
                 </div>
               </div>
 
-              {/* AI Detection Toggle */}
-              <div className="px-5 py-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Brain className="h-4 w-4 text-interactive" />
-                    <div>
-                      <label className="text-sm font-medium text-ink">
-                        AI-Powered Detection
-                      </label>
-                      <p className="text-xs text-ink-muted">
-                        Uses AI for semantic cheating analysis
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    id="ai-detection-toggle"
-                    aria-label="Toggle AI-powered detection"
-                    onClick={() =>
-                      setSettings({
-                        ...settings,
-                        aiEnabled: !settings.aiEnabled,
-                      })
-                    }
-                    className={`relative h-7 w-12 rounded-full transition-colors ${
-                      settings.aiEnabled ? "bg-interactive" : "bg-surface-2"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
-                        settings.aiEnabled ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
+
 
               {/* Webhook */}
               <div className="px-5 py-4">
@@ -885,8 +848,7 @@ function SettingsPage() {
   uses: farhank15/mantiz@main
   with:
     api-token: \${{ secrets.MANTIZ_API_TOKEN }}
-    threshold: ${settings.threshold}
-    use-ai: ${settings.aiEnabled}`}</pre>
+    threshold: ${settings.threshold}`}</pre>
             </div>
             <div className="px-5 py-4">
               <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink">

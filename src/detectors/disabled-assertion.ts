@@ -110,19 +110,60 @@ function scanHunk(hunkContent: string, baseLine: number, lang: string | null): M
     }
   }
 
-  // Check for empty test bodies (test/it block with no expect/assert inside)
-  // Pattern: it('name', () => { }) or test('name', async () => { })
-  // These are tests that exist but don't verify anything
-  if (EMPTY_TEST_PATTERN.test(hunkContent)) {
-    // Find the specific line with the empty test
+  // Check for empty test bodies — tests defined but with no assertions inside
+  // First check: inline empty body (single-line: it('name', () => { }))
+  if (EMPTY_TEST_INLINE.test(hunkContent)) {
     for (let i = 0; i < lines.length; i++) {
-      if (lines[i].startsWith('+') && EMPTY_TEST_PATTERN.test(lines[i])) {
+      if (lines[i].startsWith('+') && EMPTY_TEST_INLINE.test(lines[i])) {
         const lineIdx = baseLine + i
-        // Only add if not already matched by another pattern
         if (!matches.some(m => Math.abs(m.lineIndex - lineIdx) < 3)) {
           matches.push({ lineIndex: lineIdx, lineContent: lines[i].slice(1).trim(), pattern: 'empty_test', lang: lang || 'javascript' })
         }
       }
+    }
+  }
+
+  // Second check: multi-line empty body
+  // Find it/test open lines, then scan subsequent lines until } to see if body has assertions
+  for (let i = 0; i < lines.length; i++) {
+    if (!lines[i].startsWith('+')) continue
+    if (!TEST_OPEN_LINE.test(lines[i])) continue
+
+    const lineIdx = baseLine + i
+    if (matches.some(m => Math.abs(m.lineIndex - lineIdx) < 3)) continue  // already matched
+
+    // Check next few lines for assertions or closing brace
+    let hasAssertion = false
+    let bodyEnded = false
+    let braceDepth = 0
+    let inBody = false
+
+    for (let j = i; j < Math.min(i + 20, lines.length); j++) {
+      const scanLine = lines[j]
+      const openBrace = (scanLine.match(/{/g) || []).length
+      const closeBrace = (scanLine.match(/}/g) || []).length
+
+      braceDepth += openBrace - closeBrace
+
+      if (braceDepth > 0) inBody = true
+
+      if (inBody && braceDepth === 0) {
+        bodyEnded = true
+        break
+      }
+
+      // Check for assertions in body (skip commented lines)
+      if (inBody && !/^\s*\/\//.test(scanLine)) {
+        if (/\b(expect|assert|vi\.|jest\.|cy\.|should|assertion)\b/.test(scanLine)) {
+          hasAssertion = true
+          break
+        }
+      }
+    }
+
+    // Flag if: body was opened and closed, but no assertion found
+    if (bodyEnded && !hasAssertion) {
+      matches.push({ lineIndex: lineIdx, lineContent: lines[i].slice(1).trim(), pattern: 'empty_test', lang: lang || 'javascript' })
     }
   }
 
@@ -175,10 +216,20 @@ function patternToExplanation(pattern: MatchPattern, lang: string): string {
   }
 }
 
-// ─── Empty Test Body Pattern ──────────────────────────────────────
+// ─── Empty Test Body Patterns ─────────────────────────────────────
 // Tests that exist but have empty bodies — they pass without asserting anything.
-// Matches: it('name', () => { }) or test('name', async () => { })
-const EMPTY_TEST_PATTERN = /\b(it|test)\s*\(\s*['"][^'"]+['"]\s*,\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{\s*\}/m
+//
+// Pattern 1: Single-line inline empty body
+//   it('name', () => { })
+//   test('name', async () => { })
+const EMPTY_TEST_INLINE = /\b(it|test)\s*\(\s*['"][^'"]+['"]\s*,\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{\s*\}/m
+
+// Pattern 2: Multi-line — test body declared but no expect/assert/vi.mock inside
+//   it('name', () => {
+//     // no assertions, just comments or blank
+//   })
+// Detected by scanning for it/test open lines + checking subsequent lines for assertions
+const TEST_OPEN_LINE = /\b(it|test)\s*\(\s*['"][^'"]+['"]/m
 
 // ─── Main Detector ──────────────────────────────────────────────
 

@@ -1,8 +1,8 @@
 # Mantiz Evaluation Report — Confusion Matrix
 
 **Generated:** 2026-07-03
-**Total entries:** 180
-**Labeled:** 17 DECEPTIVE, 117 LEGIT, 1 AMBIGUOUS (excluded)
+**Total entries:** 203
+**Labeled:** 20 DECEPTIVE, 183 LEGIT, 0 AMBIGUOUS (excluded)
 
 ---
 
@@ -10,8 +10,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Verdict accuracy | 89.9% |
-| N (non-ambiguous) | 134 |
+| Verdict accuracy | 97.0% |
+| N (non-ambiguous) | 203 |
 
 ---
 
@@ -19,15 +19,15 @@
 
 | Detector | TP | FP | TN | FN | Precision | Recall | F1 | Support (D/L) |
 |----------|:--:|:--:|:--:|:--:|:---------:|:------:|:--:|:--------------:|
-| D1_DisabledAssertion | 5 | 3 | 114 | 12 | 62.5% | 29.4% | 40.0 | 17/117 |
-| D2_AssertionTampering | 2 | 0 | 117 | 15 | 100.0% | 11.8% | 21.1 | 17/117 |
-| D3_MockToAvoid | 1 | 0 | 117 | 16 | 100.0% | 5.9% | 11.1 | 17/117 |
-| D4_ClaimDiffMismatch | 0 | 0 | 117 | 17 | 0.0% | 0.0% | 0.0 | 17/117 |
-| D5_SilentCatch | 2 | 3 | 114 | 15 | 40.0% | 11.8% | 18.2 | 17/117 |
-| D6_HallucinatedAssertion | 14 | 5 | 112 | 3 | 73.7% | 82.4% | 77.8 | 17/117 |
-| D8_AIAssisted | 0 | 0 | 117 | 17 | 0.0% | 0.0% | 0.0 | 17/117 |
-| D9_Historical | 0 | 0 | 117 | 17 | 0.0% | 0.0% | 0.0 | 17/117 |
-| D10_MutationSusceptibility | 10 | 19 | 98 | 7 | 34.5% | 58.8% | 43.5 | 17/117 |
+| D1_DisabledAssertion | 5 | 6 | 177 | 15 | 45.5% | 25.0% | 32.3 | 20/183 |
+| D2_AssertionTampering | 3 | 0 | 183 | 17 | 100.0% | 15.0% | 26.1 | 20/183 |
+| D3_MockToAvoid | 1 | 0 | 183 | 19 | 100.0% | 5.0% | 9.5 | 20/183 |
+| D4_ClaimDiffMismatch | 0 | 1 | 182 | 20 | 0.0% | 0.0% | 0.0 | 20/183 |
+| D5_SilentCatch | 2 | 4 | 179 | 18 | 33.3% | 10.0% | 15.4 | 20/183 |
+| D6_HallucinatedAssertion | 14 | 4 | 179 | 6 | 77.8% | 70.0% | 73.7 | 20/183 |
+| D8_AIAssisted | 0 | 0 | 183 | 20 | 0.0% | 0.0% | 0.0 | 20/183 |
+| D9_Historical | 0 | 0 | 183 | 20 | 0.0% | 0.0% | 0.0 | 20/183 |
+| D10_MutationSusceptibility | 12 | 28 | 155 | 8 | 30.0% | 60.0% | 40.0 | 20/183 |
 
 
 ## Visual Comparison
@@ -35,24 +35,24 @@
 ```
   Detector               Precision    Recall     F1
   ─────────────────────────────────────────────────────────
-  D1_DisabledAssertion   █████████████░░░░░░░  62.5%  ██████░░░░░░░░░░░░░░  29.4%  ████████░░░░░░░░░░░░  40.0
-  D2_AssertionTampering  ████████████████████ 100.0%  ██░░░░░░░░░░░░░░░░░░  11.8%  ████░░░░░░░░░░░░░░░░  21.1
-  D3_MockToAvoid         ████████████████████ 100.0%  █░░░░░░░░░░░░░░░░░░░   5.9%  ██░░░░░░░░░░░░░░░░░░  11.1
+  D1_DisabledAssertion   █████████░░░░░░░░░░░  45.5%  █████░░░░░░░░░░░░░░░  25.0%  ██████░░░░░░░░░░░░░░  32.3
+  D2_AssertionTampering  ████████████████████ 100.0%  ███░░░░░░░░░░░░░░░░░  15.0%  █████░░░░░░░░░░░░░░░  26.1
+  D3_MockToAvoid         ████████████████████ 100.0%  █░░░░░░░░░░░░░░░░░░░   5.0%  ██░░░░░░░░░░░░░░░░░░   9.5
   D4_ClaimDiffMismatch   ░░░░░░░░░░░░░░░░░░░░   0.0%  ░░░░░░░░░░░░░░░░░░░░   0.0%  ░░░░░░░░░░░░░░░░░░░░   0.0
-  D5_SilentCatch         ████████░░░░░░░░░░░░  40.0%  ██░░░░░░░░░░░░░░░░░░  11.8%  ████░░░░░░░░░░░░░░░░  18.2
-  D6_HallucinatedAssertion ███████████████░░░░░  73.7%  ████████████████░░░░  82.4%  ████████████████░░░░  77.8
+  D5_SilentCatch         ███████░░░░░░░░░░░░░  33.3%  ██░░░░░░░░░░░░░░░░░░  10.0%  ███░░░░░░░░░░░░░░░░░  15.4
+  D6_HallucinatedAssertion ████████████████░░░░  77.8%  ██████████████░░░░░░  70.0%  ███████████████░░░░░  73.7
   D8_AIAssisted          ░░░░░░░░░░░░░░░░░░░░   0.0%  ░░░░░░░░░░░░░░░░░░░░   0.0%  ░░░░░░░░░░░░░░░░░░░░   0.0
   D9_Historical          ░░░░░░░░░░░░░░░░░░░░   0.0%  ░░░░░░░░░░░░░░░░░░░░   0.0%  ░░░░░░░░░░░░░░░░░░░░   0.0
-  D10_MutationSusceptibility ███████░░░░░░░░░░░░░  34.5%  ████████████░░░░░░░░  58.8%  █████████░░░░░░░░░░░  43.5
+  D10_MutationSusceptibility ██████░░░░░░░░░░░░░░  30.0%  ████████████░░░░░░░░  60.0%  ████████░░░░░░░░░░░░  40.0
 ```
 
 ---
 
 ## Key Takeaways
 
-- 🏆 **Best detector:** D6_HallucinatedAssertion (F1=77.8, precision=73.7%, recall=82.4%)
+- 🏆 **Best detector:** D6_HallucinatedAssertion (F1=73.7, precision=77.8%, recall=70.0%)
 - ⚠️ **Worst detector:** D9_Historical (F1=0.0, precision=0.0%, recall=0.0%)
-- 🔴 **Low precision (<50%):** D4_ClaimDiffMismatch, D5_SilentCatch, D8_AIAssisted, D9_Historical, D10_MutationSusceptibility — too many false positives
+- 🔴 **Low precision (<50%):** D1_DisabledAssertion, D4_ClaimDiffMismatch, D5_SilentCatch, D8_AIAssisted, D9_Historical, D10_MutationSusceptibility — too many false positives
 - 🔴 **Low recall (<50%):** D1_DisabledAssertion, D2_AssertionTampering, D3_MockToAvoid, D4_ClaimDiffMismatch, D5_SilentCatch, D8_AIAssisted, D9_Historical — missing too many cheaters
 
 ---

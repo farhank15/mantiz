@@ -223,11 +223,23 @@ function scanCandidate(
 
     const allFindings = [...d1, ...d2, ...d3, ...d4, ...d5, ...d6, ...d10]
 
-    // Calculate penalty
+    // Calculate penalty (must match engine.ts calculatePenalty)
+    const DETECTOR_PENALTIES: Record<string, { high: number; medium: number; low: number }> = {
+      'disabled_assertion':      { high: 10, medium: 5,  low: 2 },
+      'assertion_tampering':     { high: 20, medium: 10, low: 3 },
+      'mock_to_avoid_failure':   { high: 20, medium: 10, low: 3 },
+      'claim_diff_mismatch':     { high: 2,  medium: 1,  low: 0 },
+      'silent_catch_and_pass':   { high: 11, medium: 6,  low: 2 },
+      'hallucinated_assertion':  { high: 15, medium: 8,  low: 2 },
+      'mutation_susceptibility': { high: 7,  medium: 4,  low: 1 },
+    }
     const IMPORTANCE_MULTIPLIER: Record<string, number> = { core: 1, test: 1, source: 1, config: 0.5, docs: 0.3, artifact: 0.05 }
     let penalty = 0
     for (const f of allFindings) {
-      const base = f.confidence === 'high' ? 20 : f.confidence === 'medium' ? 10 : 3
+      const dp = DETECTOR_PENALTIES[f.patternType]
+      const base = dp
+        ? (f.confidence === 'high' ? dp.high : f.confidence === 'medium' ? dp.medium : dp.low)
+        : (f.confidence === 'high' ? 10 : f.confidence === 'medium' ? 5 : 2)
       const mult = IMPORTANCE_MULTIPLIER[f.fileImportance ?? 'source'] ?? 1
       penalty += base * mult
     }

@@ -1,6 +1,6 @@
 {
   "name": "mantiz",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "imports": {
@@ -23,7 +23,6 @@
     "@babel/parser": "^7.29.7",
     "@neondatabase/serverless": "^1.1.0",
     "@octokit/rest": "^22.0.1",
-    "@swc/core": "1.15.43",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-query": "^5.101.2",
@@ -53,6 +52,7 @@
     "web-tree-sitter": "0.26.10"
   },
   "devDependencies": {
+    "@swc/core": "1.15.43",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/devtools-vite": "latest",
     "@tanstack/router-cli": "^1.132.0",
