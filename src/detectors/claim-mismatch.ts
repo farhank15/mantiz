@@ -169,9 +169,11 @@ function scanFiles(files: ParsedDiff[], prContext?: { title?: string; author?: s
 
     // If it's a test file with changes
     if (TEST_FILE_PATTERN.test(filePath)) {
-      // Count total changed lines across all hunks
-      const totalLines = file.hunks.reduce((sum, h) => sum + h.content.split('\n').length, 0)
-      if (totalLines < 5) continue // Skip tiny test changes (<5 lines total)
+      // Count only added lines across all hunks (exclude context & removed lines)
+      const addedLines = file.hunks.reduce((sum, h) => {
+        return sum + h.content.split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++')).length
+      }, 0)
+      if (addedLines < 5) continue // Skip tiny test changes (<5 added lines)
 
       const hasMeaningful = file.hunks.some((h) => hasMeaningfulChanges(h.content))
       if (!hasMeaningful) {
