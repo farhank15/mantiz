@@ -1,10 +1,10 @@
 allowBuilds:
-  '@parcel/watcher': set this to true or false
-  '@swc/core': set this to true or false
-  esbuild: set this to true or false
-  tree-sitter-go: set this to true or false
-  tree-sitter-java: set this to true or false
-  tree-sitter-php: set this to true or false
-  tree-sitter-python: set this to true or false
-  tree-sitter-ruby: set this to true or false
-  tree-sitter-rust: set this to true or false
+  '@parcel/watcher': true
+  '@swc/core': true
+  esbuild: true
+  tree-sitter-go: true
+  tree-sitter-java: true
+  tree-sitter-php: true
+  tree-sitter-python: true
+  tree-sitter-ruby: true
+  tree-sitter-rust: true
