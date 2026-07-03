@@ -252,6 +252,8 @@ export async function scanDiffAsync(
 ): Promise<ScanResult> {
   const baseResult = scanDiff(rawDiff, prContext)
 
+  console.log('[Mantiz] AI_DETECTION_ENABLED:', typeof process !== 'undefined' ? process.env.AI_DETECTION_ENABLED : 'N/A', '| AI_JUDGE_ENABLED:', typeof process !== 'undefined' ? process.env.AI_JUDGE_ENABLED : 'N/A', '| GROQ:', typeof process !== 'undefined' && process.env.GROQ_API_KEY ? 'SET' : 'NOT SET')
+
   const aiEnabled = typeof process !== 'undefined' && process.env.AI_DETECTION_ENABLED === 'true'
 
   let allFindings = [...baseResult.findings]

@@ -605,3 +605,43 @@ export const getScanDetails = createServerFn({ method: "POST" })
       findings: scanFindings,
     };
   });
+
+/**
+ * Scan a raw diff (manual paste). Requires valid session.
+ * Rate limited: 20 scans per minute per user.
+ */
+export const scanDiff = createServerFn({ method: "POST" })
+  .validator((input: unknown) => input as { diff: string })
+  .handler(async ({ data }) => {
+    const cookie = getCookie(SESSION_COOKIE);
+    if (!cookie) {
+      throw new Error("Not authenticated. Please login with GitHub first.");
+    }
+
+    const session = decodeSession(cookie);
+    if (!session) {
+      clearSessionCookie();
+      throw new Error("Session expired. Please login again.");
+    }
+
+    // Rate limit: 20 manual scans per minute per user
+    const rateResult = checkRateLimit('session', `scan_diff:${session.dbUserId}`);
+    if (!rateResult.allowed) {
+      throw new Error('Rate limit exceeded. Maximum 20 scans per minute.');
+    }
+
+    const { scanDiffAsync } = await import("../detectors/engine");
+    const result = await scanDiffAsync(data.diff);
+
+    // Save scan history
+    const { saveHistoricalEvent } = await import("../detectors/historical-scoring");
+    await saveHistoricalEvent({
+      author: session.login || "unknown",
+      eventType: "manual_scan",
+      trustScore: result.trustScore,
+      totalFindings: result.summary.totalFindings,
+      filesChanged: result.summary.filesScanned,
+    }).catch(() => {});
+
+    return result;
+  });

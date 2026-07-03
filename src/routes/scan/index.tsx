@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BugPlay,
@@ -15,11 +15,11 @@ import {
   ChevronUp,
   Share2,
   Check,
+  Loader2,
 } from "lucide-react";
-import { scanDiffAsync } from "../../detectors/engine";
 import type { ScanResult } from "../../detectors/engine";
 import { useAuth } from "../../lib/auth-context";
-import { saveManualScan } from "../../server/auth";
+import { saveManualScan, scanDiff } from "../../server/auth";
 import { createShareLink } from "../../server/share";
 import PageHeader from "../../components/PageHeader";
 import ScanAnimation from "../../components/ScanAnimation";
@@ -30,7 +30,8 @@ import StatCard from "../../components/StatCard";
 export const Route = createFileRoute("/scan/")({ component: ScanPage });
 
 function ScanPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [diffInput, setDiffInput] = useState("");
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -43,6 +44,7 @@ function ScanPage() {
   const [expandedFindings, setExpandedFindings] = useState<Set<number>>(
     new Set(),
   );
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const handleScan = async () => {
     if (!diffInput.trim()) return;
@@ -50,13 +52,12 @@ function ScanPage() {
     setIsScanning(true);
     setScanPhase("static");
 
-    // Yield to React to render the animation before blocking
     await new Promise((r) => setTimeout(r, 50));
 
-    // scanDiffAsync handles: static detectors + AI Judge + AI-assisted detection
-    // All in one call, with proper fallback if AI is disabled or fails.
     try {
-      const finalResult = await scanDiffAsync(diffInput);
+      setScanPhase("ai");
+      setScanError(null);
+      const finalResult = await scanDiff({ data: { diff: diffInput } });
 
       setScanPhase("done");
       setScanResult(finalResult);
@@ -80,7 +81,9 @@ function ScanPage() {
         }).catch((err) => console.error("Failed to save manual scan:", err));
       }
     } catch (err) {
-      console.error("Scan failed:", err);
+      const msg = err instanceof Error ? err.message : "Scan failed";
+      setScanError(msg);
+      setIsScanning(false);
       setScanPhase("done");
     }
   };
@@ -93,6 +96,7 @@ function ScanPage() {
     setDiffInput("");
     setScanResult(null);
     setExpandedFindings(new Set());
+    setScanError(null);
   };
 
   const handleShare = async () => {
@@ -172,6 +176,40 @@ function ScanPage() {
   };
 
   const isEmpty = diffInput.trim() === "";
+
+  if (authLoading) {
+    return (
+      <div className="page-wrap flex min-h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-interactive" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <main className="page-wrap px-4 pb-16 pt-10">
+        <div className="mx-auto max-w-2xl text-center">
+          <h1 className="text-3xl font-bold text-ink">Scan Diff</h1>
+          <p className="text-ink-muted mt-2 mb-8">
+            Paste a GitHub-style diff and scan it at the AST level.
+          </p>
+          <div className="rounded-xl border border-dashed border-border bg-surface-1 p-16 max-w-md mx-auto">
+            <BugPlay className="mx-auto mb-4 h-12 w-12 text-ink-subdued" />
+            <h3 className="text-lg font-bold text-ink">Sign In Required</h3>
+            <p className="mt-1 mb-6 text-sm text-ink-muted">
+              Please sign in with GitHub to scan diffs.
+            </p>
+            <button
+              onClick={() => navigate({ to: "/login", search: { error: undefined } })}
+              className="btn btn-primary w-full"
+            >
+              Sign In to Continue
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="page-wrap px-4 pb-16 pt-8 sm:pt-10">
@@ -282,6 +320,18 @@ index abc123..def456 100644
             />
           )}
         </AnimatePresence>
+
+        {/* Error */}
+        {scanError && (
+          <div className="mb-6 rounded-xl border border-severity-critical/25 bg-severity-critical/5 p-5 text-center">
+            <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-severity-critical" />
+            <h3 className="text-base font-bold text-ink">Scan Failed</h3>
+            <p className="mt-1 text-sm text-ink-muted">{scanError}</p>
+            <button onClick={() => setScanError(null)} className="btn btn-secondary mt-4">
+              Try Again
+            </button>
+          </div>
+        )}
 
         {/* Results */}
         <AnimatePresence mode="wait">
