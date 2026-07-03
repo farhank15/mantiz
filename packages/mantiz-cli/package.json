@@ -1,7 +1,7 @@
 {
-  "name": "@farhank15/mantiz-cli",
-  "version": "0.2.2",
-  "description": "Mantiz CLI — AI lie detector for coding agents. Scan git diffs for cheating patterns.",
+  "name": "mantiz-cli",
+  "version": "0.3.0",
+  "description": "Mantiz CLI — AI lie detector for coding agents. Scan git diffs for cheating patterns. No server or API key needed.",
   "type": "module",
   "main": "./src/index.ts",
   "bin": {
@@ -12,18 +12,15 @@
     "README.md"
   ],
   "scripts": {
-    "scan": "tsx src/index.ts"
+    "scan": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@farhank15/mantiz-core": "0.2.2",
     "tsx": "^4.19.0"
   },
   "devDependencies": {
     "@types/node": "22.20.0",
     "typescript": "^6.0.2"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
   },
   "keywords": [
     "ai",

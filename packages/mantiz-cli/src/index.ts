@@ -5,16 +5,16 @@
  * Usage:
  *   mantiz-scan              # Scan local git diff
  *   mantiz-scan --diff <str> # Scan provided diff text
- *   mantiz-scan --token x    # Send to Mantiz API for cloud scan
-  mantiz-scan --token x --save  # Save results to cloud history
+ *   mantiz-scan --json       # Output results as JSON
  *   mantiz-scan --help       # Show help
  *
  * Install:
- *   npm install -g @mantiz/cli
+ *   npm install -g mantiz-cli
  */
 
 import { execSync } from 'node:child_process'
-import { scanDiff, type ScanResult } from '@farhank15/mantiz-core'
+import { scanDiff } from './cli-engine'
+import type { ScanResult } from './cli-engine'
 
 const PASS_THRESHOLD = 70
 
@@ -48,6 +48,10 @@ function printResults(result: ScanResult): void {
   console.log(`  Files:     ${result.summary.filesScanned}`)
   console.log(`  Verdict:   ${scoreColor}${scoreLabel}${reset}`)
 
+  if (result.verdict) {
+    console.log(`  Confidence: ${result.verdict.confidence}`)
+  }
+
   if (result.findings.length > 0) {
     console.log(`\n${bold}Findings:${reset}`)
     for (const f of result.findings) {
@@ -57,6 +61,17 @@ function printResults(result: ScanResult): void {
     }
   } else {
     console.log(`\n  ${bold}No cheating detected.${reset} ${dim}Code looks honest.${reset}`)
+  }
+
+  if (result.findings.length > 0) {
+    console.log(`\n${bold}Detector Breakdown:${reset}`)
+    const byType = new Map<string, number>()
+    for (const f of result.findings) {
+      byType.set(f.patternType, (byType.get(f.patternType) || 0) + 1)
+    }
+    for (const [type, count] of byType) {
+      console.log(`  ${type}: ${count}`)
+    }
   }
 
   if (result.fixInstructions.length > 0) {
@@ -76,7 +91,6 @@ Mantiz CLI — AI Lie Detector for Coding Agents
 USAGE
   mantiz-scan                  Scan current git diff
   mantiz-scan --diff <text>    Scan provided diff text
-  mantiz-scan --token <key>    Send to Mantiz cloud API
   mantiz-scan --json           Output results as JSON
   mantiz-scan --help           Show this help
 
@@ -84,17 +98,16 @@ EXIT CODES
   0  — All clean (Trust Score >= ${PASS_THRESHOLD})
   1  — Cheating detected (Trust Score < ${PASS_THRESHOLD})
 
-ENVIRONMENT VARIABLES
-  MANTIZ_API_TOKEN   API token for cloud scanning
-  MANTIZ_API_URL     API URL (default: https://mantiz-wine.vercel.app)
+FEATURES
+  • 6 Static Detectors (D1-D6) — no API key or server needed
+  • 0 external dependencies — 100% local
+  • Pre-computed precision/recall from 135 labeled PRs
+  • Powered by the Mantiz detector engine
 
 EXAMPLES
   mantiz-scan
   cat my-diff.txt | mantiz-scan --diff -
   mantiz-scan --json | jq '.trustScore'
-  mantiz-scan --token mtz_abc123
-  mantiz-scan --token mtz_abc123 --save   # Save to cloud
-  mantiz-scan --token mtz_abc123 --ai      # Enable AI detection
 `)
 }
 
@@ -107,9 +120,6 @@ async function main(): Promise<void> {
   }
 
   const jsonOutput = args.includes('--json')
-  const saveToCloud = args.includes('--save')
-  const tokenIndex = args.indexOf('--token')
-  const token = tokenIndex !== -1 ? args[tokenIndex + 1] : process.env.MANTIZ_API_TOKEN
   const diffIndex = args.indexOf('--diff')
   const diffArg = diffIndex !== -1 ? args[diffIndex + 1] : undefined
 
@@ -129,80 +139,21 @@ async function main(): Promise<void> {
     process.exit(1)
   }
 
-  if (token || saveToCloud) {
-    const apiToken = token || process.env.MANTIZ_API_TOKEN
-
-    if (!apiToken) {
-      if (jsonOutput) {
-        console.log(JSON.stringify({ error: 'No API token found. Use --token or set MANTIZ_API_TOKEN', trustScore: 0 }))
-      } else {
-        console.log('\x1b[33m⚠️  --save requires an API token. Use --token <key> or set MANTIZ_API_TOKEN env var.\x1b[0m')
-        console.log('\x1b[33m   Falling back to local scan (results not saved to cloud).\x1b[0m')
-      }
-      // Fall back to local scan
-      const result = scanDiff(diffText)
-      if (jsonOutput) {
-        console.log(JSON.stringify({ ...result, passed: result.trustScore >= PASS_THRESHOLD }, null, 2))
-      } else {
-        printResults(result)
-      }
-      process.exit(result.trustScore < PASS_THRESHOLD ? 1 : 0)
-      return
-    }
-
-    const apiUrl = process.env.MANTIZ_API_URL || 'https://mantiz-wine.vercel.app'
-    try {
-      const res = await fetch(`${apiUrl}/api/scan`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`,
-          'X-Mantiz-Source': 'cli',
-        },
-        body: JSON.stringify({ diff: diffText, useAi: args.includes('--ai') }),
-      })
-
-      if (!res.ok) {
-        const errBody = await res.text()
-        if (jsonOutput) {
-          console.log(JSON.stringify({ error: `API error: ${res.status}`, trustScore: 0 }))
-        } else {
-          console.log(`\x1b[31mAPI error: ${res.status} — ${errBody}\x1b[0m`)
-        }
-        process.exit(1)
-      }
-
-      const result = await res.json() as { trustScore: number; findings: any[]; summary: any }
-
-      if (jsonOutput) {
-        console.log(JSON.stringify(result, null, 2))
-      } else {
-        const scoreColor = result.trustScore >= 80 ? '\x1b[32m' : '\x1b[33m'
-        console.log(`\n${scoreColor}Trust Score: ${result.trustScore}/100\x1b[0m`)
-        console.log(`Findings: ${result.findings.length}`)
-        result.findings.slice(0, 5).forEach((f: any) => {
-          console.log(`  [${f.confidence}] ${f.filePath}:${f.lineStart} — ${f.explanation}`)
-        })
-      }
-
-      process.exit(result.trustScore < PASS_THRESHOLD ? 1 : 0)
-    } catch (err) {
-      if (jsonOutput) {
-        console.log(JSON.stringify({ error: `Failed to reach Mantiz API: ${err}`, trustScore: 0 }))
-      } else {
-        console.log(`\x1b[31mFailed to reach Mantiz API: ${err}\x1b[0m`)
-      }
-      process.exit(1)
-    }
-  }
-
   const result = scanDiff(diffText)
 
   if (jsonOutput) {
     console.log(JSON.stringify({
       trustScore: result.trustScore,
+      verdict: result.verdict,
       summary: result.summary,
-      findings: result.findings,
+      findings: result.findings.map(f => ({
+        patternType: f.patternType,
+        filePath: f.filePath,
+        lineStart: f.lineStart,
+        lineEnd: f.lineEnd,
+        confidence: f.confidence,
+        explanation: f.explanation,
+      })),
       fixInstructions: result.fixInstructions,
       passed: result.trustScore >= PASS_THRESHOLD,
     }, null, 2))

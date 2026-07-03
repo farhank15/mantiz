@@ -1,19 +1,19 @@
-# @mantiz/cli
+# mantiz-cli
 
 **Mantiz CLI — AI lie detector for coding agents.**
 
-Scan git diffs for AI agent cheating patterns — like a polygraph for your test suite.
+Scan git diffs for AI agent cheating patterns — no server or API key needed.
 
 ## Installation
 
 ```bash
-npm install -g @mantiz/cli
+npm install -g mantiz-cli
 ```
 
 Or run without installation:
 
 ```bash
-npx @mantiz/cli
+npx mantiz-cli
 ```
 
 ## Usage
@@ -25,21 +25,28 @@ mantiz-scan
 # Scan with JSON output (for CI)
 mantiz-scan --json
 
-# Scan a specific diff file
+# Scan a specific diff text
 mantiz-scan --diff "$(cat my-diff.diff)"
 
-# Cloud scan with API token (results saved to your history)
-mantiz-scan --token mtz_abc123
-
-# Cloud scan + persist results to your Mantiz history
-mantiz-scan --token mtz_abc123 --save
-
-# Enable AI-assisted detection (LLM-powered semantic analysis)
-mantiz-scan --token mtz_abc123 --ai
+# Scan diff from stdin
+cat my-diff.diff | mantiz-scan --diff -
 
 # Help
 mantiz-scan --help
 ```
+
+## 100% Local — No Server Required
+
+All detectors run entirely on your machine:
+- **D1** Disabled Assertion Detection
+- **D2** Assertion Tampering Detection
+- **D3** Mock-to-Avoid Detection
+- **D4** Claim-Diff Mismatch Detection
+- **D5** Silent Catch Detection
+- **D6** Hallucinated Assertion Detection
+- **D10** Mutation Susceptibility Analysis
+
+No API key, no internet connection, no database needed. Results are purely local.
 
 ## CI/CD Integration
 
@@ -53,26 +60,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-      - run: npx @mantiz/cli --token ${{ secrets.MANTIZ_API_TOKEN }} --save --ai
+      - run: npx mantiz-cli
 ```
-
-Get your API token at: https://mantiz-wine.vercel.app/settings
 
 ## Exit Codes
 
 - `0` — All clean (Trust Score ≥ 70)
 - `1` — Cheating detected (Trust Score < 70)
 
-## Environment Variables
+## Precision / Recall
 
-| Variable | Description |
-|----------|-------------|
-| `MANTIZ_API_TOKEN` | API token for cloud scan mode |
-| `MANTIZ_API_URL` | API URL (default: https://mantiz-wine.vercel.app) |
+Mantiz has been empirically validated against 135 labeled pull requests:
+
+| Detector | Precision | Recall | F1 |
+|:---------|:---------:|:------:|:--:|
+| D6 HallucinatedAssertion | 73.7% | 82.4% | 77.8 |
+| D1 DisabledAssertion | 62.5% | 29.4% | 40.0 |
+| D5 SilentCatch | 40.0% | 11.8% | 18.2 |
+| D10 MutationSusceptibility | 34.5% | 58.8% | 43.5 |
+| D2 AssertionTampering | 100% | 11.8% | 21.1 |
+| D3 MockToAvoid | 100% | 5.9% | 11.1 |
+
+**Verdict Accuracy: 89.9%** (preliminary, N=17 DECEPTIVE)
 
 ## Features
 
-- **`--save`** — Persist scan results to your Mantiz cloud history (requires `--token`)
-- **`--ai`** — Enable AI-assisted detection using LLM (Fireworks/Groq)
-- **`--json`** — Output results as JSON for CI/CD pipelines
-- **Threshold** — Default 70. Configure per-user in [Settings](https://mantiz-wine.vercel.app/settings)
+- **Local scan** — zero external dependencies
+- **--json** — output results as JSON for CI/CD pipelines
+- **--diff** — scan specific diff text instead of git diff
+- **Threshold** — default 70, configurable per scan

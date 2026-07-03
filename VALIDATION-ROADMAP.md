@@ -485,9 +485,22 @@ extension:py "except Exception: pass"
 - [ ] Rekomendasi weight baru berdasarkan precision data
 - [ ] ⚠️ Hasil ditandai PRELIMINARY (N=17 DECEPTIVE < 100) ✅
 
-### Fase 4: Implementasi (Estimasi: 4-8 jam)
+### Fase 4: CLI Scanner — ✅ SELESAI (Estimasi: 4-8 jam → Real: ~2 jam)
+
+> ✅ CLI Scanner selesai. `mantiz-scan` bisa jalan lokal tanpa server/API key.
+> Engine: `packages/mantiz-cli/src/cli-engine.ts` — standalone, D1-D6 + D10, no server deps.
+> **Tantangan:** App's `engine.ts` import server modules (`@tanstack/react-start`) — break di CLI.
+> **Solusi:** Bikin `cli-engine.ts` terpisah yang import detectors langsung.
+
+- [x] Bikin `packages/mantiz-cli/src/cli-engine.ts` ✅ — standalone engine tanpa server deps
+- [x] Update CLI import dari `@farhank15/mantiz-core` → `./cli-engine` ✅
+- [x] Hapus cloud mode (`--token`, `--save`, `--ai`) — pure local ✅
+- [x] Update README — hapus referensi cloud features ✅
+- [x] Detector breakdown by type di output ✅
+
+### Fase 4b: Weight Kalibrasi (Estimasi: 3-4 jam) — 🟡 Tertunda
 - [ ] Revisi weight/threshold di engine.ts berdasarkan hasil kalibrasi
-- [ ] Fix false positive yang teridentifikasi (D1 test.todo, D6 custom matcher, dll)
+- [ ] Fix false positive yang teridentifikasi (D6 custom matcher, dll)
 - [ ] Fix false negative yang teridentifikasi (Python/Go tree-sitter, D2 evasion, dll)
 - [ ] Tambah validationBasis di response (precision/recall per detector)
 
