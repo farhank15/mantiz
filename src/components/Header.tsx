@@ -251,6 +251,7 @@ export default function Header() {
 
   const visibleLinks = NAV_LINKS.filter((link) => {
     if (
+      link.to === "/scan" ||
       link.to === "/pr-scan" ||
       link.to === "/history" ||
       link.to === "/settings"
