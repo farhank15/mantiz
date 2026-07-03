@@ -15,6 +15,17 @@
           "resolved": false
         }
       ]
+    ],
+    [
+      "typecheck",
+      [
+        {
+          "task": "typecheck",
+          "error": "[WARN] The \"pnpm\" field in package.json is no longer read by pnpm. The following keys were ignored: \"pnpm.onlyBuiltDependencies\". See https://pnpm.io/settings for the new home of each setting.\n[WARN] The \"pnpm\" field in package.json is no longer read by pnpm. The following keys were ignored: \"pnpm.onlyBuiltDependencies\". See https://pnpm.io/settings for the new home of each setting.",
+          "timestamp": 1783053056397,
+          "resolved": false
+        }
+      ]
     ]
   ],
   "searchResults": [
@@ -389,6 +400,15 @@
         "filesScanned": 109
       },
       "timestamp": 1783049527137
+    },
+    {
+      "toolName": "execute_safe_test",
+      "params": {
+        "task": "typecheck",
+        "command": "pnpm tsc --noEmit",
+        "cwd": "/home/mawa/My_File/Development/mantiz"
+      },
+      "timestamp": 1783053046984
     }
   ],
   "conventions": {

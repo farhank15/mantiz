@@ -8,12 +8,25 @@ import { detectSilentCatch } from './silent-catch'
 import { detectHallucinatedAssertions } from './hallucination'
 import { detectWithAI } from './ai-assisted'
 import { evaluateFindings, isAIJudgeEnabled } from './ai-judge'
-import { analyzeHistoricalBehavior } from './historical-scoring'
 import { detectMutationSusceptibility } from './mutation-susceptibility'
-import { detectWithAST } from './ast-analyzer'
-import { detectWithTreeSitter, detectWithTreeSitterAsync } from './tree-sitter-analyzer'
 import { ensureCredits, deductCredits, CREDIT_COSTS } from '../server/credits'
 import { createIsomorphicFn } from '@tanstack/react-start'
+
+// Lazy imports for browser-safe detection
+// ast-analyzer and tree-sitter-analyzer may use Node-only dependencies (@swc/core)
+let _detectWithAST: typeof import('./ast-analyzer').detectWithAST | null = null
+let _detectWithTreeSitter: typeof import('./tree-sitter-analyzer').detectWithTreeSitter | null = null
+function getASTDetectors() {
+  if (!_detectWithAST) {
+    try {
+      const astMod = require('./ast-analyzer')
+      _detectWithAST = astMod.detectWithAST
+      const tsMod = require('./tree-sitter-analyzer')
+      _detectWithTreeSitter = tsMod.detectWithTreeSitter
+    } catch { /* not available in browser */ }
+  }
+  return { detectWithAST: _detectWithAST, detectWithTreeSitter: _detectWithTreeSitter }
+}
 
 // ─── Debug Logging ───────────────────────────────────────────────
 
@@ -164,13 +177,14 @@ export function scanDiff(rawDiff: string, prContext?: { title?: string; author?:
   // D1/D2/D5 regex already catch most patterns D7a/D7b look for.
   const _skipAstEnv = typeof process !== 'undefined' && process.env.MANTIZ_SKIP_AST
   const SKIP_AST = _skipAstEnv === 'true' || (_skipAstEnv !== 'false' && functionalFiles.length > 5)
-  const d7a = SKIP_AST ? [] : detectWithAST(functionalFiles)
+  let d7a: Finding[] = []
+  let d7b: Finding[] = []
+  if (!SKIP_AST) {
+    const { detectWithAST: dAST, detectWithTreeSitter: dTS } = getASTDetectors()
+    if (dAST) d7a = dAST(functionalFiles)
+    if (dTS) d7b = dTS(functionalFiles)
+  }
   debug(`  Detector 7a [AST Analysis - JS/TS]: ${d7a.length} finding${d7a.length !== 1 ? 's' : ''}${SKIP_AST ? ' (SKIPPED)' : ''}`)
-
-  // ─── Layer 7b: Multi-Language AST Analysis (Tree-sitter) ────────
-  // Uses Tree-sitter WASM parser for Python (CDN loaded)
-  // Falls back to heuristic for Go, Java, Ruby, Rust, PHP
-  const d7b = SKIP_AST ? [] : detectWithTreeSitter(functionalFiles)
   debug(`  Detector 7b [Tree-sitter ML]: ${d7b.length} finding${d7b.length !== 1 ? 's' : ''}${SKIP_AST ? ' (SKIPPED)' : ''}`)
 
   // ─── Layer 10: Mutation Susceptibility ───────────────────────────
@@ -360,6 +374,7 @@ export async function scanDiffAsync(
   // Falls back to heuristic if WASM is unavailable.
   if (baseResult.files.length > 0) {
     try {
+      const { detectWithTreeSitterAsync } = await import('./tree-sitter-analyzer')
       const d7bAsync = await detectWithTreeSitterAsync(baseResult.files)
       if (d7bAsync.length > 0) {
         debug(`  Detector 7b [Tree-sitter ASYNC]: ${d7bAsync.length} finding${d7bAsync.length !== 1 ? 's' : ''}`)
@@ -379,6 +394,7 @@ export async function scanDiffAsync(
     debug(`  Detector 9 [Historical Behavioral]: analyzing ${prContext.author}...`)
 
     try {
+      const { analyzeHistoricalBehavior } = await import('./historical-scoring')
       const historical = await analyzeHistoricalBehavior({
         author: prContext.author,
         title: prContext.title,

@@ -74,7 +74,7 @@ interface ComparisonResult {
 
 const EVAL_DIR = path.resolve(import.meta.dirname, '../../eval/ground-truth')
 const DEFAULT_BASELINE = path.join(EVAL_DIR, 'reports', 'calibration-v1.json')
-const DEFAULT_LABELED = path.join(EVAL_DIR, 'labeled_v6_labeled.jsonl')
+const DEFAULT_LABELED = path.join(EVAL_DIR, 'labeled_v10_manual_only.jsonl')
 const DEFAULT_THRESHOLD = 5  // absolute percentage points
 // Derived from baseline data — add new detectors there, not here.
 let ALL_DETECTORS: string[] = []

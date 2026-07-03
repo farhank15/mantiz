@@ -345,8 +345,10 @@ function analyzeHunk(hunkContent: string): ASTFinding[] {
   // Limit total code to 5000 chars
   const code = combinedCode.length > 5000 ? combinedCode.slice(0, 5000) : combinedCode
 
+  const swcInstance = getSwc()
+  if (!swcInstance) return findings
   try {
-    const result = swc.parseSync(code, {
+    const result = swcInstance.parseSync(code, {
       syntax: 'typescript',
       tsx: true,
       decorators: true,
@@ -357,7 +359,7 @@ function analyzeHunk(hunkContent: string): ASTFinding[] {
   } catch {
     // Fallback: try without TS syntax
     try {
-      const result = swc.parseSync(code, {
+      const result = swcInstance.parseSync(code, {
         syntax: 'ecmascript',
         jsx: true,
       } as swc.ParseOptions)
@@ -417,9 +419,11 @@ function createSerializer() {
 
 function codeToNIT(codeBlock: string): string {
   if (!codeBlock || codeBlock.trim().length < 10) return ''
+  const swcInstance = getSwc()
+  if (!swcInstance) return codeBlock.slice(0, 500)
   try {
     const { serializeNode, formatNIT } = createSerializer()
-    const result = swc.parseSync(codeBlock, { syntax: 'typescript', tsx: true } as swc.ParseOptions)
+    const result = swcInstance.parseSync(codeBlock, { syntax: 'typescript', tsx: true } as swc.ParseOptions)
     const serializedRoot = serializeNode((result as unknown) as Record<string, unknown>)
     return formatNIT(serializedRoot)
   } catch { return '' }

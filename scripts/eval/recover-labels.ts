@@ -104,7 +104,6 @@ async function main() {
   }
 
   const v5Ids = new Set(v5Map.keys())
-  const v6Ids = new Set(v6.map(e => e.id))
   const overlap = v6.filter(e => v5Ids.has(e.id))
   const newEntries = v6.filter(e => !v5Ids.has(e.id))
 
