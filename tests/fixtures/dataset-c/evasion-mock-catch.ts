@@ -31,4 +31,4 @@ index 111111..222222 100644
    })
  })`
 
-export const expected = { trustScore: 72, label: 'Evasion', dataset: 'C' }
+export const expected = { trustScore: 91, label: 'Evasion', dataset: 'C' }

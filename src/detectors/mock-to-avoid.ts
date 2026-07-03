@@ -1,20 +1,21 @@
 import type { Finding, ParsedDiff } from './types'
+import { detectLanguage, isTestFile, LANGUAGE_CONFIG } from './language-registry'
 
 /**
- * Pattern for mock-related statements.
+ * Scan hunk content for new mock introductions and calculate ratio
+ * using language-specific patterns from the Language Registry.
  */
-const MOCK_PATTERN = /(?:jest|vi)\.\s*mock\s*\(/
-const TEST_PATTERN = /\b(it|test|describe|expect|assert)\s*\(/
-
-/**
- * Scan hunk content for new mock introductions and calculate ratio.
- */
-function scanForMocks(hunkContent: string, baseLine: number, filePath: string): Finding[] {
+function scanForMocks(hunkContent: string, baseLine: number, filePath: string, lang: string | null): Finding[] {
   const findings: Finding[] = []
   const lines = hunkContent.split('\n')
 
+  const rules = lang && LANGUAGE_CONFIG[lang]
+    ? LANGUAGE_CONFIG[lang].detectionRules
+    : LANGUAGE_CONFIG.javascript.detectionRules
+
+  const mockPatterns = rules.mockToAvoid.mockPatterns
+
   let mockCount = 0
-  let testAssertionCount = 0
   const mockLines: { line: string; index: number }[] = []
 
   for (let i = 0; i < lines.length; i++) {
@@ -23,8 +24,9 @@ function scanForMocks(hunkContent: string, baseLine: number, filePath: string): 
     // Only check added lines (+ prefix)
     if (!line.startsWith('+')) continue
 
-    if (MOCK_PATTERN.test(line)) {
-      // Found a new mock statement
+    // Check against all language-specific mock patterns
+    const matchedPattern = mockPatterns.find(p => p.test(line))
+    if (matchedPattern) {
       mockCount++
       mockLines.push({ line: line.slice(1).trim(), index: baseLine + i })
 
@@ -39,18 +41,22 @@ function scanForMocks(hunkContent: string, baseLine: number, filePath: string): 
         lineEnd: baseLine + i,
         confidence: isEntireModule ? 'high' : 'medium',
         explanation: isEntireModule
-          ? `Entire module mocked with jest/vi.mock() — may bypass real implementation.`
+          ? `Entire module mocked — may bypass real implementation.`
           : `Partial mock introduced — check if real path is also tested.`,
         evidenceExcerpt: mockContent,
       })
     }
+  }
 
-    if (TEST_PATTERN.test(line)) {
+  // Check for excessive mocking: count test/assert keywords in the hunk
+  const assertionPattern = rules.assertionTampering.assertionPattern
+  let testAssertionCount = 0
+  for (const line of lines) {
+    if (line.startsWith('+') && assertionPattern.test(line)) {
       testAssertionCount++
     }
   }
 
-  // Excessive mocking: if there are more mocks than test assertions in this hunk
   if (mockCount > 0 && testAssertionCount > 0 && mockCount > testAssertionCount) {
     findings.push({
       patternType: 'mock_to_avoid_failure',
@@ -68,10 +74,10 @@ function scanForMocks(hunkContent: string, baseLine: number, filePath: string): 
 
 /**
  * Run the mock-to-avoid-failure detector across all parsed files/hunks.
+ * Multi-language support via Language Registry.
  */
 export function detectMockToAvoid(files: ParsedDiff[]): Finding[] {
   const findings: Finding[] = []
-  const TEST_FILE_PATTERN = /(\.(test|spec)\.(ts|tsx|js|jsx)$)|(\/(?:__tests__|tests?|fixtures)\/)/i
 
   for (const file of files) {
     const filePath = file.newFile || file.oldFile || 'unknown'
@@ -79,11 +85,14 @@ export function detectMockToAvoid(files: ParsedDiff[]): Finding[] {
     // Ignore deleted files
     if (file.newFile === '/dev/null') continue
 
-    // Only scan test files
-    if (!TEST_FILE_PATTERN.test(filePath)) continue
+    // Only scan test files (language-agnostic via registry)
+    if (!isTestFile(filePath)) continue
+
+    // Detect language for pattern matching
+    const lang = detectLanguage(filePath)
 
     for (const hunk of file.hunks) {
-      const hunkFindings = scanForMocks(hunk.content, hunk.newStart, filePath)
+      const hunkFindings = scanForMocks(hunk.content, hunk.newStart, filePath, lang)
       findings.push(...hunkFindings)
     }
   }

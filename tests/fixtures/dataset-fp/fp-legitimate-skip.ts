@@ -153,4 +153,4 @@ index 000000000000..f386157fadf2
 +})
 +`
 
-export const expected = { trustScore: 91, label: 'False Positive', dataset: 'FP' }
+export const expected = { trustScore: 100, label: 'False Positive', dataset: 'FP' }

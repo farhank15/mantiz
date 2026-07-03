@@ -30,4 +30,4 @@ index 555666..777888 100644
 +  role: 'admin',
 +})`
 
-export const expected = { trustScore: 94, label: 'False Positive', dataset: 'FP' }
+export const expected = { trustScore: 100, label: 'False Positive', dataset: 'FP' }

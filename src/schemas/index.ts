@@ -46,6 +46,7 @@ export const findings = pgTable('findings', {
       'ai_assisted_detection',
       'historical_behavioral',
       'mutation_susceptibility',
+      'agent_instruction_scan',
     ],
   }).notNull(),
   filePath: text('file_path').notNull(),

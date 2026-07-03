@@ -33,7 +33,7 @@ const MIN_ASSERTIONS_PER_FUNCTION = 2
 const MIN_ASSERTION_DENSITY = 2 // 2 assertions per 100 lines (was 3 — lowered to reduce FP on small files)
 
 /** Minimum lines for meaningful mutation analysis */
-const MIN_LINES_FOR_MUTATION_ANALYSIS = 35 // Skip files under 35 lines (was 25 — raised again to reduce FP on small PR diffs)
+const MIN_LINES_FOR_MUTATION_ANALYSIS = 50 // Skip files under 50 lines (was 35 — raised to reduce FP on small test stubs)
 
 /** Small file threshold — files under this get more lenient density check */
 const SMALL_FILE_LINES = 80 // Files under 80 lines use relaxed threshold (was 50)
@@ -528,12 +528,12 @@ export function detectMutationSusceptibility(files: ParsedDiff[]): Finding[] {
       // Determine severity based on vulnerability score
       let confidence: 'high' | 'medium' | 'low'
 
-      if (analysis.vulnerabilityScore >= 60) {
+      if (analysis.vulnerabilityScore >= 65) {
         confidence = 'high'
-      } else if (analysis.vulnerabilityScore >= 35) {
+      } else if (analysis.vulnerabilityScore >= 45) {
         confidence = 'medium'
       } else {
-        continue // Skip <35 — eliminates ~25 of 28 FP while keeping threshold visible
+        continue // Skip <45 — raised from 35 to reduce FP (28 FP @ 30% precision)
       }
 
       const evidenceLines = [

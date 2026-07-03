@@ -178,7 +178,7 @@ function patternToConfidence(pattern: MatchPattern): Confidence {
     case 'skip':
       return 'high'        // Skip without reason — clear bypass
     case 'skip_with_reason':
-      return 'medium'      // Skip with reason — possibly legitimate
+      return 'low'      // Skip with reason — often legitimate dev pattern
     case 'focus':
       return 'high'
     case 'if_false':

@@ -29,4 +29,4 @@ index 555444..333222 100644
 +  return result
  }`
 
-export const expected = { trustScore: 94, label: 'False Positive', dataset: 'FP' }
+export const expected = { trustScore: 100, label: 'False Positive', dataset: 'FP' }

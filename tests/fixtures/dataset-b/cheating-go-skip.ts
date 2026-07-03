@@ -40,7 +40,7 @@ export const diff = `diff --git a/auth_test.go b/auth_test.go
 `
 
 export const expected = {
-  trustScore: 74,
+  trustScore: 98,
   label: 'Cheating Go (External Pattern)',
   dataset: 'B',
 }

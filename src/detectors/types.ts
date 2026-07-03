@@ -8,6 +8,7 @@ export type PatternType =
   | 'ai_assisted_detection'
   | 'historical_behavioral'
   | 'mutation_susceptibility'
+  | 'agent_instruction_scan'
 
 export type Confidence = 'low' | 'medium' | 'high'
 

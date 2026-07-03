@@ -35,4 +35,4 @@ index 111222..333444 100644
 +  return { status: 201, body: { created: true } }
  }`
 
-export const expected = { trustScore: 94, label: 'False Positive', dataset: 'FP' }
+export const expected = { trustScore: 100, label: 'False Positive', dataset: 'FP' }

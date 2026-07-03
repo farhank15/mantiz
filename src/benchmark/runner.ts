@@ -25,6 +25,9 @@ import * as cheatingGoSkip from '../../tests/fixtures/dataset-b/cheating-go-skip
 // External Benchmarks (from documented cheating patterns - DebugML/UC Berkeley)
 import * as cheatingPythonExternal from '../../tests/fixtures/dataset-b/cheating-python-external'
 import * as cheatingGoExternal from '../../tests/fixtures/dataset-b/cheating-go-external'
+import * as cheatingPythonComprehensive from '../../tests/fixtures/dataset-b/cheating-python-comprehensive'
+import * as cheatingGoComprehensive from '../../tests/fixtures/dataset-b/cheating-go-comprehensive'
+import * as cheatingJava from '../../tests/fixtures/dataset-b/cheating-java'
 
 // Dataset C: Smart Evasion
 import * as evasionAssertionTamper from '../../tests/fixtures/dataset-c/evasion-assertion-tamper'
@@ -115,6 +118,9 @@ export const FIXTURE_REGISTRY: Array<{ name: string; module: FixtureModule }> = 
   // External Benchmarks (from documented cheating patterns)
   { name: 'cheating-python-external', module: cheatingPythonExternal as unknown as FixtureModule },
   { name: 'cheating-go-external', module: cheatingGoExternal as unknown as FixtureModule },
+  { name: 'cheating-python-comprehensive', module: cheatingPythonComprehensive as unknown as FixtureModule },
+  { name: 'cheating-go-comprehensive', module: cheatingGoComprehensive as unknown as FixtureModule },
+  { name: 'cheating-java', module: cheatingJava as unknown as FixtureModule },
   // Dataset C: Smart Evasion
   { name: 'evasion-assertion-tamper', module: evasionAssertionTamper as unknown as FixtureModule },
   { name: 'evasion-mock-catch', module: evasionMockCatch as unknown as FixtureModule },

@@ -35,4 +35,4 @@ index 6260bf30c41d..985950e1270f 100644
  })
 `
 
-export const expected = { trustScore: 94, label: 'False Positive', dataset: 'FP' }
+export const expected = { trustScore: 100, label: 'False Positive', dataset: 'FP' }

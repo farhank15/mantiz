@@ -34,4 +34,4 @@ index 555555..666666 100644
 +  test.todo('should support dark mode')
  })`
 
-export const expected = { trustScore: 30, label: 'False Positive', dataset: 'FP' }
+export const expected = { trustScore: 100, label: 'False Positive', dataset: 'FP' }

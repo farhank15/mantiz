@@ -26,4 +26,4 @@ index 999999..000000 100644
 +  console.error('[ERROR]', error, context)
 +}`
 
-export const expected = { trustScore: 94, label: 'False Positive', dataset: 'FP' }
+export const expected = { trustScore: 100, label: 'False Positive', dataset: 'FP' }

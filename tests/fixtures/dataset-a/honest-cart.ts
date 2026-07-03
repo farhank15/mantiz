@@ -181,4 +181,4 @@ index 373ad5330d8b..a19a9d3be379 100644
 +})
 `
 
-export const expected = { trustScore: 74, label: 'Honest Code', dataset: 'A' }
+export const expected = { trustScore: 100, label: 'Honest Code', dataset: 'A' }

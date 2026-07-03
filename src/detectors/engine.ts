@@ -9,6 +9,7 @@ import { detectHallucinatedAssertions } from './hallucination'
 import { detectWithAI } from './ai-assisted'
 import { evaluateFindings, isAIJudgeEnabled } from './ai-judge'
 import { detectMutationSusceptibility } from './mutation-susceptibility'
+import { detectAgentInstructions } from './agent-instruction'
 import { ensureCredits, deductCredits, CREDIT_COSTS } from '../server/credits'
 import { createIsomorphicFn } from '@tanstack/react-start'
 
@@ -78,15 +79,16 @@ const IMPORTANCE_MULTIPLIER: Record<string, number> = {
 // confidence_factor = min(1, min(N_DECEPTIVE, N_LEGIT) / 50) = 0.4 (N=20 < 50 — PRELIMINARY)
 // Formula: weight = max(2, round(20 × precision × confidence_factor))
 const DETECTOR_PENALTIES: Record<string, { high: number; medium: number; low: number }> = {
-  'disabled_assertion':      { high: 4,  medium: 2, low: 1 },  // Precision 45.5% — moderate-low
+  'disabled_assertion':      { high: 8,  medium: 4, low: 2 },  // Precision 45.5% — moderate recall (25%), raised to catch cheaters
   'assertion_tampering':     { high: 8,  medium: 4, low: 1 },  // Precision 100% — reliable
   'mock_to_avoid_failure':   { high: 8,  medium: 4, low: 1 },  // Precision 100% — reliable
-  'claim_diff_mismatch':     { high: 2,  medium: 1, low: 0 },  // Precision 0% — floor=2 defense-in-depth
+  'claim_diff_mismatch':     { high: 0,  medium: 0, low: 0 },  // Precision 0% — disabled, data collection only
   'silent_catch_and_pass':   { high: 3,  medium: 1, low: 0 },  // Precision 33.3% — low
   'hallucinated_assertion':  { high: 6,  medium: 3, low: 1 },  // Precision 77.8% — best detector
   'ai_assisted_detection':   { high: 10, medium: 5, low: 2 },  // fallback — no calibration data
   'historical_behavioral':   { high: 5,  medium: 3, low: 1 },  // fallback — no calibration data
   'mutation_susceptibility': { high: 2,  medium: 1, low: 0 },  // Precision 30.0% — high FP
+  'agent_instruction_scan':    { high: 10, medium: 5, low: 2 },  // New — severity-based, high impact
 }
 
 /**
@@ -191,8 +193,12 @@ export function scanDiff(rawDiff: string, prContext?: { title?: string; author?:
   const d10 = detectMutationSusceptibility(functionalFiles)
   debug(`  Detector 10 [Mutation Susceptibility]: ${d10.length} finding${d10.length !== 1 ? 's' : ''}`)
 
+  // ─── Layer 11: Agent Instruction Scanner ─────────────────────────
+  const d11 = detectAgentInstructions(files)
+  debug(`  Detector 11 [Agent Instruction Scan]: ${d11.length} finding${d11.length !== 1 ? 's' : ''}`)
+
   const findings: Finding[] = [
-    ...d1, ...d2, ...d3, ...d4, ...d5, ...d6, ...d7a, ...d7b, ...d10,
+    ...d1, ...d2, ...d3, ...d4, ...d5, ...d6, ...d7a, ...d7b, ...d10, ...d11,
   ]
 
   // ─── Enrich with file importance for weighted scoring ────────
@@ -519,6 +525,12 @@ function generateFixInstructions(findings: Finding[]): FixInstruction[] {
         instructions.push({
           patternType: 'hallucinated_assertion',
           instruction: `Replace the unknown assertion matcher with a valid Jest/Vitest matcher. Use the whitelist of valid matchers. If this is a custom matcher, ensure it's properly defined with expect.extend().`,
+        })
+        break
+      case 'agent_instruction_scan':
+        instructions.push({
+          patternType: 'agent_instruction_scan',
+          instruction: `Remove any instructions that encourage deceptive test practices. Agent configuration files should promote ethical testing, not evasion or concealment. Review the flagged patterns and align with honest testing principles.`,
         })
         break
       case 'mutation_susceptibility':

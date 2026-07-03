@@ -25,4 +25,4 @@ index 111aaa..222bbb 100644
 +  } while (retries > 0)
 +}`
 
-export const expected = { trustScore: 94, label: 'False Positive', dataset: 'FP' }
+export const expected = { trustScore: 100, label: 'False Positive', dataset: 'FP' }

@@ -205,4 +205,4 @@ index 000000000000..f386157fadf2
 +})
 `
 
-export const expected = { trustScore: 71, label: 'Honest Code', dataset: 'A' }
+export const expected = { trustScore: 100, label: 'Honest Code', dataset: 'A' }

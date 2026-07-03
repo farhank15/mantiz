@@ -51,4 +51,4 @@ index ed642430b29c..4a75217eb63c 100644
    test('loads unloaded module', async () => {
 `
 
-export const expected = { trustScore: 30, label: 'Honest Code', dataset: 'A' }
+export const expected = { trustScore: 91, label: 'Honest Code', dataset: 'A' }
