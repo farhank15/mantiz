@@ -1,0 +1,135 @@
+{
+  "generated_at": "2026-07-03T02:07:19.124Z",
+  "seed": 42,
+  "total_entries": 134,
+  "sample_size": 14,
+  "note": "Buka setiap PR di GitHub, baca diff-nya, kasih label DECEPTIVE/LEGIT/AMBIGUOUS. Simpan hasil di file JSON baru.",
+  "entries": [
+    {
+      "id": "gt_0036",
+      "pr_url": "https://github.com/raccoongang/frontend-app-learning/pull/48",
+      "repo": "raccoongang/frontend-app-learning",
+      "pr_title": "feat: [AsPu-569, AsPu-602] tab navigation and keyboard logic",
+      "pr_author": "vladislavkeblysh",
+      "original_label": "CONFIRMED_DECEPTIVE",
+      "label": null
+    },
+    {
+      "id": "gt_0116",
+      "pr_url": "https://github.com/pentaho/pentaho-scheduler-plugin/pull/367",
+      "repo": "pentaho/pentaho-scheduler-plugin",
+      "pr_title": "[BISERVER-15569] Use the correct field from java.util.Date to get the",
+      "pr_author": "peterrinehart",
+      "original_label": "CONFIRMED_DECEPTIVE",
+      "label": null
+    },
+    {
+      "id": "gt_0024",
+      "pr_url": "https://github.com/ryanbuckleyca/wev/pull/145",
+      "repo": "ryanbuckleyca/wev",
+      "pr_title": "New scraper workinculture",
+      "pr_author": "ryanbuckleyca",
+      "original_label": "CONFIRMED_LEGIT",
+      "label": null
+    },
+    {
+      "id": "gt_0007",
+      "pr_url": "https://github.com/vanyastaff/flui/pull/81",
+      "repo": "vanyastaff/flui",
+      "pr_title": "refactor(rendering): flui-rendering Phase 1 zombie cleanup (U1-U5 + clippy baseline)",
+      "pr_author": "vanyastaff",
+      "original_label": "CONFIRMED_LEGIT",
+      "label": null
+    },
+    {
+      "id": "gt_0110",
+      "pr_url": "https://github.com/SharathSPhD/neo-fm/pull/4",
+      "repo": "SharathSPhD/neo-fm",
+      "pr_title": "v1.4 live-bug closeout: composer delegation, cover-art bucket, fork dropdowns, audio copy",
+      "pr_author": "SharathSPhD",
+      "original_label": "CONFIRMED_DECEPTIVE",
+      "label": null
+    },
+    {
+      "id": "gt_0153",
+      "pr_url": "https://github.com/RumbleDB/rumble/pull/1594",
+      "repo": "RumbleDB/rumble",
+      "pr_title": "Implement fn:namespace-uri",
+      "pr_author": "ghislainfourny",
+      "original_label": "CONFIRMED_LEGIT",
+      "label": null
+    },
+    {
+      "id": "gt_0113",
+      "pr_url": "https://github.com/openshift/route-monitor-operator/pull/509",
+      "repo": "openshift/route-monitor-operator",
+      "pr_title": "Gate probe deployment on HCP Available condition",
+      "pr_author": "dustman9000",
+      "original_label": "CONFIRMED_LEGIT",
+      "label": null
+    },
+    {
+      "id": "gt_0029",
+      "pr_url": "https://github.com/digirenraz/pogosundet/pull/194",
+      "repo": "digirenraz/pogosundet",
+      "pr_title": "CI: enable auth-gated e2e with preview Supabase (report #9)",
+      "pr_author": "digirenraz",
+      "original_label": "CONFIRMED_DECEPTIVE",
+      "label": null
+    },
+    {
+      "id": "gt_0104",
+      "pr_url": "https://github.com/Calel33/real-estate-prd/pull/28",
+      "repo": "Calel33/real-estate-prd",
+      "pr_title": "Fix #27: Replace exposed error.message in properties error boundary",
+      "pr_author": "Calel33",
+      "original_label": "CONFIRMED_DECEPTIVE",
+      "label": null
+    },
+    {
+      "id": "gt_0132",
+      "pr_url": "https://github.com/florianwolz/motion/pull/14",
+      "repo": "florianwolz/motion",
+      "pr_title": "feat(render): wire DrawPass infrastructure into render tree + 92 new unit tests",
+      "pr_author": "Copilot",
+      "original_label": "CONFIRMED_LEGIT",
+      "label": null
+    },
+    {
+      "id": "gt_0133",
+      "pr_url": "https://github.com/puntopost/web/pull/44",
+      "repo": "puntopost/web",
+      "pr_title": "Move Integraciones from global nav into /envia/tiendas/ body",
+      "pr_author": "Copilot",
+      "original_label": "CONFIRMED_LEGIT",
+      "label": null
+    },
+    {
+      "id": "gt_0155",
+      "pr_url": "https://github.com/RumbleDB/rumble/pull/1592",
+      "repo": "RumbleDB/rumble",
+      "pr_title": "Master henrik",
+      "pr_author": "ghislainfourny",
+      "original_label": "CONFIRMED_LEGIT",
+      "label": null
+    },
+    {
+      "id": "gt_0167",
+      "pr_url": "https://github.com/Siddhant23/NY-Times-Popular-Articles/pull/343",
+      "repo": "Siddhant23/NY-Times-Popular-Articles",
+      "pr_title": "Bot: Bump hilt from 2.59.2 to 2.60",
+      "pr_author": "dependabot[bot]",
+      "original_label": "CONFIRMED_LEGIT",
+      "label": null
+    },
+    {
+      "id": "gt_0026",
+      "pr_url": "https://github.com/team-telnyx/webrtc/pull/700",
+      "repo": "team-telnyx/webrtc",
+      "pr_title": "feat(webrtc): harden RECONNECTION_EXHAUSTED + WEBSOCKET_CONNECTION_FAILED local call teardown (VSDK-318)",
+      "pr_author": "webrtc-afk-agent[bot]",
+      "original_label": "CONFIRMED_DECEPTIVE",
+      "label": null
+    }
+  ]
+}

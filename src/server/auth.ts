@@ -190,8 +190,10 @@ export const handleCallback = createServerFn({ method: "POST" })
     let dbUser = await db.query.users.findFirst({
       where: eq(users.githubId, String(user.id)),
     });
+    let isNewUser = false
 
     if (!dbUser) {
+      isNewUser = true
       const [inserted] = await db
         .insert(users)
         .values({
@@ -209,6 +211,25 @@ export const handleCallback = createServerFn({ method: "POST" })
           avatarUrl: user.avatar_url,
         })
         .where(eq(users.id, dbUser.id));
+    }
+
+    // ─── Seed Credits for new users ──────────────────────────────────
+    if (isNewUser) {
+      await db.insert(require('../schemas/index').userCredits).values({
+        userId: dbUser.id,
+        balance: 30,
+        lifetimeUsed: 0,
+        plan: 'free',
+        periodStart: new Date(),
+        periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      }).catch(() => {})
+
+      await db.insert(require('../schemas/index').creditTransactions).values({
+        userId: dbUser.id,
+        amount: 30,
+        reason: 'signup_bonus',
+        metadata: JSON.stringify({ note: 'Welcome bonus for new user' }),
+      }).catch(() => {})
     }
 
     // Create session data
@@ -415,6 +436,7 @@ export const scanPR = createServerFn({ method: "POST" })
         lowCount: result.summary.lowCount,
         filesScanned: result.summary.filesScanned,
         findings: result.findings.slice(0, 20), // Limit findings
+        scoringBreakdown: result.scoringBreakdown,
       },
       totalDiffLines: diffText.split('\n').length,
     };

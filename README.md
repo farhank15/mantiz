@@ -82,7 +82,19 @@ Same diff (package.json + lockfile changes only):
 
 ### 🎯 Trust Score
 
-Weighted scoring: **high = 30pts**, **medium = 15pts**, **low = 5pts** deducted per finding. File importance multiplier: `core/test/source = 1.0`, `config = 0.5`, `docs = 0.3`, `artifact = 0.05`. Minimum score is 0 (rounded). Threshold: **default 70**, configurable per-user in Settings.
+Per-detector calibrated scoring — each detector has empirically-determined weights based on precision from 203 unique PRs (20 DECEPTIVE, 183 LEGIT):
+
+| Detector | High | Medium | Low | Precision |
+|:---------|:----:|:------:|:---:|:---------:|
+| D6 HallucinatedAssertion | 6 | 3 | 1 | 77.8% |
+| D2 AssertionTampering | 8 | 4 | 1 | 100% |
+| D3 MockToAvoid | 8 | 4 | 1 | 100% |
+| D1 DisabledAssertion | 4 | 2 | 1 | 45.5% |
+| D5 SilentCatch | 3 | 1 | 0 | 33.3% |
+| D10 MutationSusceptibility | 2 | 1 | 0 | 30.0% |
+| D4 ClaimDiffMismatch | 2 | 1 | 0 | 0% |
+
+File importance multiplier: `core/test/source = 1.0`, `config = 0.5`, `docs = 0.3`, `artifact = 0.05`. Minimum score is 30 when findings exist (prevents false floor). Score = max(30, 100 - min(penalty, 85)). Threshold: **default 70**, configurable per-user in Settings.
 
 ### ⚙️ Per-User Settings
 
@@ -91,7 +103,7 @@ Configure scan behavior from the [Settings](https://mantiz-wine.vercel.app/setti
 | Setting | Default | Description |
 |---------|---------|-------------|
 | **Threshold** | 70 | Trust score threshold (0-100). Scores below this fail the check. |
-| **AI Detection** | Off | Enable LLM-powered semantic analysis (Fireworks/Groq) |
+| **AI Detection** | Off | Enable LLM-powered semantic analysis |
 | **Min Score** | 0 | Hard floor — result never goes below this score |
 | **Webhook URL** | — | Receive scan results as POST requests (HMAC signed, 3x retry) |
 
@@ -147,6 +159,7 @@ Helps track detection accuracy over time.
 
 - **Toggle:** Easily enable/disable via Settings page or `--ai` CLI flag
 - **Smart Analysis:** Detects 5 AI-level patterns: test weakening, assertion removal, semantic bypass, hallucinated APIs, and coverage reduction.
+- **AI Judge** (separate from AI detection): Reviews static findings and filters false positives. Enabled via `AI_JUDGE_ENABLED=true` env var. Uses Groq (`GROQ_API_KEY`) or Fireworks (`FIREWORKS_API_KEY`).
 
 ### 📊 Routes
 
@@ -209,9 +222,15 @@ GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
 # Session secret (required — at least 32 characters)
 SESSION_SECRET=your_random_secret_at_least_32_chars
 
-# AI Detection (optional)
+# AI Detection (optional — D8: find new cheating patterns)
 AI_DETECTION_ENABLED=true
-AI_API_KEY=your_ai_api_key
+GROQ_API_KEY=gsk_your_groq_api_key
+# or FIREWORKS_API_KEY=fw_your_fireworks_key
+
+# AI Judge (optional — reviews static findings, filters false positives)
+AI_JUDGE_ENABLED=true
+
+# (AI Judge shares the same API key as AI Detection above)
 
 # Webhook secret (optional — for HMAC signing webhook payloads)
 WEBHOOK_SECRET=your_random_secret_at_least_32_chars
@@ -339,39 +358,25 @@ npx mantiz scan diff.diff --fix
 | **Silent Catch-and-Pass** | Wraps the empty catch body with `console.error` logging |
 | **Mock-to-Avoid-Failure** | Adds a comment suggesting real integration test |
 
-### 📊 Historical Behavioral Scoring 🆕
-
-Mantiz tracks **author behavior patterns over time** using a dedicated database table. Every PR scan stores behavioral data, and future scans get smarter by detecting:
-
-| Pattern | What It Detects | Score Modifier |
-|---------|----------------|:--------------:|
-| **🔄 Style Change** | PR description style suddenly changes from historical baseline | −10pts |
-| **🌙 Odd Hours** | Commits consistently at 1–5 AM (automation signal) | −5pts |
-| **📈 Score Volatility** | Trust score swings >40pts between consecutive scans | −15pts |
-| **🆕 New Author** | First scan from this author — no behavioral baseline | −5pts |
-| **⚡ Frequency Anomaly** | >10 PRs in 24 hours from same author | −10pts |
-| **❌ Consecutive Failures** | 3+ failed scans in a row — persistent cheating pattern | −5pts each |
-
-Behavioral findings appear with a `📊` badge in the scan output and are saved as `historical_behavioral` pattern type in the database.
-
-> **Database required.** Historical scoring gracefully degrades when no database connection is available (CLI usage, CI without DB).
 
 ---
 
 ## 📊 Benchmark Results
 
-> **⚠️ REALITY CHECK:** Benchmark scores reflect actual detector output, not target scores. A score of 10 does NOT mean "10% accurate" — it means the diff triggered enough detector findings to floor the score. Dataset A (Honest) uses real merged PRs from `vitest-dev/vitest` and scores 10-58 because Mantiz flags legitimate assertion changes as cheating. This is a known FP issue being actively worked on.
+> **⚠️ REALITY CHECK:** Benchmark scores reflect actual detector output, not target scores. A score of 10 does NOT mean "10% accurate" — it means the diff triggered enough detector findings to floor the score. Each detector has calibrated weights based on precision from a deduped validation set (203 unique PRs: 20 DECEPTIVE, 183 LEGIT).
 
 Mantiz includes a built-in benchmark suite with **39 fixtures across 4 datasets**:
 
-| Dataset | Description | Fixtures | Source | Avg Score |
-|:---:|---|:---:|:------:|:---------:|
-| **A** — "The Honest Code" | Proper diff + valid test updates | 4 | 🔴 **Real PRs** (vitest-dev/vitest) | 27 🟡 |
-| **B** — "The Lazy/Cheating AI" | `.skip()`, `if(false)`, commented assertions | 8 | 📜 **Research-based** (DebugML/UC Berkeley) | 27 🟡 |
-| **C** — "The Smart Evasion AI" | Assertion tampering, mock + empty catch | 4 | 📜 **Research-based** (DebugML) | 32 🟡 |
-| **FP** — "False Positive" | Legitimate code patterns | 23 | 🟡 **Mixed** (2 real vitest PRs + 21 documented) | 55 🟡 |
+| Dataset | Description | Fixtures | Source |
+|:---:|---|:---:|:------:|
+| **A** — "The Honest Code" | Proper diff + valid test updates | 4 | 🔴 **Real PRs** (vitest-dev/vitest) |
+| **B** — "The Lazy/Cheating AI" | `.skip()`, `if(false)`, commented assertions | 8 | 📜 **Research-based** (DebugML/UC Berkeley) |
+| **C** — "The Smart Evasion AI" | Assertion tampering, mock + empty catch | 4 | 📜 **Research-based** (DebugML) |
+| **FP** — "False Positive" | Legitimate code patterns | 23 | 🟡 **Mixed** (2 real vitest PRs + 21 documented) |
 
-**How scores work:** `score = max(10, 100 - (high×30 + med×15 + low×5))` — each finding deducts points based on confidence. Every score shown is computed dynamically by `scanDiff()` running all 11 detectors in real time. **No scores are hardcoded or fabricated.**
+**How scores work:** Per-detector calibrated weights (see Trust Score table above). Penalty = sum of weighted findings × file importance multiplier. Score = max(30, 100 - min(penalty, 85)). Every score is computed dynamically by `scanDiff()` running all 11 detectors in real time. **No scores are hardcoded or fabricated.**
+
+> **Validation status:** 97.0% verdict accuracy on deduped dataset (N=20 DECEPTIVE — preliminary, confidence interval ±15-25%).
 
 Visit the [**/benchmark**](https://mantiz-wine.vercel.app/benchmark) dashboard to see live accuracy results with per-fixture breakdowns.
 

@@ -8,7 +8,6 @@ import {
   FileX,
   VolumeX,
   TrendingDown,
-  Trash2,
   SkipForward,
   Search,
   Github,
@@ -37,14 +36,14 @@ export const Route = createFileRoute("/")({ component: App });
 
 const detectionPatterns = [
   {
-    name: "Disabled Assertion",
+    name: "Hallucinated Assertion",
     severity: "Critical",
     color: "severity-critical",
     icon: Ban,
-    codeSample: `- // assert.equal(add(2,3), 5)  // commented out
-+ assert.equal(add(2,3), 5)`,
+    codeSample: `- expect(result).toExist()       // AI-hallucinated matcher
++ expect(result).toBeDefined()  // fixed`,
     longDesc:
-      "Test or assertion commented out, wrapped in if(false), or marked .skip() in the same diff that claims a fix.",
+      "Non-existent Jest/Vitest matchers hallucinated by AI agents (e.g. .toExist(), .toBeString()). Precision: 77.8%.",
   },
   {
     name: "Assertion Tampering",
@@ -54,7 +53,7 @@ const detectionPatterns = [
     codeSample: `- expect(result).toBe(42)       // original
 + expect(result).toBe(-1)       // tampered`,
     longDesc:
-      "Expected value in a test changed to match broken output, with no corresponding spec change.",
+      "Expected value in a test changed to match broken output, with no corresponding spec change. Precision: 100%.",
   },
   {
     name: "Mock-to-Avoid-Failure",
@@ -65,7 +64,42 @@ const detectionPatterns = [
 +   fetchData: () => mockData
 + }))`,
     longDesc:
-      "New mock introduced around a previously-failing real call path, with no coverage of the real path.",
+      "New mock introduced around a previously-failing real call path, with no coverage of the real path. Precision: 100%.",
+  },
+  {
+    name: "Disabled Assertion",
+    severity: "Critical",
+    color: "severity-critical",
+    icon: SkipForward,
+    codeSample: `- // assert.equal(add(2,3), 5)  // commented out
++ assert.equal(add(2,3), 5)`,
+    longDesc:
+      "Test or assertion commented out, wrapped in if(false), or marked .skip() in the same diff that claims a fix. Precision: 45.5%.",
+  },
+  {
+    name: "Silent Catch-and-Pass",
+    severity: "High",
+    color: "severity-high",
+    icon: VolumeX,
+    codeSample: `+ try {
++   riskyOperation()
++ } catch (e) {  // empty — swallows error
++   // TODO
++ }`,
+    longDesc:
+      "Empty catch block newly added around code that previously threw and failed a test. Precision: 33.3%.",
+  },
+  {
+    name: "Mutation Susceptibility",
+    severity: "Medium",
+    color: "severity-medium",
+    icon: TrendingDown,
+    codeSample: `- expect(result).toBe(true)     // single assertion
++ expect(result).toBe(true)
++ expect(result.id).toBeDefined()
++ expect(result.name).toBeString()`,
+    longDesc:
+      "Detects fragile tests with low assertion density that can be easily mutated to pass with broken code. Precision: 30.0%.",
   },
   {
     name: "Claim-Diff Mismatch",
@@ -80,48 +114,52 @@ const detectionPatterns = [
       "Commit message claims to fix behavior X, but the diff contains zero changes to files related to X.",
   },
   {
-    name: "Silent Catch-and-Pass",
+    name: "Tree-sitter AST",
     severity: "High",
     color: "severity-high",
-    icon: VolumeX,
-    codeSample: `+ try {
-+   riskyOperation()
-+ } catch (e) {  // empty — swallows error
-+   // TODO
-+ }`,
+    icon: Terminal,
+    codeSample: `+ def test_add():          // Python
++   assert add(1,2) == 3
+- def test_add_skip():    // skipped
+-   pass`,
     longDesc:
-      "Empty catch block newly added around code that previously threw and failed a test.",
+      "Multi-language AST analysis via WASM parsers — Python, Go, Java, Ruby, Rust, and PHP detection.",
   },
   {
-    name: "Coverage Cliff Dropped",
+    name: "Historical Behavioral",
     severity: "Info",
     color: "severity-info",
-    icon: TrendingDown,
-    codeSample: `- lines: 142/200  (71%)
-+ lines: 98/200   (49%)  // -22%!`,
+    icon: Search,
+    codeSample: `> Author: "bot-user-1337"
+> PR #1: Score 100  (3 AM)
+> PR #2: Score 95   (4 AM)
+> PR #3: Score 100  (3:30 AM)`,
     longDesc:
-      "Coverage percentage drops significantly in the diff, suggesting tests were removed or bypassed.",
+      "Tracks author behavior patterns — style changes, odd-hour commits, score volatility, and frequency anomalies.",
   },
   {
-    name: "Empty Try-Catch",
+    name: "AI-Assisted Detection",
     severity: "High",
     color: "severity-high",
-    icon: Trash2,
-    codeSample: `+ try {
-+   callExternalAPI()
-+ } catch {}  // completely empty`,
+    icon: Brain,
+    codeSample: `> LLM analysis: pattern detected
+> Test weakening: ✓
+> Assertion removal: ✓
+> Coverage reduction: ✓`,
     longDesc:
-      "A try-catch block with an empty catch clause that silently swallows all exceptions.",
+      "LLM-powered semantic analysis detects test weakening, assertion removal, and coverage reduction. Requires GROQ_API_KEY.",
   },
   {
-    name: "Skipped Test Suite",
-    severity: "Critical",
-    color: "severity-critical",
-    icon: SkipForward,
-    codeSample: `- describe('Payment flow', () => {
-+ describe.skip('Payment flow', () => {`,
+    name: "AI Judge",
+    severity: "Info",
+    color: "severity-info",
+    icon: Brain,
+    codeSample: `> D6 flagged "toBeString"
+> AI Judge: false positive
+> → Valid custom matcher
+> Finding downgraded`,
     longDesc:
-      "Entire test suite marked with .skip() or removed from the test runner config.",
+      "Reviews static findings and filters false positives using LLM reasoning. Increases precision by removing invalid detections.",
   },
 ];
 
@@ -281,9 +319,10 @@ function App() {
         <div className="mx-auto">
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[
-              { label: "Diffs Scanned", value: 142, suffix: "" },
-              { label: "Cheats Flagged", value: 37, suffix: "" },                  { label: "Detection Patterns", value: 11, suffix: "" },
-              { label: "False Positive Rate", value: 3, suffix: "%" },
+              { label: "Diffs Scanned", value: 795, suffix: "" },
+              { label: "Benchmarked PRs", value: 203, suffix: "" },
+              { label: "Detection Patterns", value: 11, suffix: "" },
+              { label: "Verdict Accuracy", value: 97, suffix: "%" },
             ].map((stat) => (
               <div
                 key={stat.label}
@@ -360,8 +399,8 @@ function App() {
               From Diff to <AnimatedGradientText>Verdict</AnimatedGradientText>
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-ink-muted">
-              Paste any diff. Mantiz scans every line through 8 detection
-              patterns.
+              Paste any diff. Mantiz scans every line through 11 detection
+              engines.
               <br />
               <span className="text-ink-subdued text-sm">
                 No signup needed. No GitHub required.
@@ -476,12 +515,11 @@ function App() {
                     { label: "Mock Avoid Failure", color: "severity-high" },
                     { label: "Claim-Diff Mismatch", color: "severity-medium" },
                     { label: "Silent Catch-Pass", color: "severity-high" },
-                    { label: "Coverage Cliff", color: "severity-info" },
-                    { label: "Empty Try-Catch", color: "severity-high" },
-                    { label: "Skipped Suite", color: "severity-critical" },
                     { label: "Tree-sitter AST", color: "severity-high" },
                     { label: "Hist. Behavioral", color: "severity-info" },
                     { label: "Mutation Suscpt.", color: "severity-medium" },
+                    { label: "AI-Assisted", color: "severity-high" },
+                    { label: "AI Judge", color: "severity-info" },
                   ].map((d) => (
                     <span
                       key={d.label}
@@ -632,7 +670,7 @@ function App() {
             className="mb-10 text-center"
           >
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-severity-critical/20 bg-severity-critical/8 px-4 py-1.5 text-xs font-semibold text-severity-critical">
-              <Swords className="h-3.5 w-3.5" />8 Detection Patterns
+              <Swords className="h-3.5 w-3.5" />11 Detection Engines
             </div>
             <h2 className="text-3xl font-bold text-ink sm:text-4xl">
               What <AnimatedGradientText>Mantiz Detects</AnimatedGradientText>
@@ -871,8 +909,8 @@ function App() {
                   Static Analysis
                 </h3>
                 <p className="text-sm text-ink-muted">
-                  10 detection patterns scan every line. Findings ranked by
-                  severity and confidence in milliseconds.
+                  11 detection engines scan every line. Findings ranked by
+                  severity and confidence with per-detector calibrated weights.
                 </p>
               </div>
             </motion.div>

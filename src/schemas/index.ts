@@ -96,6 +96,30 @@ export const authorEvents = pgTable('author_events', {
   timestamp: timestamp('timestamp').defaultNow().notNull(),
 })
 
+export const userCredits = pgTable('user_credits', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id).notNull().unique(),
+  balance: integer('balance').default(30).notNull(),
+  lifetimeUsed: integer('lifetime_used').default(0).notNull(),
+  plan: text('plan', { enum: ['free', 'pro'] }).default('free').notNull(),
+  periodStart: timestamp('period_start').defaultNow().notNull(),
+  periodEnd: timestamp('period_end').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: uniqueIndex('user_credits_user_id_idx').on(table.userId),
+}))
+
+export const creditTransactions = pgTable('credit_transactions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  amount: integer('amount').notNull(), // negative = deduction, positive = top-up
+  reason: text('reason').notNull(), // e.g. 'ai_judge', 'ai_assisted', 'full_ai', 'signup_bonus', 'admin_topup'
+  metadata: text('metadata'), // JSON for extra context
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdCreatedAtIdx: index('credit_tx_user_id_created_at_idx').on(table.userId, table.createdAt),
+}))
+
 export const apiTokens = pgTable('api_tokens', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').references(() => users.id).notNull(),

@@ -14,7 +14,7 @@
  * 7. AI-Assisted Detection (via Fireworks/Groq)
  */
 
-import type { Finding, ParsedDiff } from './types'
+import type { Finding, ParsedDiff, ScoringBreakdown, Verdict, VerdictResult } from './types'
 import { parseRawDiff } from './diff-parser'
 import { detectDisabledAssertions } from './detectors/disabled-assertion'
 import { detectAssertionTampering } from './detectors/assertion-tampering'
@@ -23,6 +23,7 @@ import { detectClaimDiffMismatch, isNonFunctional, classifyImportance } from './
 import { detectSilentCatch } from './detectors/silent-catch'
 import { detectHallucinatedAssertions } from './detectors/hallucination'
 import { detectWithAI } from './detectors/ai-assisted'
+import { evaluateFindings, isAIJudgeEnabled } from './detectors/ai-judge'
 
 export interface FixInstruction {
   patternType: string
@@ -41,6 +42,9 @@ export interface ScanResult {
     filesScanned: number
   }
   fixInstructions: FixInstruction[]
+  scoringBreakdown?: ScoringBreakdown
+  /** Categorical verdict — derived from evidenceScore, more honest than raw number */
+  verdict?: VerdictResult
 }
 
 const CONFIDENCE_PENALTY: Record<string, number> = {
@@ -144,7 +148,21 @@ export function scanDiff(rawDiff: string): ScanResult {
 
   const fixInstructions = trustScore < 80 ? generateFixInstructions(staticFindings) : []
 
-  return { files, findings: staticFindings, trustScore, summary, fixInstructions }
+  return {
+    files,
+    findings: staticFindings,
+    trustScore,
+    summary,
+    fixInstructions,
+    scoringBreakdown: {
+      staticScore: trustScore,
+      rawFindings: staticFindings.length,
+      dedupedFindings: staticFindings.length,
+      aiJudgeFiltered: 0,
+      aiAssistedFindings: 0,
+    },
+    verdict: deriveVerdict(trustScore),
+  }
 }
 
 /**
@@ -156,6 +174,49 @@ export function scanDiff(rawDiff: string): ScanResult {
  */
 export async function scanDiffAsync(rawDiff: string, prContext?: { title?: string; description?: string }): Promise<ScanResult> {
   const result = scanDiff(rawDiff)
+
+  // ── AI Judge: Review Static Findings ────────────────────────────
+  // Runs AFTER static detectors, BEFORE AI-assisted discovery.
+  // Filters false positives and downgrades contextual findings.
+  if (isAIJudgeEnabled() && result.findings.length > 0) {
+    try {
+      const judgeFindings = await evaluateFindings(result.findings, result.files, prContext)
+
+      if (judgeFindings.length < result.findings.length) {
+        console.log('[Mantiz] AI Judge: filtered', result.findings.length - judgeFindings.length, 'false positives')
+      }
+
+      const changed = judgeFindings.length !== result.findings.length ||
+        judgeFindings.some((f, i) => f.confidence !== result.findings[i]?.confidence || f.aiVerdict !== result.findings[i]?.aiVerdict)
+
+      if (changed) {
+        let deductions = 0
+        for (const finding of judgeFindings) {
+          const base = CONFIDENCE_PENALTY[finding.confidence] ?? 5
+          const mult = IMPORTANCE_MULTIPLIER[finding.fileImportance ?? 'source'] ?? 1
+          deductions += base * mult
+        }
+        const minScore = judgeFindings.length > 0 ? 30 : 0
+        const newTrustScore = Math.max(minScore, Math.round(100 - deductions))
+
+        result.findings = judgeFindings
+        result.trustScore = newTrustScore
+        result.summary = {
+          totalFindings: judgeFindings.length,
+          highCount: judgeFindings.filter(f => f.confidence === 'high').length,
+          mediumCount: judgeFindings.filter(f => f.confidence === 'medium').length,
+          lowCount: judgeFindings.filter(f => f.confidence === 'low').length,
+          filesScanned: result.summary.filesScanned,
+        }
+        result.fixInstructions = newTrustScore < 80 ? generateFixInstructions(judgeFindings) : []
+        console.log('[Mantiz] AI Judge: adjusted —',
+          judgeFindings.filter(f => f.aiVerdict === 'VALID').length, 'valid,',
+          judgeFindings.filter(f => f.aiVerdict === 'CONTEXTUAL').length, 'contextual')
+      }
+    } catch {
+      // AI Judge failed silently — keep static findings
+    }
+  }
 
   // Run AI detection (async, may fail silently)
   try {
@@ -191,6 +252,28 @@ export async function scanDiffAsync(rawDiff: string, prContext?: { title?: strin
   }
 
   return result
+}
+
+function deriveVerdict(score: number): VerdictResult {
+  if (score >= 80) {
+    return {
+      label: 'CLEAN' as Verdict,
+      confidence: score >= 95 ? 'high' as const : score >= 88 ? 'medium' as const : 'low' as const,
+      reason: `Evidence score ${score}/100 — no significant cheating patterns detected`,
+    }
+  }
+  if (score >= 50) {
+    return {
+      label: 'SUSPICIOUS' as Verdict,
+      confidence: score <= 60 ? 'high' as const : 'medium' as const,
+      reason: `Evidence score ${score}/100 — suspicious patterns found, manual review recommended`,
+    }
+  }
+  return {
+    label: 'LIKELY_DECEPTIVE' as Verdict,
+    confidence: score <= 30 ? 'high' as const : 'medium' as const,
+    reason: `Evidence score ${score}/100 — strong indicators of test manipulation detected`,
+  }
 }
 
 function generateFixInstructions(findings: Finding[]): FixInstruction[] {

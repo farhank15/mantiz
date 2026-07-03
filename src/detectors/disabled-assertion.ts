@@ -13,7 +13,7 @@ import type { LanguageDetectionRules } from './language-registry'
 
 // ─── Types ───────────────────────────────────────────────────────
 
-type MatchPattern = 'skip' | 'skip_with_reason' | 'focus' | 'if_false' | 'comment' | 'todo'
+type MatchPattern = 'skip' | 'skip_with_reason' | 'focus' | 'if_false' | 'comment' | 'todo' | 'empty_test'
 
 interface MatchResult {
   lineIndex: number
@@ -110,6 +110,63 @@ function scanHunk(hunkContent: string, baseLine: number, lang: string | null): M
     }
   }
 
+  // Check for empty test bodies — tests defined but with no assertions inside
+  // First check: inline empty body (single-line: it('name', () => { }))
+  if (EMPTY_TEST_INLINE.test(hunkContent)) {
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith('+') && EMPTY_TEST_INLINE.test(lines[i])) {
+        const lineIdx = baseLine + i
+        if (!matches.some(m => Math.abs(m.lineIndex - lineIdx) < 3)) {
+          matches.push({ lineIndex: lineIdx, lineContent: lines[i].slice(1).trim(), pattern: 'empty_test', lang: lang || 'javascript' })
+        }
+      }
+    }
+  }
+
+  // Second check: multi-line empty body
+  // Find it/test open lines, then scan subsequent lines until } to see if body has assertions
+  for (let i = 0; i < lines.length; i++) {
+    if (!lines[i].startsWith('+')) continue
+    if (!TEST_OPEN_LINE.test(lines[i])) continue
+
+    const lineIdx = baseLine + i
+    if (matches.some(m => Math.abs(m.lineIndex - lineIdx) < 3)) continue  // already matched
+
+    // Check next few lines for assertions or closing brace
+    let hasAssertion = false
+    let bodyEnded = false
+    let braceDepth = 0
+    let inBody = false
+
+    for (let j = i; j < Math.min(i + 20, lines.length); j++) {
+      const scanLine = lines[j]
+      const openBrace = (scanLine.match(/{/g) || []).length
+      const closeBrace = (scanLine.match(/}/g) || []).length
+
+      braceDepth += openBrace - closeBrace
+
+      if (braceDepth > 0) inBody = true
+
+      if (inBody && braceDepth === 0) {
+        bodyEnded = true
+        break
+      }
+
+      // Check for assertions in body (skip commented lines)
+      if (inBody && !/^\s*\/\//.test(scanLine)) {
+        if (/\b(expect|assert|vi\.|jest\.|cy\.|should|assertion)\b/.test(scanLine)) {
+          hasAssertion = true
+          break
+        }
+      }
+    }
+
+    // Flag if: body was opened and closed, but no assertion found
+    if (bodyEnded && !hasAssertion) {
+      matches.push({ lineIndex: lineIdx, lineContent: lines[i].slice(1).trim(), pattern: 'empty_test', lang: lang || 'javascript' })
+    }
+  }
+
   return matches
 }
 
@@ -126,6 +183,8 @@ function patternToConfidence(pattern: MatchPattern): Confidence {
       return 'high'
     case 'if_false':
       return 'high'
+    case 'empty_test':
+      return 'medium'
     case 'comment':
       return 'medium'
     case 'todo':
@@ -150,10 +209,27 @@ function patternToExplanation(pattern: MatchPattern, lang: string): string {
       return `Assertion wrapped in conditional that always evaluates to false (${langName}) — the assertion will never execute.`
     case 'comment':
       return `Assertion commented out (${langName}) — the test no longer verifies the expected behavior.`
+    case 'empty_test':
+      return `Empty test body (${langName}) — the test is defined but contains no assertions, so it passes without verifying anything.`
     case 'todo':
       return `TODO comment on a test line (${langName}) — may indicate intentionally disabled verification.`
   }
 }
+
+// ─── Empty Test Body Patterns ─────────────────────────────────────
+// Tests that exist but have empty bodies — they pass without asserting anything.
+//
+// Pattern 1: Single-line inline empty body
+//   it('name', () => { })
+//   test('name', async () => { })
+const EMPTY_TEST_INLINE = /\b(it|test)\s*\(\s*['"][^'"]+['"]\s*,\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{\s*\}/m
+
+// Pattern 2: Multi-line — test body declared but no expect/assert/vi.mock inside
+//   it('name', () => {
+//     // no assertions, just comments or blank
+//   })
+// Detected by scanning for it/test open lines + checking subsequent lines for assertions
+const TEST_OPEN_LINE = /\b(it|test)\s*\(\s*['"][^'"]+['"]/m
 
 // ─── Main Detector ──────────────────────────────────────────────
 
@@ -187,12 +263,30 @@ export function detectDisabledAssertions(files: ParsedDiff[]): Finding[] {
       const baseLine = hunk.newStart
       const matches = scanHunk(hunk.content, baseLine, lang)
 
+      // Check if hunk has active (non-commented) assertions nearby
+      // If commented assertions coexist with active assertions in same hunk,
+      // the comments are likely temporary refactoring artifacts, not permanent disables
+      const hasActiveAssertions = /\bexpect\s*\(|\bassert\s*\(/.test(
+        hunk.content.split('\n')
+          .filter(l => l.startsWith('+') && !l.startsWith('+++'))
+          .map(l => l.slice(1))
+          .filter(l => !/^\s*\/\//.test(l)) // exclude commented lines
+          .join('\n')
+      )
+      const hasCommentedAssert = matches.some(m => m.pattern === 'comment' || m.pattern === 'todo')
+
       for (const match of matches) {
         let confidence = patternToConfidence(match.pattern)
 
         // Context-aware: if source code also changed, commented assertions
         // are likely refactoring artifacts (e.g., old code commented out during cleanup)
         if (match.pattern === 'comment' && hasSourceChange) {
+          confidence = 'low'
+        }
+
+        // Context-aware: if hunk has BOTH commented assertions and active assertions,
+        // the comments are temporary refactoring, not permanent disables
+        if ((match.pattern === 'comment' || match.pattern === 'todo') && hasActiveAssertions && hasCommentedAssert) {
           confidence = 'low'
         }
 

@@ -1,6 +1,7 @@
 import type { Finding, ParsedDiff } from './types'
 
 const VALID_MATCHERS = new Set([
+  // ── Jest / Vitest Core Matchers ──
   'toBe', 'toEqual', 'toStrictEqual', 'toBeNull', 'toBeUndefined',
   'toBeDefined', 'toBeTruthy', 'toBeFalsy', 'toBeGreaterThan',
   'toBeGreaterThanOrEqual', 'toBeLessThan', 'toBeLessThanOrEqual',
@@ -22,6 +23,7 @@ const VALID_MATCHERS = new Set([
   'mockImplementation', 'mockImplementationOnce', 'mockRestore',
   'mockClear', 'mockReset',
 
+  // Jest Extended / Community matchers
   'toBeArray', 'toBeArrayOfSize', 'toBeBoolean', 'toBeDate',
   'toBeEmpty', 'toBeEmptyObject', 'toBeEven', 'toBeFinite',
   'toBeFloat', 'toBeFunction', 'toBeHexadecimal', 'toBeInteger',
@@ -31,14 +33,94 @@ const VALID_MATCHERS = new Set([
   'toEndWith', 'toInclude', 'toIncludeRepeated', 'toIncludeAllMembers',
   'toIncludeAnyMembers', 'toIncludeEqual', 'toStartWith', 'toSatisfy',
 
+  // Asymmetric matchers
   'anything', 'any', 'arrayContaining', 'assertions', 'extend',
   'hasAssertions', 'not', 'objectContaining', 'stringContaining',
   'stringMatching', 'resolves', 'rejects',
 
+  // Jest / Vitest global functions
   'describe', 'it', 'test', 'expect', 'beforeAll', 'afterAll',
   'beforeEach', 'afterEach', 'vi', 'jest',
 
-  'should', 'assert', 'expect',
+  // Chai-style (should, assert)
+  'should', 'assert',
+
+  // test.todo is a valid Jest/Vitest function for planned tests
+  'todo',
+
+  // ── JUnit 5 / AssertJ (Java) ──
+  'assertEquals', 'assertNotEquals', 'assertTrue', 'assertFalse',
+  'assertNull', 'assertNotNull', 'assertSame', 'assertNotSame',
+  'assertThrows', 'assertDoesNotThrow', 'assertTimeout', 'assertArrayEquals',
+  'assertThat', 'assertIterableEquals', 'assertLinesMatch',
+  'as', 'describedAs', 'is', 'isNot', 'isEqualTo', 'isNotEqualTo',
+  'isSameAs', 'isNotSameAs', 'isInstanceOf', 'isNotInstanceOf',
+  'isNull', 'isNotNull', 'isTrue', 'isFalse', 'isZero', 'isNotZero',
+  'isPositive', 'isNotPositive', 'isNegative', 'isNotNegative',
+  'isIn', 'isNotIn', 'hasSize', 'hasToString', 'doesNotHaveToString',
+  'contains', 'doesNotContain', 'containsExactly', 'containsOnlyOnce',
+  'containsAnyOf', 'startsWith', 'endsWith', 'matches', 'doesNotMatch',
+  'hasMessage', 'hasCause', 'hasNoCause', 'hasStackTraceContaining',
+
+  // ── EasyMock (Java) ──
+  'expect', 'andReturn', 'andThrow', 'andAnswer', 'times',
+  'once', 'atLeastOnce', 'anyTimes', 'expectLastCall',
+
+  // ── Mockito (Java) ──
+  'when', 'thenReturn', 'thenThrow', 'thenAnswer', 'thenCallRealMethod',
+  'verify', 'verifyZeroInteractions', 'verifyNoMoreInteractions',
+  'doReturn', 'doThrow', 'doAnswer', 'doCallRealMethod',
+  'any', 'anyInt', 'anyString', 'anyList', 'anySet', 'anyMap',
+  'eq', 'same', 'isA', 'isNull', 'isNotNull', 'contains',
+  'argThat', 'intThat', 'stringThat',
+  'capture', 'captor',
+
+  // ── Rust testing ──
+  'assert_eq', 'assert_ne', 'assert', 'assert_matches',
+  'panic', 'unwrap', 'expect', 'ok', 'err',
+  'is_ok', 'is_err', 'is_some', 'is_none',
+
+  // ── Kotest (Kotlin) ──
+  'shouldBe', 'shouldNotBe', 'shouldEqual', 'shouldNotEqual',
+  'shouldBeTrue', 'shouldBeFalse', 'shouldBeNull', 'shouldNotBeNull',
+  'shouldContain', 'shouldNotContain', 'shouldHaveSize',
+  'shouldThrow', 'shouldNotThrow', 'shouldMatch',
+  'shouldStartWith', 'shouldEndWith', 'shouldBeInstanceOf',
+
+  // ── pytest (Python) ──
+  'assert_raises', 'assert_warns', 'raises', 'warns',
+  'approx', 'almost_equal',
+
+  // ── Playwright / CLI Output Testing ──
+  'toHaveURL', 'toHaveTitle', 'toHaveText', 'toContainText',
+  'toHaveValue', 'toHaveValues', 'toHaveAttribute',
+  'toHaveClass', 'toHaveCount', 'toHaveCSS', 'toHaveId',
+  'toHaveJSProperty', 'toHaveScreenshot', 'toBeChecked',
+  'toBeDisabled', 'toBeEnabled', 'toBeFocused', 'toBeHidden',
+  'toBeVisible', 'toBeInViewport', 'toBeOK', 'toMatchSnapshot',
+  'toPass', 'toOutput',
+
+  // ── jest-dom (testing-library) ──
+  'toBeDisabled', 'toBeEnabled', 'toBeEmptyDOMElement',
+  'toBeInTheDocument', 'toBeInvalid', 'toBeRequired',
+  'toBeValid', 'toBeVisible', 'toContainElement',
+  'toContainHTML', 'toHaveAttribute', 'toHaveClass',
+  'toHaveDisplayValue', 'toHaveErrorMessage', 'toHaveFocus',
+  'toHaveFormValues', 'toHaveStyle', 'toHaveTextContent',
+  'toHaveValue',
+
+  // ── Hardhat (Ethereum) ──
+  'emit', 'withArgs', 'revertedWith', 'reverted',
+
+  // ── Google Test / Google Mock (C++) ──
+  'EXPECT_EQ', 'EXPECT_NE', 'EXPECT_LT', 'EXPECT_LE',
+  'EXPECT_GT', 'EXPECT_GE', 'EXPECT_TRUE', 'EXPECT_FALSE',
+  'EXPECT_THROW', 'EXPECT_NO_THROW', 'EXPECT_ANY_THROW',
+  'EXPECT_STREQ', 'EXPECT_STRNE', 'EXPECT_STRCASEEQ',
+  'ASSERT_EQ', 'ASSERT_NE', 'ASSERT_TRUE', 'ASSERT_FALSE',
+  'ASSERT_THROW', 'ASSERT_NO_THROW',
+  'EXPECT_CALL', 'ON_CALL', 'Return', 'ReturnOnce', 'WillOnce',
+  'WillRepeatedly', 'Times', 'AtLeast', 'AtMost',
 ])
 
 const KNOWN_HALLUCINATED_MATCHERS = [
@@ -64,15 +146,20 @@ function scanLineForHallucination(line: string, lineIndex: number, filePath: str
   const chainSuspicious = chainMatch && !VALID_MATCHERS.has(chainMatch[1])
 
   if (isKnownHallucinated || isNotInWhitelist || chainSuspicious) {
+    // Reserve 'high' confidence only for matchers known to be hallucinated
+    // across ALL frameworks. Unknown matchers get 'medium' because they might
+    // be valid in a non-Jest framework.
+    const confidence: 'high' | 'medium' = isKnownHallucinated ? 'high' : 'medium'
+
     return {
       patternType: 'hallucinated_assertion',
       filePath,
       lineStart: lineIndex,
       lineEnd: lineIndex,
-      confidence: 'high',
+      confidence,
       explanation: isKnownHallucinated
-        ? `Potentially hallucinated assertion matcher "${matcher}" — this function does not exist in Jest/Vitest.`
-        : `Unknown assertion matcher "${matcher}" — not found in the Jest/Vitest matcher whitelist.`,
+        ? `Potentially hallucinated assertion matcher "${matcher}" — this function does not exist in any known testing framework.`
+        : `Unknown assertion matcher "${matcher}" — not in Jest/Vitest whitelist. May be valid in a different framework (EasyMock, AssertJ, Playwright, etc).`,
       evidenceExcerpt: content.substring(0, 200),
     }
   }

@@ -16,9 +16,8 @@ import {
   Share2,
   Check,
 } from "lucide-react";
-import { scanDiff } from "../../detectors/engine";
+import { scanDiffAsync } from "../../detectors/engine";
 import type { ScanResult } from "../../detectors/engine";
-import { detectWithAI } from "../../detectors/ai-assisted";
 import { useAuth } from "../../lib/auth-context";
 import { saveManualScan } from "../../server/auth";
 import { createShareLink } from "../../server/share";
@@ -54,77 +53,35 @@ function ScanPage() {
     // Yield to React to render the animation before blocking
     await new Promise((r) => setTimeout(r, 50));
 
-    // Phase 1: Static analysis (sync, instant)
-    const staticResult = scanDiff(diffInput);
+    // scanDiffAsync handles: static detectors + AI Judge + AI-assisted detection
+    // All in one call, with proper fallback if AI is disabled or fails.
+    try {
+      const finalResult = await scanDiffAsync(diffInput);
 
-    // Phase 2: AI analysis (async, slow)
-    const aiEnabled =
-      typeof process !== "undefined" &&
-      process.env.AI_DETECTION_ENABLED === "true";
+      setScanPhase("done");
+      setScanResult(finalResult);
 
-    let finalResult = staticResult;
-
-    if (aiEnabled) {
-      setScanPhase("ai");
-      try {
-        const aiFindings = await detectWithAI(staticResult.files);
-
-        if (aiFindings.length > 0) {
-          const mergedFindings = [...staticResult.findings, ...aiFindings];
-          let deductions = 0;
-          for (const finding of mergedFindings) {
-            deductions +=
-              finding.confidence === "high"
-                ? 30
-                : finding.confidence === "medium"
-                  ? 15
-                  : 5;
-          }
-          const minScore = mergedFindings.length > 0 ? 10 : 0;
-          const newTrustScore = Math.max(minScore, 100 - deductions);
-
-          finalResult = {
-            ...staticResult,
-            findings: mergedFindings,
-            trustScore: newTrustScore,
-            summary: {
-              totalFindings: mergedFindings.length,
-              highCount: mergedFindings.filter((f) => f.confidence === "high")
-                .length,
-              mediumCount: mergedFindings.filter(
-                (f) => f.confidence === "medium",
-              ).length,
-              lowCount: mergedFindings.filter((f) => f.confidence === "low")
-                .length,
-              filesScanned: staticResult.summary.filesScanned,
-            },
-          };
-        }
-      } catch (err) {
-        console.error("AI detection failed:", err);
+      // Save to DB if authenticated
+      if (isAuthenticated) {
+        saveManualScan({
+          data: {
+            rawDiff: diffInput,
+            trustScore: finalResult.trustScore,
+            findings: finalResult.findings.map((f) => ({
+              patternType: f.patternType,
+              filePath: f.filePath,
+              lineStart: f.lineStart,
+              lineEnd: f.lineEnd,
+              confidence: f.confidence,
+              explanation: f.explanation,
+              evidenceExcerpt: f.evidenceExcerpt,
+            })),
+          },
+        }).catch((err) => console.error("Failed to save manual scan:", err));
       }
-    }
-
-    setScanPhase("done");
-    setScanResult(finalResult);
-
-    // Save to DB if authenticated
-    if (isAuthenticated) {
-      saveManualScan({
-        data: {
-          rawDiff: diffInput,
-          trustScore: finalResult.trustScore,
-          findings: finalResult.findings.map((f) => ({
-            patternType: f.patternType,
-            filePath: f.filePath,
-            lineStart: f.lineStart,
-            lineEnd: f.lineEnd,
-            confidence: f.confidence,
-            explanation: f.explanation,
-            evidenceExcerpt: f.evidenceExcerpt,
-          })),
-        },
-      }).catch((err) => console.error("Failed to save manual scan:", err));
+    } catch (err) {
+      console.error("Scan failed:", err);
+      setScanPhase("done");
     }
   };
 
@@ -172,6 +129,7 @@ function ScanPage() {
               explanation: f.explanation,
               evidenceExcerpt: f.evidenceExcerpt,
             })),
+            scoringBreakdown: scanResult.scoringBreakdown,
           },
         },
       });

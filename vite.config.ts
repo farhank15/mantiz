@@ -15,6 +15,11 @@ const config = defineConfig({
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
   resolve: { tsconfigPaths: true },
+  // Exclude native modules from Vite's dependency pre-bundling
+  // to avoid rolldown trying to load .node binaries as JS/TS.
+  optimizeDeps: {
+    exclude: ['@swc/core'],
+  },
   plugins: [
     devtools(),
     nitro({ config: { rollupConfig: { external: [/^@sentry\//] } } }),

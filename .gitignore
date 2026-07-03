@@ -14,3 +14,17 @@ todos.json
 .testsprite/
 .kuma/
 .kuma/**
+
+# Eval temp data (keep only latest)
+eval/ground-truth/raw_candidates*.jsonl
+eval/ground-truth/labeled_v*.jsonl
+eval/ground-truth/labeled_v*_manual_only.jsonl
+eval/ground-truth/labeled_v*_deduped.jsonl
+# Hackathon internal docs
+VALIDATION-ROADMAP.md
+AGENTS.md
+GAME-PLAN-TOP1.md
+Mantiz-PRD.md
+DESIGN.md
+.rules/
+.agents/

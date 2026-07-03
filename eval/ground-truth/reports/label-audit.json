@@ -1,0 +1,19 @@
+{
+  "generated_at": "2026-07-03",
+  "total_entries": 339,
+  "manual": {
+    "total": 135,
+    "deceptive": 17,
+    "legit": 117,
+    "ambiguous": 1
+  },
+  "auto_labeled": {
+    "total": 189,
+    "legit": 173,
+    "deceptive": 16
+  },
+  "pending_review": {
+    "total": 15
+  },
+  "note": "6 PENDING auto-labeled as DECEPTIVE (score 30, high-conf >= 10). 15 still pending."
+}

@@ -11,8 +11,6 @@ import {
   ChevronDown,
   ChevronUp,
   FileCode,
-  Play,
-  RefreshCw,
 } from "lucide-react";
 import { runBenchmark, type BenchmarkResult } from "../../benchmark/runner";
 import PageHeader from "../../components/PageHeader";
@@ -99,42 +97,6 @@ function BenchmarkPage() {
           breadcrumbs={[{ label: "Home", to: "/" }, { label: "Benchmark" }]}
           badge={{ label: "39 fixtures · 4 datasets", color: "success" }}
         />
-
-        {/* Interactive Run Button */}
-        <div className="mb-6 flex items-center justify-between rounded-xl border border-border bg-surface-1 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-interactive/10">
-              <Beaker className="h-5 w-5 text-interactive" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-ink">
-                Interactive Benchmark
-              </p>
-              <p className="text-xs text-ink-muted">
-                {results
-                  ? `Last run: ${results.length} datasets, ${results.reduce((a, r) => a + r.summary.total, 0)} fixtures`
-                  : "Run the benchmark to verify all detectors work correctly"}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={load}
-            disabled={isLoading}
-            className="btn btn-primary"
-          >
-            {isLoading ? (
-              <>
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                Running...
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4" />
-                Run Now
-              </>
-            )}
-          </button>
-        </div>
 
         {/* Animated progress bar */}
         <AnimatePresence>

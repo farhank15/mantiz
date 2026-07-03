@@ -15,6 +15,17 @@
           "resolved": false
         }
       ]
+    ],
+    [
+      "typecheck",
+      [
+        {
+          "task": "typecheck",
+          "error": "[WARN] The \"pnpm\" field in package.json is no longer read by pnpm. The following keys were ignored: \"pnpm.onlyBuiltDependencies\". See https://pnpm.io/settings for the new home of each setting.\n[WARN] The \"pnpm\" field in package.json is no longer read by pnpm. The following keys were ignored: \"pnpm.onlyBuiltDependencies\". See https://pnpm.io/settings for the new home of each setting.",
+          "timestamp": 1783053056397,
+          "resolved": false
+        }
+      ]
     ]
   ],
   "searchResults": [
@@ -109,6 +120,78 @@
         "testsprite_tests/plans/17-history-source-tracking-label.json",
         "testsprite_tests/plans/authenticated-pr-scan-mock.json",
         "testsprite_tests/plans/authenticated-pr-scan-mock.json"
+      ]
+    ],
+    [
+      "scraper|scrape|scrap",
+      [
+        "scripts/eval/scrape-github.ts",
+        "scripts/eval/scrape-github.ts",
+        "scripts/eval/scrape-github.ts",
+        "scripts/eval/scrape-github.ts",
+        "scripts/eval/scrape-github.ts",
+        "scripts/eval/scrape-github.ts",
+        "scripts/eval/scrape-github.ts",
+        "scripts/eval/standalone-scan.ts",
+        "scripts/eval/standalone-scan.ts",
+        "scripts/eval/standalone-scan.ts",
+        "scripts/eval/standalone-scan.ts",
+        "scripts/eval/standalone-scan.ts",
+        "src/detectors/diff-parser.ts",
+        "eval/ground-truth/reports/self-agreement-sample.json"
+      ]
+    ],
+    [
+      "toBeNil|toBeString|customMatcher|matcherWhitelist|whitelist|KNOWN_CUSTOM",
+      [
+        "scripts/run-benchmark-async.ts",
+        "scripts/run-benchmark-async.ts",
+        "src/benchmark/runner.ts",
+        "src/benchmark/runner.ts",
+        "src/detectors/engine.ts",
+        "src/detectors/hallucination.ts",
+        "src/detectors/hallucination.ts",
+        "src/detectors/hallucination.ts",
+        "src/detectors/hallucination.ts",
+        "src/detectors/hallucination.ts",
+        "src/detectors/language-registry.ts",
+        "src/detectors/language-registry.ts",
+        "packages/mantiz-cli/src/cli-engine.ts",
+        "packages/mantiz-core/src/engine.ts",
+        "tests/fixtures/dataset-fp/fp-valid-custom-matcher.ts",
+        "tests/fixtures/dataset-fp/fp-valid-custom-matcher.ts",
+        "tests/fixtures/dataset-fp/fp-valid-custom-matcher.ts",
+        "packages/mantiz-core/src/detectors/claim-mismatch.ts",
+        "packages/mantiz-core/src/detectors/claim-mismatch.ts",
+        "packages/mantiz-core/src/detectors/claim-mismatch.ts",
+        "packages/mantiz-core/src/detectors/claim-mismatch.ts",
+        "packages/mantiz-core/src/detectors/claim-mismatch.ts",
+        "packages/mantiz-core/src/detectors/hallucination.ts",
+        "packages/mantiz-core/src/detectors/hallucination.ts",
+        "packages/mantiz-core/src/detectors/hallucination.ts",
+        "packages/mantiz-core/src/detectors/hallucination.ts",
+        "packages/mantiz-core/src/detectors/hallucination.ts",
+        "packages/mantiz-core/src/detectors/hallucination.ts",
+        "packages/mantiz-core/src/detectors/hallucination.ts",
+        "packages/mantiz-core/src/detectors/hallucination.ts"
+      ]
+    ],
+    [
+      "historical.*behavioral|D9.*detector|class.*Historical|class.*Behavioral",
+      [
+        "src/cli/scan.ts",
+        "src/detectors/engine.ts",
+        "src/detectors/engine.ts",
+        "src/detectors/engine.ts",
+        "src/detectors/engine.ts",
+        "src/detectors/engine.ts",
+        "src/detectors/engine.ts",
+        "src/detectors/engine.ts",
+        "src/detectors/historical-scoring.ts",
+        "src/detectors/historical-scoring.ts",
+        "src/detectors/types.ts",
+        "src/schemas/index.ts",
+        "src/server/auth.ts"
       ]
     ]
   ],
@@ -290,6 +373,42 @@
         "maxCount": 3
       },
       "timestamp": 1782974172115
+    },
+    {
+      "toolName": "smart_grep",
+      "params": {
+        "query": "scraper|scrape|scrap",
+        "matchCount": 14,
+        "filesScanned": 157
+      },
+      "timestamp": 1783045961090
+    },
+    {
+      "toolName": "smart_grep",
+      "params": {
+        "query": "toBeNil|toBeString|customMatcher|matcherWhitelist|whitelist|KNOWN_CUSTOM",
+        "matchCount": 30,
+        "filesScanned": 107
+      },
+      "timestamp": 1783049483166
+    },
+    {
+      "toolName": "smart_grep",
+      "params": {
+        "query": "historical.*behavioral|D9.*detector|class.*Historical|class.*Behavioral",
+        "matchCount": 13,
+        "filesScanned": 109
+      },
+      "timestamp": 1783049527137
+    },
+    {
+      "toolName": "execute_safe_test",
+      "params": {
+        "task": "typecheck",
+        "command": "pnpm tsc --noEmit",
+        "cwd": "/home/mawa/My_File/Development/mantiz"
+      },
+      "timestamp": 1783053046984
     }
   ],
   "conventions": {

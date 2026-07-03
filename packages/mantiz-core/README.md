@@ -48,9 +48,9 @@ Async version that also runs AI-assisted detection (via Fireworks/Groq).
 
 ```typescript
 {
-  trustScore: number        // 0-100
-  findings: Finding[]       // Detected cheating patterns
-  summary: {                // Aggregate stats
+  trustScore: number        // 0-100, per-detector calibrated weights
+  findings: Finding[]       // Detected cheating patterns (evidence only — no historical behavioral)
+  summary: {
     totalFindings: number
     highCount: number
     mediumCount: number
@@ -58,8 +58,34 @@ Async version that also runs AI-assisted detection (via Fireworks/Groq).
     filesScanned: number
   }
   fixInstructions: FixInstruction[]  // Auto-generated remediation
+  scoringBreakdown?: {       // Transparent scoring pipeline
+    staticScore: number
+    rawFindings: number
+    dedupedFindings: number
+    aiJudgeFiltered: number
+    aiAssistedFindings: number
+    behavioralFlags?: Array<{ type: string; confidence: string; note: string }>
+  }
+  verdict?: {
+    label: 'CLEAN' | 'SUSPICIOUS' | 'LIKELY_DECEPTIVE'
+    confidence: 'low' | 'medium' | 'high'
+    reason: string
+  }
 }
 ```
+
+### Scoring
+
+Per-detector weights calibrated from 203 unique PRs (20 DECEPTIVE, 183 LEGIT).
+Detectors with higher precision get higher penalty weights:
+- D2/D3 (100% precision): high=8, med=4, low=1
+- D6 (77.8% precision): high=6, med=3, low=1
+- D1 (45.5% precision): high=4, med=2, low=1
+- D5 (33.3% precision): high=3, med=1, low=0
+- D10 (30.0% precision): high=2, med=1, low=0
+- D4 (0% precision): high=2, med=1, low=0 (floor=2 defense-in-depth)
+
+Score = max(30, 100 - min(penalty, 85)). File importance multiplier applies (core/test=1.0, config=0.5, docs=0.3, artifact=0.05).
 
 ## Detectors (11 patterns)
 

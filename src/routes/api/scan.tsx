@@ -14,7 +14,7 @@
  */
 
 import { createFileRoute } from '@tanstack/react-router'
-import { scanDiff, scanDiffAsync } from '../../detectors/engine'
+import { scanDiffAsync } from '../../detectors/engine'
 import { verifyToken, saveAPIScan } from '../../server/tokens'
 import { checkRateLimit, rateLimitHeaders } from '../../server/rate-limiter'
 import { loadUserSettings } from '../../server/settings'
@@ -67,7 +67,7 @@ export const Route = createFileRoute('/api/scan')({
           }
 
           // ── Parse body ───────────────────────────────────────────
-          let body: { diff?: string; token?: string; useAi?: boolean }
+          let body: { diff?: string; token?: string }
           try {
             body = await request.json() as typeof body
           } catch {
@@ -85,7 +85,7 @@ export const Route = createFileRoute('/api/scan')({
             if (match) apiToken = match[1]
           }
 
-          const { diff, useAi } = body
+          const { diff } = body
           const token = apiToken
 
           // ── Validate diff ────────────────────────────────────────
@@ -153,9 +153,8 @@ export const Route = createFileRoute('/api/scan')({
           const settings = userId ? await loadUserSettings(userId) : null
           const threshold = settings?.threshold ?? 70
 
-          // ── Run scan ─────────────────────────────────────────────
-          const useAiDetection = useAi || settings?.aiEnabled || false
-          const result = useAiDetection ? await scanDiffAsync(diff) : scanDiff(diff)
+          // ── Run scan (AI auto-detects from env vars) ─────────────
+          const result = await scanDiffAsync(diff)
 
           // ── Determine source context from X-Mantiz-Source header ─
           const sourceLabel = request.headers.get('x-mantiz-source') || 'API / CLI'
@@ -222,7 +221,21 @@ export const Route = createFileRoute('/api/scan')({
               passed: result.trustScore >= threshold,
               threshold,
               scannedBy: userLogin,
-              aiDetected: useAiDetection,
+              aiDetected: true, // env-controlled, auto-enabled
+              validationBasis: {
+                disclaimer: 'PRELIMINARY — N=20 DECEPTIVE samples. Confidence interval ±15-25%.',
+                datasetSize: 203,
+                lastCalibrated: '2026-07-03',
+                detectors: {
+                  D6_HallucinatedAssertion: { precision: 77.8, recall: 70.0, f1: 73.7 },
+                  D2_AssertionTampering: { precision: 100.0, recall: 15.0, f1: 26.1 },
+                  D3_MockToAvoid: { precision: 100.0, recall: 5.0, f1: 9.5 },
+                  D1_DisabledAssertion: { precision: 45.5, recall: 25.0, f1: 32.3 },
+                  D5_SilentCatch: { precision: 33.3, recall: 10.0, f1: 15.4 },
+                  D10_MutationSusceptibility: { precision: 30.0, recall: 60.0, f1: 40.0 },
+                  D4_ClaimDiffMismatch: { precision: 0.0, recall: 0.0, f1: 0.0 },
+                },
+              },
             },
             {
               status: 200,

@@ -11,7 +11,32 @@ export type PatternType =
 
 export type Confidence = 'low' | 'medium' | 'high'
 
+/**
+ * Categorical verdict derived from evidence score.
+ * More honest than a raw number — explicitly admits uncertainty.
+ */
+export type Verdict = 'CLEAN' | 'SUSPICIOUS' | 'LIKELY_DECEPTIVE'
+export type VerdictConfidence = 'low' | 'medium' | 'high'
+
+/**
+ * Behavioral flag — anomaly signal that does NOT affect evidence score.
+ * Stored separately from findings to avoid conflating evidence with inference.
+ */
+export interface BehavioralFlag {
+  type: string
+  confidence: Confidence
+  note: string
+}
+
 export type FileImportance = 'core' | 'test' | 'source' | 'config' | 'artifact' | 'docs'
+
+/**
+ * AI Judge verdict for a static finding.
+ * - VALID: Finding correctly identifies cheating — keep as-is
+ * - FALSE_POSITIVE: Finding is a legitimate code change — drop
+ * - CONTEXTUAL: Technically suspicious but context justifies partial mitigation — downgrade
+ */
+export type AIJudgeVerdict = 'VALID' | 'FALSE_POSITIVE' | 'CONTEXTUAL'
 
 export interface Finding {
   patternType: PatternType
@@ -22,6 +47,10 @@ export interface Finding {
   explanation: string
   evidenceExcerpt: string
   fileImportance?: FileImportance
+  /** AI Judge verdict — set when AI ref reviews static findings */
+  aiVerdict?: AIJudgeVerdict
+  /** Reasoning behind the AI Judge's verdict */
+  aiReasoning?: string
 }
 
 export interface ParsedDiff {
@@ -36,6 +65,45 @@ export interface DiffHunk {
   newStart: number
   newLines: number
   content: string
+}
+
+/**
+ * Transparent breakdown of how the trust score was calculated.
+ * Makes the scoring pipeline auditable and explainable.
+ * behavioral flags are SEPARATE from evidence score — they do NOT affect it.
+ */
+export interface ScoringBreakdown {
+  /** Score after static detectors + dedup */
+  staticScore: number
+  /** Raw findings count before dedup */
+  rawFindings: number
+  /** Findings count after dedup */
+  dedupedFindings: number
+  /** Number of findings filtered by AI Judge (if enabled) */
+  aiJudgeFiltered: number
+  /** Details from AI Judge verdicts */
+  aiJudgeDetails?: Array<{
+    patternType: string
+    filePath: string
+    originalConfidence: string
+    aiVerdict: string
+    aiReasoning?: string
+  }>
+  /** New findings discovered by AI-Assisted detection */
+  aiAssistedFindings: number
+  /** Behavioral flags — do NOT affect evidence score */
+  behavioralFlags?: BehavioralFlag[]
+}
+
+/**
+ * Derived verdict — categorical, not numeric.
+ * evidenceScore ranges 0-100 but verdict is CLEAN/SUSPICIOUS/LIKELY_DECEPTIVE
+ * with an explicit confidence band.
+ */
+export interface VerdictResult {
+  label: Verdict
+  confidence: VerdictConfidence
+  reason: string
 }
 
 export interface CommitMeta {
