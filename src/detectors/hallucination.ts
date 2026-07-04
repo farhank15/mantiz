@@ -15,35 +15,50 @@ import type { Finding, ParsedDiff } from './types'
 import { detectLanguage, isTestFile, LANGUAGE_CONFIG } from './language-registry'
 
 /**
- * Non-assertion method calls that are often mistaken as matchers.
- * These are standard JS/TS methods that should NEVER be flagged.
+ * Non-assertion method calls that start with 'to' but are NOT matchers.
+ * These standard JS/TS string/number methods look like assertions (start with 'to')
+ * but would cause false positives if checked against the valid matcher list.
+ * All other non-assertion methods (filter, map, then, catch, etc.) are
+ * already filtered by isAssertionLike() — they don't start with assertion prefixes.
  */
 const NON_ASSERTION_METHODS = new Set([
-  'filter', 'map', 'reduce', 'forEach', 'flat', 'flatMap',
-  'then', 'catch', 'finally',
-  'entries', 'values', 'keys', 'fromEntries',
-  'every', 'some', 'find', 'findIndex',
-  'sort', 'reverse', 'splice', 'slice',
-  'join', 'split', 'trim', 'trimStart', 'trimEnd',
-  'replace', 'replaceAll', 'match', 'matchAll',
-  'test', 'exec', 'search',
-  'includes', 'indexOf', 'lastIndexOf',
-  'startsWith', 'endsWith', 'charAt', 'charCodeAt',
   'toUpperCase', 'toLowerCase', 'toString',
-  'concat', 'push', 'pop', 'shift', 'unshift',
-  'then', 'resolve', 'reject',
-  'length', 'name', 'prototype',
+  'toExponential', 'toFixed', 'toPrecision',
+  'toLocaleString', 'toLocaleUpperCase', 'toLocaleLowerCase',
+  'toDateString', 'toTimeString', 'toISOString',
+  'toJSON', 'toSource',
 ])
 
 /**
  * Matchers KNOWN to be hallucinated across ALL frameworks.
  * These have been confirmed as non-existent in any major testing library.
+ * Includes common AI-hallucinated patterns across testing style families:
+ * - 'to' prefix (Jest/Vitest-inspired but non-existent)
+ * - 'must' prefix (RSpec/Capybara-inspired)
+ * - 'has/have' prefix (Chai-inspired)
+ * - 'will' prefix (Mockito-inspired)
  */
 const KNOWN_HALLUCINATED_MATCHERS = new Set([
+  // to* patterns — look real but don't exist
   'toExist', 'toNotExist', 'toNotBe', 'toNotEqual', 'toNotMatch',
   'toHave', 'toNotHave', 'toHas', 'toNotHas', 'toBePresent',
   'toNotBePresent', 'toIncludeAll', 'toExclude', 'toExcludeAll',
   'toBeValid', 'toBeInvalid',
+  // must* patterns — RSpec-inspired (must not should)
+  'mustBe', 'mustNotBe', 'mustEqual', 'mustNotEqual',
+  'mustHave', 'mustNotHave', 'mustReturn', 'mustNotReturn',
+  'mustThrow', 'mustNotThrow', 'mustCall', 'mustNotCall',
+  'mustExist', 'mustNotExist', 'mustMatch', 'mustNotMatch',
+  'mustBeNull', 'mustNotBeNull', 'mustBeTrue', 'mustBeFalse',
+  'mustResolve', 'mustReject',
+  // has*/have* patterns — Chai-inspired
+  'hasLength', 'hasProperty', 'hasKey', 'hasItem',
+  'hasBeenCalled', 'hasBeenCalledWith', 'hasReturned',
+  'haveProperty', 'haveKey', 'haveItem', 'haveLength',
+  'haveBeenCalled', 'haveBeenCalledWith', 'haveReturned',
+  // will* patterns — Mockito-inspired
+  'willReturn', 'willThrow', 'willCall', 'willResolve',
+  'willReject', 'willBe', 'willHave',
 ])
 
 /**
@@ -179,11 +194,18 @@ function getValidMatchers(lang: string | null): Set<string> {
 
 /**
  * Check if a method name looks like an assertion matcher.
- * Only flag methods that look like assertions (toXxx, assertXxx, shouldXxx)
- * or are known to be hallucinated.
+ * Covers multiple testing framework families:
+ * - 'to' prefix (Jest/Vitest/Playwright)
+ * - 'assert' prefix (Node built-in, Chai assert, unittest)
+ * - 'should' prefix (Chai BDD, RSpec)
+ * - 'must' prefix (RSpec, minitest)
+ * - 'has/have' prefix (Chai property expectations)
+ * - 'will' prefix (Mockito-style action verification)
  */
 function isAssertionLike(name: string): boolean {
   return name.startsWith('to') || name.startsWith('assert') || name.startsWith('should')
+    || name.startsWith('must') || name.startsWith('has') || name.startsWith('have')
+    || name.startsWith('will')
 }
 
 /**
@@ -195,47 +217,56 @@ function scanLineForHallucination(line: string, lineIndex: number, filePath: str
 
   const validMatchers = getValidMatchers(lang)
 
-  // Find matcher calls: .methodName(
-  const matcherMatch = content.match(/\.\s*([a-zA-Z]+)\s*\(/)
-  if (!matcherMatch) return null
+  // Find ALL method calls on the line: .methodName(
+  // Then check BOTH the first method AND any chained methods for hallucinations
+  const allMethodMatches = content.matchAll(/\.\s*([a-zA-Z]+)\s*\(/g)
+  const methods = [...allMethodMatches].map(m => m[1])
+  if (methods.length === 0) return null
 
-  const matcher = matcherMatch[1]
+  // Skip if the FIRST method is a known non-assertion (toString, toUpperCase, etc.)
+  // These look like assertions but are standard JS/TS methods
+  if (NON_ASSERTION_METHODS.has(methods[0])) return null
 
-  // Skip non-assertion method calls (filter, map, then, catch, etc.)
-  if (NON_ASSERTION_METHODS.has(matcher)) return null
+  // Check ALL methods on the line — not just the first one.
+  // A line like `.somePromise().mustBe(true)` has FIRST method 'somePromise'
+  // (not assertion-like) but SECOND method 'mustBe' (hallucinated assertion).
+  // Without checking all methods, we'd miss hallucinated assertions in chains.
+  let flaggedMethod: string | null = null
+  let isKnownHallucinated = false
+  let fromChain = false
 
-  // Only analyze methods that look like assertions or are known-hallucinated
-  const isKnownHallucinated = KNOWN_HALLUCINATED_MATCHERS.has(matcher)
-  const looksLikeMatcher = isAssertionLike(matcher)
-
-  // Skip methods that clearly aren't assertions
-  if (!isKnownHallucinated && !looksLikeMatcher) return null
-
-  // Check if it's in the valid list
-  const inValidList = validMatchers.has(matcher) || JEST_GLOBALS.has(matcher)
-
-  // Check chained matchers: .method(...).method2(
-  // Only suspicious if the chained method also looks like an assertion
-  const chainMatch = content.match(/\.\s*\w+\s*\([^)]*\)\s*\.\s*(\w+)\s*\(/)
-  const chainSuspicious = chainMatch && isAssertionLike(chainMatch[1]) && !validMatchers.has(chainMatch[1])
-
-  if (isKnownHallucinated || (looksLikeMatcher && !inValidList) || chainSuspicious) {
-    const confidence: 'high' | 'medium' = isKnownHallucinated ? 'high' : 'medium'
-
-    return {
-      patternType: 'hallucinated_assertion',
-      filePath,
-      lineStart: lineIndex,
-      lineEnd: lineIndex,
-      confidence,
-      explanation: isKnownHallucinated
-        ? `Potentially hallucinated assertion matcher "${matcher}" — this function does not exist in any known testing framework.`
-        : `Unknown assertion matcher "${matcher}" — not in the ${(lang && LANGUAGE_CONFIG[lang]?.name) || 'expected'} whitelist. May be valid in a different framework.`,
-      evidenceExcerpt: content.substring(0, 200),
+  for (const method of methods) {
+    if (NON_ASSERTION_METHODS.has(method)) continue
+    if (KNOWN_HALLUCINATED_MATCHERS.has(method)) {
+      flaggedMethod = method
+      isKnownHallucinated = true
+      break
+    }
+    if (isAssertionLike(method) && !validMatchers.has(method) && !JEST_GLOBALS.has(method)) {
+      flaggedMethod = method
+      isKnownHallucinated = false
+      fromChain = method !== methods[0]
+      break
     }
   }
 
-  return null
+  if (!flaggedMethod) return null
+
+  const confidence: 'high' | 'medium' | 'low' = isKnownHallucinated ? 'high' : fromChain ? 'low' : 'medium'
+
+  return {
+    patternType: 'hallucinated_assertion',
+    filePath,
+    lineStart: lineIndex,
+    lineEnd: lineIndex,
+    confidence,
+    explanation: isKnownHallucinated
+      ? `Potentially hallucinated assertion matcher "${flaggedMethod}" — this function does not exist in any known testing framework.`
+      : fromChain
+        ? `Unknown assertion matcher "${flaggedMethod}" in chained call — not in the ${(lang && LANGUAGE_CONFIG[lang]?.name) || 'expected'} whitelist. May be valid in a different framework.`
+        : `Unknown assertion matcher "${flaggedMethod}" — not in the ${(lang && LANGUAGE_CONFIG[lang]?.name) || 'expected'} whitelist. May be valid in a different framework.`,
+    evidenceExcerpt: content.substring(0, 200),
+  }
 }
 
 /**
