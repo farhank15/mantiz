@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/mantiz.png" alt="Mantiz Logo" width="120" height="120" style="border-radius: 24px;" />
+  <img src="public/mantiz.png" alt="Mantiz Logo" width="160" height="160" style="border-radius: 24px;" />
 </p>
 
 <h3 align="center">AI Coding Agent Lie Detector</h3>
