@@ -188,10 +188,18 @@ async function main() {
   const baselineMap = new Map(baseline.detectors.map(d => [d.detector, d]))
   ALL_DETECTORS = baseline.detectors.map(d => d.detector)
 
-  // 2. Load current labeled data
+  // 2. Load current labeled data (with fallback)
   if (!fs.existsSync(opts.labeledFile)) {
-    console.error(`❌ Labeled data not found: ${opts.labeledFile}`)
-    process.exit(2)
+    const altFile = opts.labeledFile.replace('_manual_only', '').replace('_deduped', '')
+    if (altFile !== opts.labeledFile && fs.existsSync(altFile)) {
+      console.warn(`⚠️  ${path.basename(opts.labeledFile)} not found — falling back to ${path.basename(altFile)}`)
+      opts.labeledFile = altFile
+    } else {
+      console.error(`❌ Labeled data not found: ${opts.labeledFile}`)
+      console.error('   Required for CI calibration check. Run calibration first:')
+      console.error('   npx tsx scripts/eval/calibrate-standalone.ts')
+      process.exit(2)
+    }
   }
   const raw = fs.readFileSync(opts.labeledFile, 'utf-8')
   const entries: Entry[] = raw.split('\n').filter(Boolean).map(line => JSON.parse(line))

@@ -18,8 +18,9 @@ todos.json
 # Eval temp data (keep only latest)
 eval/ground-truth/raw_candidates*.jsonl
 eval/ground-truth/labeled_v*.jsonl
-eval/ground-truth/labeled_v*_manual_only.jsonl
 eval/ground-truth/labeled_v*_deduped.jsonl
+# Track the latest manual-only labels (used by CI ci-detectors.yml)
+!eval/ground-truth/labeled_v10_manual_only.jsonl
 # Hackathon internal docs
 VALIDATION-ROADMAP.md
 AGENTS.md
