@@ -21,16 +21,16 @@ import type { Finding, PatternType, ParsedDiff, Confidence } from "../../src/det
 // ─── Weights (mirrors engine.ts — keep in sync!) ───────────────────
 
 export const DETECTOR_PENALTIES: Record<string, { high: number; medium: number; low: number }> = {
-  // Calibration v3 — 346 overlap, 18 DECEPTIVE, 328 LEGIT
+  // Calibration v4 — 354 overlap, 18 DECEPTIVE
   disabled_assertion:      { high: 3,  medium: 2, low: 0 },  // F1=23  — sync engine.ts
   assertion_tampering:     { high: 2,  medium: 1, low: 1 },  // F1=22
   mock_to_avoid_failure:   { high: 5,  medium: 2, low: 1 },  // F1=39
   claim_diff_mismatch:     { high: 0,  medium: 0, low: 0 },  // F1=0
-  silent_catch_and_pass:   { high: 1,  medium: 1, low: 0 },  // F1=12
-  hallucinated_assertion:  { high: 6,  medium: 3, low: 0 },  // F1=45
-  ai_assisted_detection:   { high: 0,  medium: 0, low: 0 },  // 0 TP — prompt tuned, needs async
-  historical_behavioral:   { high: 5,  medium: 3, low: 1 },  // fallback — async-only
-  mutation_susceptibility: { high: 8,  medium: 3, low: 0 },  // F1=57
+  silent_catch_and_pass:   { high: 1,  medium: 1, low: 0 },  // F1=10
+  hallucinated_assertion:  { high: 3,  medium: 2, low: 0 },  // F1=25  — suggested from calibration
+  ai_assisted_detection:   { high: 1,  medium: 1, low: 0 },  // F1=10  — 1 TP, activated gradual
+  historical_behavioral:   { high: 0,  medium: 0, low: 0 },  // Disabled — 0 TP
+  mutation_susceptibility: { high: 8,  medium: 3, low: 0 },  // F1=55
   agent_instruction_scan:  { high: 0,  medium: 0, low: 0 },  // 0 TP
 };
 

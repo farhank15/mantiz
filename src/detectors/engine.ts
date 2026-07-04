@@ -72,28 +72,28 @@ const IMPORTANCE_MULTIPLIER: Record<string, number> = {
   artifact: 0.05,
 }
 
-// ─── Per-Detector Penalty Calibration (v3 — 346 overlap, 18 DECEPTIVE) ─
-// Calibrated by calibrate-standalone.ts against 350 raw candidates
-// with 346 ground-truth-labeled overlaps (18 DECEPTIVE, 328 LEGIT).
+// ─── Per-Detector Penalty Calibration (v4 — 354 overlap, 18 DECEPTIVE) ─
+// Calibrated by calibrate-standalone.ts against 374 raw candidates
+// with 354 ground-truth-labeled overlaps (18 DECEPTIVE, 336 LEGIT).
 // Weight formula: round(F1 * 20), distributed by current ratio, capped at 15.
 //
-// D4 disabled (0% precision). D8/D11 still 0 TP (kept at 0/0/0).
-// D9 kept as fallback (async-only, not in calibration data).
+// D4 disabled (0% precision). D8 active with low weight (1 TP proven). D11 0 TP.
+// D9 disabled (0 TP — no historical data to calibrate against).
 //
-// Key changes from v2 (48 overlap):
-//   D5: F1 29→12 — precision tanked 50%→9% (31 FP from silent catch on legit code)
-//   D6: F1 63→45 — FP naik dari 1→30 (custom matchers & foreign language patterns)
-//   D2: F1 33→22 — precision turun 100%→33% (assertion tampering more FP with scale)
+// Key changes from v3 (346 overlap):
+//   D5: FP 31→21 — \b word boundary fix + Rust .unwrap/.expect removal
+//   D6: F1 45→25 — FP 30→3 from NON_ASSERTION_METHODS filter (but recall dropped)
+//   D8: 0→{1,1,0} — first activation after prompt tuning (1 TP, 0 FP in calibration)
 const DETECTOR_PENALTIES: Record<string, { high: number; medium: number; low: number }> = {
   'disabled_assertion':      { high: 3,  medium: 2, low: 0 },  // F1=23  — TP=3, FP=5, FN=15
   'assertion_tampering':     { high: 2,  medium: 1, low: 1 },  // F1=22  — TP=3, FP=6, FN=15
   'mock_to_avoid_failure':   { high: 5,  medium: 2, low: 1 },  // F1=39  — TP=7, FP=11, FN=11
   'claim_diff_mismatch':     { high: 0,  medium: 0, low: 0 },  // F1=0   — Precision 0%, data collection only
-  'silent_catch_and_pass':   { high: 1,  medium: 1, low: 0 },  // F1=12  — TP=3, FP=31 (!), FN=15
-  'hallucinated_assertion':  { high: 6,  medium: 3, low: 0 },  // F1=45  — TP=14, FP=30, FN=4
-  'ai_assisted_detection':   { high: 0,  medium: 0, low: 0 },  // 0 TP, prompt tuned — needs async eval
-  'historical_behavioral':   { high: 5,  medium: 3, low: 1 },  // fallback — async-only, no calibration data
-  'mutation_susceptibility': { high: 8,  medium: 3, low: 0 },  // F1=57  — TP=13, FP=15, FN=5
+  'silent_catch_and_pass':   { high: 1,  medium: 1, low: 0 },  // F1=10  — TP=2, FP=21, FN=16
+  'hallucinated_assertion':  { high: 3,  medium: 2, low: 0 },  // F1=25  — TP=3, FP=3, FN=15 (suggested)
+  'ai_assisted_detection':   { high: 1,  medium: 1, low: 0 },  // F1=10  — 1 TP proven (prompt tuned)
+  'historical_behavioral':   { high: 0,  medium: 0, low: 0 },  // Disabled — 0 TP in calibration
+  'mutation_susceptibility': { high: 8,  medium: 3, low: 0 },  // F1=55  — TP=13, FP=16, FN=5
   'agent_instruction_scan':  { high: 0,  medium: 0, low: 0 },  // 0 TP — needs labeled data
 }
 
