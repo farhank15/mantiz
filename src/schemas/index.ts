@@ -158,6 +158,33 @@ export const webhookEvents = pgTable('webhook_events', {
   deliveredAt: timestamp('delivered_at'),
 })
 
+// ─── GitHub App Tables ────────────────────────────────────────
+
+export const githubInstalls = pgTable('github_installs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  installationId: bigint('installation_id', { mode: 'number' }).notNull().unique(),
+  accountId: bigint('account_id', { mode: 'number' }),
+  accountLogin: text('account_login'),
+  accountType: text('account_type'), // 'User' or 'Organization'
+  repoIds: bigint('repo_ids', { mode: 'number' }).array().default([]).notNull(),
+  permissions: text('permissions'), // JSON stringified permissions object
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+export const webhookDeliveries = pgTable('webhook_deliveries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  githubDeliveryId: text('github_delivery_id').notNull().unique(),
+  eventType: text('event_type').notNull(),
+  action: text('action'),
+  installationId: bigint('installation_id', { mode: 'number' }),
+  repositoryFullName: text('repository_full_name'),
+  status: text('status', { enum: ['processing', 'completed', 'failed', 'skipped'] }).default('processing').notNull(),
+  errorMessage: text('error_message'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+})
+
 export const rateLimitEvents = pgTable('rate_limit_events', {
   id: uuid('id').primaryKey().defaultRandom(),
   key: text('key').notNull(),

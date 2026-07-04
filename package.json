@@ -22,6 +22,7 @@
   "dependencies": {
     "@babel/parser": "^7.29.7",
     "@neondatabase/serverless": "^1.1.0",
+    "@octokit/auth-app": "^8.2.0",
     "@octokit/rest": "^22.0.1",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "latest",
@@ -39,6 +40,7 @@
     "framer-motion": "^12.42.1",
     "lucide-react": "^0.545.0",
     "nitro": "npm:nitro-nightly@latest",
+    "octokit": "^5.0.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tailwind-merge": "^3.6.0",

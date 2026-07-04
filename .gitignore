@@ -15,6 +15,13 @@ todos.json
 .kuma/
 .kuma/**
 
+# GitHub App private keys (DO NOT COMMIT!)
+*.pem
+*.private-key.pem
+
+# Planning docs (internal only)
+ROADMAP-SARAN.md
+
 # Eval temp data (keep only latest)
 eval/ground-truth/raw_candidates*.jsonl
 eval/ground-truth/labeled_v*.jsonl
