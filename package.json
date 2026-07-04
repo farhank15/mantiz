@@ -17,7 +17,7 @@
     "test": "vitest run",
     "mantiz-scan": "tsx src/cli/scan.ts",
     "mantiz:cli": "tsx packages/mantiz-cli/src/index.ts",
-    "mantiz:publish": "npm publish -w packages/mantiz-core && npm publish -w packages/mantiz-cli"
+    "mantiz:publish": "cd packages/mantiz-core && pnpm publish && cd ../../packages/mantiz-cli && pnpm publish"
   },
   "dependencies": {
     "@babel/parser": "^7.29.7",
@@ -76,7 +76,9 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild",
-      "lightningcss"
+      "lightningcss",
+      "tree-sitter-javascript",
+      "tree-sitter-typescript"
     ]
   }
 }

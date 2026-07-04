@@ -7,7 +7,7 @@ Scan git diffs for AI agent cheating patterns — no server or API key needed.
 ## Installation
 
 ```bash
-npm install -g mantiz-cli
+pnpm add -g mantiz-cli
 ```
 
 Or run without installation:

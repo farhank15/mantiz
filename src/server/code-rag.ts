@@ -1,4 +1,5 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
+import { getVectorSize } from "./embedding-provider";
 
 // ─── Configuration ──────────────────────────────────────────────
 
@@ -8,7 +9,6 @@ const QDRANT_API_KEY =
   typeof process !== "undefined" ? process.env.QDRANT_API_KEY : undefined;
 
 const COLLECTION_PREFIX = "mantiz_code_";
-const VECTOR_SIZE = 1536; // text-embedding-3-small default
 
 let _client: QdrantClient | null = null;
 
@@ -65,7 +65,7 @@ export async function ensureCollection(repo: string): Promise<void> {
   if (!exists) {
     await client.createCollection(collectionName, {
       vectors: {
-        size: VECTOR_SIZE,
+        size: getVectorSize(),
         distance: "Cosine",
       },
       // HNSW index for fast approximate search
@@ -86,15 +86,15 @@ export async function ensureCollection(repo: string): Promise<void> {
     // Create payload indexes for filtered fields
     await client.createPayloadIndex(collectionName, {
       field_name: "repo",
-      field_type: "keyword",
+      field_schema: { type: "keyword" },
     });
     await client.createPayloadIndex(collectionName, {
       field_name: "filePath",
-      field_type: "keyword",
+      field_schema: { type: "keyword" },
     });
     await client.createPayloadIndex(collectionName, {
       field_name: "symbolName",
-      field_type: "keyword",
+      field_schema: { type: "keyword" },
     });
   }
 }
@@ -190,7 +190,7 @@ export async function searchSymbol(
             symbolName: payload.symbolName || symbolName,
             content: definition.content,
             startLine: definition.startLine,
-            score: top.score || 1,
+            score: 1, // scroll = exact match, no relevance score
           },
         ]),
         definition,
@@ -217,9 +217,10 @@ export async function searchQuery(
   }
 
   try {
-    // Dynamic import to avoid circular dependency
-    const { generateEmbeddings } = await import("./code-indexer");
-    const [queryVector] = await generateEmbeddings([queryText]);
+    const { generateEmbeddings } = await import("./embedding-provider");
+    const vectors = await generateEmbeddings([queryText]);
+    if (vectors.length === 0) return ""
+    const [queryVector] = vectors
 
     const client = getQdrantClient();
     const collectionName = getCollectionName(repo);

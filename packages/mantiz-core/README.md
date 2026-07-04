@@ -7,7 +7,7 @@ Pure TypeScript library with zero framework dependencies. Scans git diffs for AI
 ## Installation
 
 ```bash
-npm install @mantiz/core
+pnpm add @mantiz/core
 ```
 
 ## Usage

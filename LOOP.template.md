@@ -14,7 +14,7 @@
 
 ## Auto-Logging Format
 
-The Mantiz CLI (`npm run mantiz-scan`) automatically appends a row to `LOOP.md` after every scan.
+The Mantiz CLI (`pnpm run mantiz-scan`) automatically appends a row to `LOOP.md` after every scan.
 
 | # | Maker | Action | Score | Findings | Status | Next Step | Date |
 |---|---|---|---|---|---|---|---|
@@ -22,7 +22,7 @@ The Mantiz CLI (`npm run mantiz-scan`) automatically appends a row to `LOOP.md` 
 
 <!--
 Instructions for the AI agent:
-- Mantiz CLI auto-appends rows after every `npm run mantiz-scan` cycle.
+- Mantiz CLI auto-appends rows after every `pnpm run mantiz-scan` cycle.
 - Use plain English. Keep each column brief (max 80 chars).
 - If Mantiz fails the diff (score < 70), the agent MUST fix the code before proceeding.
 - Never skip a scan step. Every code change → scan → fix → re-scan → log.

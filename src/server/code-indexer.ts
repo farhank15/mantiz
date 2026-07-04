@@ -4,6 +4,7 @@ import {
   type TreeSitterNode,
 } from "../detectors/tree-sitter-manager";
 import { detectLanguage } from "../detectors/language-registry";
+import { generateEmbeddings } from "./embedding-provider";
 import { getQdrantClient, getCollectionName } from "./code-rag";
 
 // ─── Types ──────────────────────────────────────────────────────
@@ -36,18 +37,77 @@ export interface CodeChunk {
 // ─── Tree-sitter Chunking ───────────────────────────────────────
 
 /**
- * JavaScript/TypeScript function name patterns (heuristic, not AST)
- * Tree-sitter for JS/TS uses 'function_declaration', 'method_definition',
- * 'arrow_function', 'generator_function_declaration'
+ * Tree-sitter AST node types for symbol definitions, mapped by language.
+ * Each language grammar has different node type names for functions,
+ * classes, and methods.
+ *
+ * Sources:
+ * - https://tree-sitter.github.io/tree-sitter/
+ * - Grammar node definitions in each tree-sitter-* package
  */
-const SYMBOL_NODE_TYPES = [
+const LANGUAGE_SYMBOL_NODES: Record<string, string[]> = {
+  // JavaScript / TypeScript
+  javascript: [
+    "function_declaration",
+    "method_definition",
+    "arrow_function",
+    "generator_function_declaration",
+    "class_declaration",
+  ],
+  typescript: [
+    "function_declaration",
+    "method_definition",
+    "arrow_function",
+    "generator_function_declaration",
+    "class_declaration",
+  ],
+  // Python
+  python: [
+    "function_definition",
+    "class_definition",
+    "decorated_definition",
+  ],
+  // Go
+  go: [
+    "function_declaration",
+    "method_declaration",
+  ],
+  // Rust
+  rust: [
+    "function_item",
+    "struct_item",
+    "impl_item",
+    "enum_item",
+  ],
+  // Java
+  java: [
+    "method_declaration",
+    "class_declaration",
+  ],
+  // Ruby
+  ruby: [
+    "method",
+    "class",
+    "module",
+  ],
+  // PHP
+  php: [
+    "function_definition",
+    "class_declaration",
+    "method_declaration",
+  ],
+}
+
+/**
+ * Default symbol node types when language is unknown.
+ */
+const DEFAULT_SYMBOL_NODES = [
   "function_declaration",
+  "function_definition",
   "method_definition",
-  "arrow_function",
-  "generator_function_declaration",
   "class_declaration",
-  "class",
-];
+  "function_item",
+]
 
 /**
  * Extract code chunks from a file using Tree-sitter AST.
@@ -68,7 +128,7 @@ export async function chunkFile(
       const tree = parser.parse(code);
       if (tree && tree.rootNode) {
         const root = simplifyNode(tree.rootNode);
-        const symbols = findSymbolNodes(root);
+        const symbols = findSymbolNodes(root, language);
 
         for (const node of symbols) {
           const name = extractSymbolName(node, language);
@@ -147,16 +207,22 @@ function simplifyNode(node: any): TreeSitterNode {
 
 /**
  * Find all symbol definition nodes (functions, classes, methods) in the tree.
+ * Uses language-specific node types for accurate matching.
  */
-function findSymbolNodes(node: TreeSitterNode): TreeSitterNode[] {
+function findSymbolNodes(
+  node: TreeSitterNode,
+  language: string = "typescript",
+): TreeSitterNode[] {
   const results: TreeSitterNode[] = [];
 
-  if (SYMBOL_NODE_TYPES.includes(node.type)) {
+  const symbolTypes = LANGUAGE_SYMBOL_NODES[language] || DEFAULT_SYMBOL_NODES;
+
+  if (symbolTypes.includes(node.type)) {
     results.push(node);
   }
 
   for (const child of node.children) {
-    results.push(...findSymbolNodes(child));
+    results.push(...findSymbolNodes(child, language));
   }
 
   return results;
@@ -164,108 +230,61 @@ function findSymbolNodes(node: TreeSitterNode): TreeSitterNode[] {
 
 /**
  * Extract the symbol name from a function/class definition node.
+ * Handles naming patterns across all supported languages:
+ * - name node: (JS/TS: function_declaration → name child)
+ * - identifier node: (Go: func_declaration → identifier child, Java: method → identifier child)
+ * - Go methods: (receiver) FuncName
+ * - Python: 'def' or 'class' keyword
+ * - Rust: 'fn' keyword
+ * - Ruby: 'def' keyword
  */
 function extractSymbolName(
   node: TreeSitterNode,
   _language: string,
 ): string | null {
-  // Try to find the name child node
+  // Try name child (JS/TS, Python, Rust, PHP)
   for (const child of node.children) {
     if (child.type === "name") {
       return child.text;
     }
   }
 
+  // Try identifier child (Go, Java, Ruby)
+  for (const child of node.children) {
+    if (child.type === "identifier") {
+      return child.text;
+    }
+  }
+
   // Fallback: extract from the first line of text
   const firstLine = node.text.split("\n")[0] || "";
-  const funcMatch = firstLine.match(/(?:function|class|def|fn)\s+(\w+)/);
-  if (funcMatch) return funcMatch[1];
 
-  // Method shorthand: { foo() { ... } }
-  const methodMatch = firstLine.match(/(\w+)\s*\(/);
+  // Language-specific keyword patterns
+  const funcMatch = firstLine.match(
+    /(?:function|class|def|fn|struct|enum|impl|module)\s+(\w+)/,
+  )
+  if (funcMatch) return funcMatch[1]
+
+  // Go method: (receiver) FuncName(...
+  const goMethodMatch = firstLine.match(/\([^)]*\)\s+(\w+)\s*\(/)
+  if (goMethodMatch) return goMethodMatch[1]
+
+  // Method shorthand or variable assignment: foo() { ... }
+  const methodMatch = firstLine.match(/(\w+)\s*\(/)
   if (
     methodMatch &&
-    !["if", "for", "while", "switch", "catch"].includes(methodMatch[1])
+    !["if", "for", "while", "switch", "catch", "return"].includes(
+      methodMatch[1],
+    )
   ) {
-    return methodMatch[1];
+    return methodMatch[1]
   }
 
   return null;
 }
 
-// ─── Embedding Generation ───────────────────────────────────────
-
-const OPENAI_EMBEDDING_URL = "https://api.openai.com/v1/embeddings";
-const EMBEDDING_MODEL = "text-embedding-3-small";
-const EMBEDDING_DIMENSIONS = 1536;
-
-interface EmbeddingResponse {
-  data: Array<{
-    embedding: number[];
-    index: number;
-  }>;
-  usage: {
-    prompt_tokens: number;
-    total_tokens: number;
-  };
-}
-
-/**
- * Check if OpenAI embedding API is configured.
- */
-export function isEmbeddingConfigured(): boolean {
-  return (
-    typeof process !== "undefined" && !!process.env.OPENAI_API_KEY
-  );
-}
-
-/**
- * Generate embeddings for an array of text chunks via OpenAI API.
- * Batches up to 20 chunks per request.
- * Returns empty array if OpenAI is not configured.
- */
-export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
-  const apiKey =
-    typeof process !== "undefined" ? process.env.OPENAI_API_KEY : undefined;
-
-  if (!apiKey) {
-    console.warn('[code-indexer] OPENAI_API_KEY not configured — skipping embeddings')
-    return []
-  }
-
-  const embeddings: number[][] = [];
-  const BATCH_SIZE = 20;
-
-  for (let i = 0; i < texts.length; i += BATCH_SIZE) {
-    const batch = texts.slice(i, i + BATCH_SIZE);
-
-    const res = await fetch(OPENAI_EMBEDDING_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: EMBEDDING_MODEL,
-        input: batch,
-        dimensions: EMBEDDING_DIMENSIONS,
-      }),
-    });
-
-    if (!res.ok) {
-      throw new Error(`OpenAI embedding API error: ${res.status}`);
-    }
-
-    const data = (await res.json()) as EmbeddingResponse;
-    const batchEmbeddings = data.data
-      .sort((a, b) => a.index - b.index)
-      .map((d) => d.embedding);
-
-    embeddings.push(...batchEmbeddings);
-  }
-
-  return embeddings;
-}
+// ─── Embedding Provider ─────────────────────────────────────────
+// Imported from embedding-provider.ts at the top of the file.
 
 // ─── Index Orchestration ─────────────────────────────────────────
 
@@ -365,7 +384,9 @@ export async function searchCode(
   const collectionName = getCollectionName(repo);
 
   // Generate embedding for the query
-  const [queryVector] = await generateEmbeddings([query]);
+  const vectors = await generateEmbeddings([query]);
+  if (vectors.length === 0) return [];
+  const [queryVector] = vectors;
 
   // Search Qdrant with filter on repo
   const results = await client.search(collectionName, {

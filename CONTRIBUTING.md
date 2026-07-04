@@ -28,14 +28,14 @@ This project adheres to a [Code of Conduct](CODE_OF_CONDUCT.md). By participatin
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Copy environment variables
 cp .env.example .env
 # Add your DATABASE_URL (Neon Postgres recommended)
 
 # Start the dev server
-npm run dev
+pnpm run dev
 
 # Run typechecking
 npx tsc --noEmit
@@ -142,10 +142,10 @@ If you're using an AI coding agent (Claude Code, Aider, etc.) to develop Mantiz,
 > You are an AI Coding Agent building Mantiz — an AI lie detector for coding agents.
 > You MUST follow the TestSprite S3 "Build the Loop" workflow:
 >
-> 1. After EVERY code change, run `npm run mantiz-scan`
+> 1. After EVERY code change, run `pnpm run mantiz-scan`
 > 2. Read the results — if trust score < 70, your code was flagged as suspicious
 > 3. Fix the code honestly (remove `.skip()`, fill empty catch blocks, fix assertions properly)
-> 4. Re-scan with `npm run mantiz-scan` until score >= 70
+> 4. Re-scan with `pnpm run mantiz-scan` until score >= 70
 > 5. Append results to LOOP.md (the CLI does this automatically)
 > 6. Never skip the scan step or fake the results
 > 7. Each iteration = one row in LOOP.md — aim for 10+ iterations

@@ -204,7 +204,7 @@ git clone https://github.com/farhank15/mantiz.git
 cd mantiz
 
 # Install dependencies
-npm install
+pnpm install
 
 # Set up environment
 cp .env.example .env
@@ -248,14 +248,14 @@ APP_URL=http://localhost:3030
 npx drizzle-kit push
 
 # Start dev server
-npm run dev
+pnpm run dev
 ```
 
 ### 3. Build for Production
 
 ```bash
-npm run build
-npm run preview
+pnpm run build
+pnpm run preview
 ```
 
 ### 4. Apply Database Migrations
@@ -302,7 +302,7 @@ Add to your workflow to scan every PR:
 Install the CLI and scan with options:
 
 ```bash
-npm install -g @mantiz/cli
+pnpm add -g @mantiz/cli
 
 # Local scan (no cloud)
 mantiz-scan
