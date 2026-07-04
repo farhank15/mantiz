@@ -20,6 +20,7 @@ import { Route as ShareIdRouteImport } from './routes/share/$id'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as ApiMockLoginRouteImport } from './routes/api/mock-login'
 import { Route as AuthGithubCallbackRouteImport } from './routes/auth/github/callback'
+import { Route as ApiShareIdRouteImport } from './routes/api/share/$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -76,6 +77,11 @@ const AuthGithubCallbackRoute = AuthGithubCallbackRouteImport.update({
   path: '/auth/github/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiShareIdRoute = ApiShareIdRouteImport.update({
+  id: '/api/share/$id',
+  path: '/api/share/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/pr-scan/': typeof PrScanIndexRoute
   '/scan/': typeof ScanIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/api/share/$id': typeof ApiShareIdRoute
   '/auth/github/callback': typeof AuthGithubCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/pr-scan': typeof PrScanIndexRoute
   '/scan': typeof ScanIndexRoute
   '/settings': typeof SettingsIndexRoute
+  '/api/share/$id': typeof ApiShareIdRoute
   '/auth/github/callback': typeof AuthGithubCallbackRoute
 }
 export interface FileRoutesById {
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   '/pr-scan/': typeof PrScanIndexRoute
   '/scan/': typeof ScanIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/api/share/$id': typeof ApiShareIdRoute
   '/auth/github/callback': typeof AuthGithubCallbackRoute
 }
 export interface FileRouteTypes {
@@ -130,6 +139,7 @@ export interface FileRouteTypes {
     | '/pr-scan/'
     | '/scan/'
     | '/settings/'
+    | '/api/share/$id'
     | '/auth/github/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -143,6 +153,7 @@ export interface FileRouteTypes {
     | '/pr-scan'
     | '/scan'
     | '/settings'
+    | '/api/share/$id'
     | '/auth/github/callback'
   id:
     | '__root__'
@@ -156,6 +167,7 @@ export interface FileRouteTypes {
     | '/pr-scan/'
     | '/scan/'
     | '/settings/'
+    | '/api/share/$id'
     | '/auth/github/callback'
   fileRoutesById: FileRoutesById
 }
@@ -170,6 +182,7 @@ export interface RootRouteChildren {
   PrScanIndexRoute: typeof PrScanIndexRoute
   ScanIndexRoute: typeof ScanIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
+  ApiShareIdRoute: typeof ApiShareIdRoute
   AuthGithubCallbackRoute: typeof AuthGithubCallbackRoute
 }
 
@@ -252,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthGithubCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/share/$id': {
+      id: '/api/share/$id'
+      path: '/api/share/$id'
+      fullPath: '/api/share/$id'
+      preLoaderRoute: typeof ApiShareIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -266,6 +286,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrScanIndexRoute: PrScanIndexRoute,
   ScanIndexRoute: ScanIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
+  ApiShareIdRoute: ApiShareIdRoute,
   AuthGithubCallbackRoute: AuthGithubCallbackRoute,
 }
 export const routeTree = rootRouteImport
