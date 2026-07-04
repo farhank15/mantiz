@@ -74,30 +74,30 @@ interface ShareData {
 }
 
 const VALIDATION_BASIS = {
-  disclaimer: 'PRELIMINARY — N=20 DECEPTIVE samples. Confidence interval ±15-25%.',
-  datasetSize: 203,
-  lastCalibrated: '2026-07-03',
+  disclaimer: 'Calibrated against 423 labeled PRs (16 DECEPTIVE, 407 LEGIT).',
+  datasetSize: 423,
+  lastCalibrated: '2026-07-04',
   detectors: {
-    D6_HallucinatedAssertion: { precision: 77.8, recall: 70.0, f1: 73.7 },
-    D2_AssertionTampering: { precision: 100.0, recall: 15.0, f1: 26.1 },
-    D3_MockToAvoid: { precision: 100.0, recall: 5.0, f1: 9.5 },
-    D1_DisabledAssertion: { precision: 45.5, recall: 25.0, f1: 32.3 },
-    D5_SilentCatch: { precision: 33.3, recall: 10.0, f1: 15.4 },
-    D10_MutationSusceptibility: { precision: 30.0, recall: 60.0, f1: 40.0 },
+    D6_HallucinatedAssertion: { precision: 50.0, recall: 31.3, f1: 38.5 },
+    D2_AssertionTampering: { precision: 30.0, recall: 18.8, f1: 23.1 },
+    D3_MockToAvoid: { precision: 35.0, recall: 43.8, f1: 38.9 },
+    D1_DisabledAssertion: { precision: 37.5, recall: 18.8, f1: 25.0 },
+    D5_SilentCatch: { precision: 7.7, recall: 12.5, f1: 9.5 },
+    D10_MutationSusceptibility: { precision: 43.3, recall: 81.3, f1: 56.5 },
     D4_ClaimDiffMismatch: { precision: 0.0, recall: 0.0, f1: 0.0 },
   },
 }
 
 // ─── Detector penalty weights (from calibrated engine.ts) ────────
 const DETECTOR_PENALTIES: Record<string, { high: number; medium: number; low: number }> = {
-  disabled_assertion: { high: 4, medium: 2, low: 1 },
-  assertion_tampering: { high: 8, medium: 4, low: 1 },
-  mock_to_avoid_failure: { high: 8, medium: 4, low: 1 },
-  claim_diff_mismatch: { high: 2, medium: 1, low: 0 },
-  silent_catch_and_pass: { high: 3, medium: 1, low: 0 },
-  hallucinated_assertion: { high: 6, medium: 3, low: 1 },
-  ai_assisted_detection: { high: 10, medium: 5, low: 2 },
-  mutation_susceptibility: { high: 2, medium: 1, low: 0 },
+  disabled_assertion: { high: 3, medium: 2, low: 0 },
+  assertion_tampering: { high: 2, medium: 1, low: 1 },
+  mock_to_avoid_failure: { high: 5, medium: 2, low: 1 },
+  claim_diff_mismatch: { high: 0, medium: 0, low: 0 },
+  silent_catch_and_pass: { high: 1, medium: 1, low: 0 },
+  hallucinated_assertion: { high: 3, medium: 2, low: 0 },
+  ai_assisted_detection: { high: 0, medium: 0, low: 0 },
+  mutation_susceptibility: { high: 8, medium: 3, low: 0 },
 }
 
 function ShareError({ error }: { error: Error }) {

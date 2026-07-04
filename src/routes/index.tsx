@@ -319,10 +319,10 @@ function App() {
         <div className="mx-auto">
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[
-              { label: "Diffs Scanned", value: 795, suffix: "" },
-              { label: "Benchmarked PRs", value: 203, suffix: "" },
+              { label: "Diffs Scanned", value: 488, suffix: "+" },
+              { label: "Labeled PRs", value: 488, suffix: "" },
               { label: "Detection Patterns", value: 11, suffix: "" },
-              { label: "Verdict Accuracy", value: 97, suffix: "%" },
+              { label: "Overlap Accuracy", value: 98, suffix: "%" },
             ].map((stat) => (
               <div
                 key={stat.label}

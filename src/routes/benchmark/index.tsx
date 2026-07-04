@@ -95,7 +95,7 @@ function BenchmarkPage() {
           title="Benchmark"
           description="Running all 11 detectors against curated datasets to measure accuracy. Each dataset represents a different cheating profile."
           breadcrumbs={[{ label: "Home", to: "/" }, { label: "Benchmark" }]}
-          badge={{ label: "39 fixtures · 4 datasets", color: "success" }}
+          badge={{ label: "42 fixtures · 4 datasets", color: "success" }}
         />
 
         {/* Animated progress bar */}
