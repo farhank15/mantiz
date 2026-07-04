@@ -1,0 +1,266 @@
+{
+  "version": "v2",
+  "generated_at": "2026-07-04T04:25:30.874Z",
+  "total_candidates": 350,
+  "labeled_overlap": 48,
+  "deceptive_count": 10,
+  "legit_count": 38,
+  "detectors": [
+    {
+      "detector": "disabled_assertion",
+      "label": "D1_DisabledAssertion",
+      "confusion": {
+        "tp": 2,
+        "fp": 1,
+        "tn": 37,
+        "fn": 8
+      },
+      "precision": 66.7,
+      "recall": 20,
+      "f1": 30.8,
+      "supportDeceptive": 10,
+      "supportLegit": 38,
+      "suggestedWeight": {
+        "high": 3,
+        "medium": 2,
+        "low": 1
+      },
+      "currentWeight": {
+        "high": 8,
+        "medium": 4,
+        "low": 2
+      }
+    },
+    {
+      "detector": "assertion_tampering",
+      "label": "D2_AssertionTampering",
+      "confusion": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 38,
+        "fn": 8
+      },
+      "precision": 100,
+      "recall": 20,
+      "f1": 33.3,
+      "supportDeceptive": 10,
+      "supportLegit": 38,
+      "suggestedWeight": {
+        "high": 4,
+        "medium": 2,
+        "low": 1
+      },
+      "currentWeight": {
+        "high": 8,
+        "medium": 4,
+        "low": 1
+      }
+    },
+    {
+      "detector": "mock_to_avoid_failure",
+      "label": "D3_MockToAvoid",
+      "confusion": {
+        "tp": 4,
+        "fp": 2,
+        "tn": 36,
+        "fn": 6
+      },
+      "precision": 66.7,
+      "recall": 40,
+      "f1": 50,
+      "supportDeceptive": 10,
+      "supportLegit": 38,
+      "suggestedWeight": {
+        "high": 6,
+        "medium": 3,
+        "low": 1
+      },
+      "currentWeight": {
+        "high": 8,
+        "medium": 4,
+        "low": 1
+      }
+    },
+    {
+      "detector": "claim_diff_mismatch",
+      "label": "D4_ClaimDiffMismatch",
+      "confusion": {
+        "tp": 0,
+        "fp": 0,
+        "tn": 38,
+        "fn": 10
+      },
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "supportDeceptive": 10,
+      "supportLegit": 38,
+      "suggestedWeight": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "currentWeight": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      }
+    },
+    {
+      "detector": "silent_catch_and_pass",
+      "label": "D5_SilentCatch",
+      "confusion": {
+        "tp": 2,
+        "fp": 2,
+        "tn": 36,
+        "fn": 8
+      },
+      "precision": 50,
+      "recall": 20,
+      "f1": 28.6,
+      "supportDeceptive": 10,
+      "supportLegit": 38,
+      "suggestedWeight": {
+        "high": 5,
+        "medium": 2,
+        "low": -1
+      },
+      "currentWeight": {
+        "high": 3,
+        "medium": 1,
+        "low": 0
+      }
+    },
+    {
+      "detector": "hallucinated_assertion",
+      "label": "D6_HallucinatedAssertion",
+      "confusion": {
+        "tp": 6,
+        "fp": 3,
+        "tn": 35,
+        "fn": 4
+      },
+      "precision": 66.7,
+      "recall": 60,
+      "f1": 63.2,
+      "supportDeceptive": 10,
+      "supportLegit": 38,
+      "suggestedWeight": {
+        "high": 8,
+        "medium": 4,
+        "low": 1
+      },
+      "currentWeight": {
+        "high": 6,
+        "medium": 3,
+        "low": 1
+      }
+    },
+    {
+      "detector": "ai_assisted_detection",
+      "label": "D8_AIAssisted",
+      "confusion": {
+        "tp": 0,
+        "fp": 0,
+        "tn": 38,
+        "fn": 10
+      },
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "supportDeceptive": 10,
+      "supportLegit": 38,
+      "suggestedWeight": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "currentWeight": {
+        "high": 10,
+        "medium": 5,
+        "low": 2
+      }
+    },
+    {
+      "detector": "historical_behavioral",
+      "label": "D9_Historical",
+      "confusion": {
+        "tp": 0,
+        "fp": 0,
+        "tn": 38,
+        "fn": 10
+      },
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "supportDeceptive": 10,
+      "supportLegit": 38,
+      "suggestedWeight": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "currentWeight": {
+        "high": 5,
+        "medium": 3,
+        "low": 1
+      }
+    },
+    {
+      "detector": "mutation_susceptibility",
+      "label": "D10_MutationSusceptibility",
+      "confusion": {
+        "tp": 6,
+        "fp": 2,
+        "tn": 36,
+        "fn": 4
+      },
+      "precision": 75,
+      "recall": 60,
+      "f1": 66.7,
+      "supportDeceptive": 10,
+      "supportLegit": 38,
+      "suggestedWeight": {
+        "high": 9,
+        "medium": 4,
+        "low": 0
+      },
+      "currentWeight": {
+        "high": 2,
+        "medium": 1,
+        "low": 0
+      }
+    },
+    {
+      "detector": "agent_instruction_scan",
+      "label": "D11_AgentInstruction",
+      "confusion": {
+        "tp": 0,
+        "fp": 0,
+        "tn": 38,
+        "fn": 10
+      },
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "supportDeceptive": 10,
+      "supportLegit": 38,
+      "suggestedWeight": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "currentWeight": {
+        "high": 10,
+        "medium": 5,
+        "low": 2
+      }
+    }
+  ],
+  "score_distribution": {
+    "avg": 95.9,
+    "clean": 325,
+    "suspicious": 18,
+    "deceptive": 7
+  }
+}

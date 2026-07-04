@@ -49,10 +49,14 @@ function scanForMocks(hunkContent: string, baseLine: number, filePath: string, l
   }
 
   // Check for excessive mocking: count test/assert keywords in the hunk
-  const assertionPattern = rules.assertionTampering.assertionPattern
+  // NOTE: We use a SIMPLE regex here, NOT the full assertionPattern from the registry,
+  // because assertionPattern has nested quantifiers that cause catastrophic backtracking
+  // on long non-matching lines (e.g., minified JS in diffs).
+  // This check is approximate — we just need a count, not exact matches.
+  const SIMPLE_ASSERTION_CHECK = /expect\s*\(|assert|should|it\./i
   let testAssertionCount = 0
   for (const line of lines) {
-    if (line.startsWith('+') && assertionPattern.test(line)) {
+    if (line.startsWith('+') && SIMPLE_ASSERTION_CHECK.test(line)) {
       testAssertionCount++
     }
   }
