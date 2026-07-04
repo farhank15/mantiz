@@ -8,7 +8,7 @@ import { detectSilentCatch } from './silent-catch'
 import { detectHallucinatedAssertions } from './hallucination'
 import { detectWithAI } from './ai-assisted'
 import { evaluateFindings, isAIJudgeEnabled } from './ai-judge'
-import { registerCustomMatchersFromDiff, resetCustomMatchers } from './custom-matchers'
+import { registerCustomMatchersFromDiff, resetCustomMatchers, scanInstalledMatcherPackages, initJestDomMatchers } from './custom-matchers'
 import { detectMutationSusceptibility } from './mutation-susceptibility'
 import { detectAgentInstructions } from './agent-instruction'
 import { ensureCredits, deductCredits, CREDIT_COSTS } from '../server/credits'
@@ -190,9 +190,14 @@ export function scanDiff(rawDiff: string, prContext?: { title?: string; author?:
 
   const functionalFiles = files.filter(f => !isNonFunctional(f.newFile || f.oldFile || ''))
 
-  // Register custom matchers from expect.extend() calls in the diff
-  // Reset first to prevent context leaking between scans in long-running processes
+  // Register custom matchers from:
+  // 1. Reset per-scan to prevent context leaking
+  // 2. Re-scan node_modules packages (jest-dom, jest-extended, etc.)
+  // 3. Re-init static jest-dom fallback
+  // 4. Extract from expect.extend() calls in the diff
   resetCustomMatchers()
+  scanInstalledMatcherPackages()
+  initJestDomMatchers()
   registerCustomMatchersFromDiff(files)
 
   debug(`🔍 Parsing ${files.length} files (${functionalFiles.length} functional) from diff`)

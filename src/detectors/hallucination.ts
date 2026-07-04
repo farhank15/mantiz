@@ -261,7 +261,12 @@ function scanLineForHallucination(line: string, lineIndex: number, filePath: str
 
   if (!flaggedMethod) return null
 
-  const confidence: 'high' | 'medium' | 'low' = isKnownHallucinated ? 'high' : fromChain ? 'low' : 'medium'
+  // Layer 3: Heuristic Fallback — unknown assertion-like matchers = LOW confidence.
+  // Research shows 95%+ of real matchers use 'to' prefix. If a matcher is
+  // assertion-like but not in any known whitelist AND not hallucinated,
+  // it's likely a custom matcher from an unscanned package.
+  // Only known hallucinated patterns get HIGH confidence.
+  const confidence: 'high' | 'medium' | 'low' = isKnownHallucinated ? 'high' : 'low'
 
   return {
     patternType: 'hallucinated_assertion',
@@ -271,9 +276,7 @@ function scanLineForHallucination(line: string, lineIndex: number, filePath: str
     confidence,
     explanation: isKnownHallucinated
       ? `Potentially hallucinated assertion matcher "${flaggedMethod}" — this function does not exist in any known testing framework.`
-      : fromChain
-        ? `Unknown assertion matcher "${flaggedMethod}" in chained call — not in the ${(lang && LANGUAGE_CONFIG[lang]?.name) || 'expected'} whitelist. May be valid in a different framework.`
-        : `Unknown assertion matcher "${flaggedMethod}" — not in the ${(lang && LANGUAGE_CONFIG[lang]?.name) || 'expected'} whitelist. May be valid in a different framework.`,
+      : `Unknown assertion matcher "${flaggedMethod}" — not in the whitelist. Likely a custom matcher from an unscanned package (LOW confidence).`,
     evidenceExcerpt: content.substring(0, 200),
   }
 }

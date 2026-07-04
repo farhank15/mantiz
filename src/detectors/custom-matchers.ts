@@ -4,13 +4,19 @@
  * Maintains a set of custom assertion matchers registered via `expect.extend()`.
  * This prevents D6 (Hallucinated Assertion) from flagging legitimate custom matchers.
  *
- * Sources:
+ * Sources (Layer 2+4):
  * 1. Auto-extracted from `expect.extend({...})` calls in the diff
- * 2. Configurable via env var MANTIZ_CUSTOM_MATCHERS (comma-separated)
+ * 2. Auto-detected from installed node_modules packages (jest-dom, jest-extended, etc.)
+ * 3. Configurable via env var MANTIZ_CUSTOM_MATCHERS (comma-separated)
+ *
+ * Layer 2 (Node_modules Scanner) resolves known matcher packages at runtime,
+ * imports them via dynamic require, and enumerates their exported matchers.
+ * This auto-detects packages like @testing-library/jest-dom without hardcoding.
  *
  * Usage:
  *   import { registerCustomMatchers, isCustomMatcher } from './custom-matchers'
  *   registerCustomMatchersFromDiff(files)  // auto-detect from diff content
+ *   scanInstalledMatcherPackages()          // auto-detect from node_modules
  *   isCustomMatcher('toOutput')  // true if registered
  */
 
@@ -23,6 +29,8 @@ const CUSTOM_MATCHER_SET = new Set<string>()
  *   { toBeFoo, toBeBar }          → 'toBeFoo', 'toBeBar'
  *   { toBeFoo: fn, toBeBar: fn }  → 'toBeFoo', 'toBeBar'
  */
+import { createRequire as _createRequire } from 'node:module'
+
 const MATCHER_NAME_PATTERN = /[,\s{]*\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?::\s*\(|[:(,\s\]\}]|$)/g
 
 /**
@@ -162,10 +170,70 @@ export function initCustomMatchersFromEnv(): void {
 }
 
 /**
+ * Layer 2: Node_modules Scanner — Auto-detect matchers from installed packages.
+ *
+ * Tries to dynamically resolve and import known matcher-providing packages.
+ * If a package is installed (in node_modules), extracts its matchers via
+ * Object.keys() and registers them.
+ *
+ * This catches:
+ *   - @testing-library/jest-dom (installed)
+ *   - jest-extended (if installed)
+ *   - @emotion/jest (if installed)
+ *
+ * Wrapped in try/catch — fails gracefully if package not found.
+ */
+export function scanInstalledMatcherPackages(): void {
+  // Helper: try to resolve a module path and extract its exports.
+  // Uses createRequire for ESM compatibility ("type": "module" in package.json).
+  function tryExtractMatchers(packageName: string, subpath?: string): boolean {
+    try {
+      const _require = _createRequire(import.meta.url)
+
+      const resolvePath = subpath
+        ? _require.resolve(`${packageName}/${subpath}`)
+        : _require.resolve(packageName)
+
+      const mod = _require(resolvePath)
+
+      // Extract all function names from the module's exports
+      // Use Reflect.ownKeys to also catch getter-based matchers
+      const exports = mod.default || mod
+      if (typeof exports === 'object' && exports !== null) {
+        for (const key of Reflect.ownKeys(exports) as string[]) {
+          if (typeof key === 'string' && key.startsWith('to')) {
+            CUSTOM_MATCHER_SET.add(key)
+          }
+        }
+        return true
+      }
+    } catch {
+      // Package not installed — ignore silently
+    }
+    return false
+  }
+
+  // Priority 1: @testing-library/jest-dom matchers (most common)
+  // Ships matchers in @testing-library/jest-dom/matchers or dist/matchers.js
+  tryExtractMatchers('@testing-library/jest-dom', 'matchers') ||
+    tryExtractMatchers('@testing-library/jest-dom', 'dist/matchers') ||
+    tryExtractMatchers('@testing-library/jest-dom', 'dist/matchers.js')
+
+  // Priority 2: jest-extended (if installed)
+  tryExtractMatchers('jest-extended')
+
+  // Priority 3: @emotion/jest matchers (if installed)
+  tryExtractMatchers('@emotion/jest')
+}
+
+/**
  * Register common @testing-library/jest-dom custom matchers that are
  * imported via `import '@testing-library/jest-dom'` (auto-registers via side-effect).
  * These don't appear as `expect.extend()` in user code, so we include them
  * by default to prevent FP.
+ *
+ * NOTE: This static list serves as a FALLBACK if Layer 2 (node_modules scanner)
+ * fails or returns incomplete results. Layer 2 is tried FIRST.
  */
 export function initJestDomMatchers(): void {
   // All @testing-library/jest-dom matchers that import via side-effect
@@ -186,5 +254,6 @@ export function initJestDomMatchers(): void {
 }
 
 // Initialize at module load
+scanInstalledMatcherPackages()
 initJestDomMatchers()
 initCustomMatchersFromEnv()
