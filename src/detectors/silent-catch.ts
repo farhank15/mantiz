@@ -229,7 +229,8 @@ function scanForSilentCatches(hunkContent: string, baseLine: number, lang: strin
       const trimmed = nextLine.slice(1).trim()
 
       // Skip multi-line detection for Python/Ruby (use indentation, not braces)
-      if (blockClose === null) break
+      // Single-line patterns already caught in first pass above.
+      if (blockClose === null) continue
       const isBlockEnd = trimmed === blockClose || trimmed.startsWith(blockClose)
 
       if (isBlockEnd) {

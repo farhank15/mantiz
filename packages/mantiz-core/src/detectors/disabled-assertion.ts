@@ -1,86 +1,196 @@
 import type { Finding, ParsedDiff, Confidence } from '../types'
+import { detectLanguage, isTestFile, LANGUAGE_CONFIG } from '../language-registry'
+import type { LanguageDetectionRules } from '../language-registry'
 
-const COMMENTED_ASSERTION = /\/\/\s*(assert\s*\(|assert\.|expect\s*\(|should\s*\(|should\.|\.should\b|\.toBe|\.toEqual|\.toMatch|\.toContain|\.toThrow|\.resolves|\.rejects)/i
-const SKIP_PATTERN = /\.skip\s*\(/
-const IF_FALSE_PATTERN = /if\s*\(\s*(?:false|0)\s*\)\s*\{/
-const COMMENTED_TEST = /\/\/\s*(?:it|test|describe)\s*\(/
-const TODO_PREFIX = /\/\/\s*TODO/i
+type MatchPattern = 'skip' | 'skip_with_reason' | 'focus' | 'if_false' | 'comment' | 'empty_test'
 
 interface MatchResult {
   lineIndex: number
   lineContent: string
-  pattern: 'comment' | 'skip' | 'if_false' | 'todo'
+  pattern: MatchPattern
+  lang: string
 }
 
-function scanHunk(hunkContent: string, baseLine: number): MatchResult[] {
+function getRules(lang: string | null): LanguageDetectionRules {
+  if (lang && LANGUAGE_CONFIG[lang]) {
+    return LANGUAGE_CONFIG[lang].detectionRules
+  }
+  return LANGUAGE_CONFIG.javascript.detectionRules
+}
+
+function scanHunk(hunkContent: string, baseLine: number, lang: string | null): MatchResult[] {
+  const rules = getRules(lang)
   const lines = hunkContent.split('\n')
   const matches: MatchResult[] = []
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     if (line.startsWith(' ')) continue
+    const content = line.slice(1).trim()
+    const lineIdx = baseLine + i
+    let matched = false
 
-    if (COMMENTED_ASSERTION.test(line)) {
-      matches.push({ lineIndex: baseLine + i, lineContent: line.trim(), pattern: 'comment' })
-      continue
+    if (!matched) {
+      for (const pattern of rules.disabledAssertion.skipPatterns) {
+        if (pattern.test(line) || pattern.test(content)) {
+          const hasReason = /\.skip\s*\(\s*['"`]/.test(line) ||
+            /@pytest\.mark\.skip\s*\(/.test(line) ||
+            /@pytest\.mark\.skipif\s*\(/.test(line) ||
+            /@unittest\.skip\(/.test(line)
+          matches.push({
+            lineIndex: lineIdx,
+            lineContent: content,
+            pattern: hasReason ? 'skip_with_reason' : 'skip',
+            lang: lang || 'javascript',
+          })
+          matched = true
+          break
+        }
+      }
     }
-    if (SKIP_PATTERN.test(line) && (line.includes('it') || line.includes('describe') || line.includes('test'))) {
-      matches.push({ lineIndex: baseLine + i, lineContent: line.trim(), pattern: 'skip' })
-      continue
+
+    if (!matched) {
+      for (const pattern of rules.disabledAssertion.focusPatterns) {
+        if (pattern.test(line) || pattern.test(content)) {
+          matches.push({ lineIndex: lineIdx, lineContent: content, pattern: 'focus', lang: lang || 'javascript' })
+          matched = true
+          break
+        }
+      }
     }
-    if (IF_FALSE_PATTERN.test(line)) {
-      matches.push({ lineIndex: baseLine + i, lineContent: line.trim(), pattern: 'if_false' })
-      continue
+
+    if (!matched) {
+      for (const pattern of rules.disabledAssertion.conditionalDisable) {
+        if (pattern.test(line) || pattern.test(content)) {
+          matches.push({ lineIndex: lineIdx, lineContent: content, pattern: 'if_false', lang: lang || 'javascript' })
+          matched = true
+          break
+        }
+      }
     }
-    if (COMMENTED_TEST.test(line)) {
-      matches.push({ lineIndex: baseLine + i, lineContent: line.trim(), pattern: 'comment' })
-      continue
+
+    if (!matched) {
+      for (const pattern of rules.disabledAssertion.commentPatterns) {
+        if (pattern.test(line) || pattern.test(content)) {
+          matches.push({ lineIndex: lineIdx, lineContent: content, pattern: 'comment', lang: lang || 'javascript' })
+          matched = true
+          break
+        }
+      }
     }
-    if (TODO_PREFIX.test(line) && (line.includes('test') || line.includes('assert') || line.includes('expect'))) {
-      matches.push({ lineIndex: baseLine + i, lineContent: line.trim(), pattern: 'todo' })
-      continue
+  }
+
+  // Empty test body detection (JS/TS style)
+  const EMPTY_TEST_INLINE = /\b(it|test)\s*\(\s*['"][^'"]+['"]\s*,\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{\s*\}/m
+  const TEST_OPEN_LINE = /\b(it|test)\s*\(\s*['"][^'"]+['"]/m
+
+  if (EMPTY_TEST_INLINE.test(hunkContent)) {
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith('+') && EMPTY_TEST_INLINE.test(lines[i])) {
+        const lineIdx = baseLine + i
+        if (!matches.some(m => Math.abs(m.lineIndex - lineIdx) < 3)) {
+          matches.push({ lineIndex: lineIdx, lineContent: lines[i].slice(1).trim(), pattern: 'empty_test', lang: lang || 'javascript' })
+        }
+      }
+    }
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    if (!lines[i].startsWith('+')) continue
+    if (!TEST_OPEN_LINE.test(lines[i])) continue
+    const lineIdx = baseLine + i
+    if (matches.some(m => Math.abs(m.lineIndex - lineIdx) < 3)) continue
+
+    let hasAssertion = false
+    let bodyEnded = false
+    let braceDepth = 0
+    let inBody = false
+
+    for (let j = i; j < Math.min(i + 20, lines.length); j++) {
+      const scanLine = lines[j]
+      const openBrace = (scanLine.match(/{/g) || []).length
+      const closeBrace = (scanLine.match(/}/g) || []).length
+      braceDepth += openBrace - closeBrace
+      if (braceDepth > 0) inBody = true
+      if (inBody && braceDepth === 0) { bodyEnded = true; break }
+      if (inBody && !/^\s*\/\//.test(scanLine)) {
+        if (/\b(expect|assert|vi\.|jest\.|cy\.|should|assertion)\b/.test(scanLine)) {
+          hasAssertion = true
+          break
+        }
+      }
+    }
+    if (bodyEnded && !hasAssertion) {
+      matches.push({ lineIndex: lineIdx, lineContent: lines[i].slice(1).trim(), pattern: 'empty_test', lang: lang || 'javascript' })
     }
   }
 
   return matches
 }
 
-function patternToConfidence(pattern: MatchResult['pattern']): Confidence {
+function patternToConfidence(pattern: MatchPattern): Confidence {
   switch (pattern) {
     case 'skip': return 'high'
+    case 'skip_with_reason': return 'low'
+    case 'focus': return 'high'
     case 'if_false': return 'high'
+    case 'empty_test': return 'medium'
     case 'comment': return 'medium'
-    case 'todo': return 'low'
   }
 }
 
-function patternToExplanation(pattern: MatchResult['pattern']): string {
+function patternToExplanation(pattern: MatchPattern, lang: string): string {
+  const langName = LANGUAGE_CONFIG[lang]?.name || lang
   switch (pattern) {
-    case 'skip': return 'Test or test suite marked with .skip() — will be silently ignored by the test runner.'
-    case 'if_false': return 'Assertion wrapped in if(false) — the assertion will never execute.'
-    case 'comment': return 'Assertion commented out — the test no longer verifies the expected behavior.'
-    case 'todo': return 'TODO comment on a test line — may indicate intentionally disabled verification.'
+    case 'skip': return `Test or test suite skipped without reason (${langName}) — will be silently ignored by the test runner.`
+    case 'skip_with_reason': return `Test or test suite skipped with a reason (${langName}) — may be legitimate but still disables the assertion.`
+    case 'focus': return `Focused test or test suite (${langName}) — will cause the runner to skip all other tests in the project.`
+    case 'if_false': return `Assertion wrapped in conditional that always evaluates to false (${langName}) — the assertion will never execute.`
+    case 'comment': return `Assertion commented out (${langName}) — the test no longer verifies the expected behavior.`
+    case 'empty_test': return `Empty test body (${langName}) — the test is defined but contains no assertions, so it passes without verifying anything.`
   }
 }
 
 export function detectDisabledAssertions(files: ParsedDiff[]): Finding[] {
   const findings: Finding[] = []
 
+  const hasSourceChange = files.some(f => {
+    const fp = f.newFile || f.oldFile || ''
+    if (fp === '/dev/null' || !fp) return false
+    return !isTestFile(fp) && detectLanguage(fp) !== null
+  })
+
   for (const file of files) {
     const filePath = file.newFile || file.oldFile || 'unknown'
+    if (file.newFile === '/dev/null') continue
+    const lang = detectLanguage(filePath)
+    if (!isTestFile(filePath)) continue
 
     for (const hunk of file.hunks) {
       const baseLine = hunk.newStart
-      const matches = scanHunk(hunk.content, baseLine)
+      const matches = scanHunk(hunk.content, baseLine, lang)
+
+      const hasActiveAssertions = /\bexpect\s*\(|\bassert\s*\(/.test(
+        hunk.content.split('\n')
+          .filter(l => l.startsWith('+') && !l.startsWith('+++'))
+          .map(l => l.slice(1))
+          .filter(l => !/^\s*\/\//.test(l))
+          .join('\n')
+      )
+      const hasCommentedAssert = matches.some(m => m.pattern === 'comment')
 
       for (const match of matches) {
+        let confidence = patternToConfidence(match.pattern)
+        if (match.pattern === 'comment' && hasSourceChange) confidence = 'low'
+        if (match.pattern === 'comment' && hasActiveAssertions && hasCommentedAssert) confidence = 'low'
+
         findings.push({
           patternType: 'disabled_assertion',
           filePath,
           lineStart: match.lineIndex,
           lineEnd: match.lineIndex,
-          confidence: patternToConfidence(match.pattern),
-          explanation: patternToExplanation(match.pattern),
+          confidence,
+          explanation: `${patternToExplanation(match.pattern, match.lang)} [${match.lang.toUpperCase()}]`,
           evidenceExcerpt: match.lineContent.slice(0, 200),
         })
       }

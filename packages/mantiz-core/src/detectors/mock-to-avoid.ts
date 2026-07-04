@@ -1,46 +1,44 @@
 import type { Finding, ParsedDiff } from '../types'
+import { detectLanguage, isTestFile, LANGUAGE_CONFIG } from '../language-registry'
 
-// Order matters: mock, spyOn, fn — used with findIndex to determine confidence
-const MOCK_PATTERNS = [
-  /(?:jest|vi)\.\s*mock\s*\(/,
-  /(?:jest|vi)\.\s*spyOn\s*\(/,
-  /(?:jest|vi)\.\s*fn\s*\(/,
-]
-const TEST_PATTERN = /\b(it|test|describe|expect|assert)\s*\(/
+const SIMPLE_ASSERTION_CHECK = /expect\s*\(|assert|should|it\./i
 
-function scanForMocks(hunkContent: string, baseLine: number, filePath: string): Finding[] {
+function scanForMocks(hunkContent: string, baseLine: number, filePath: string, lang: string | null): Finding[] {
   const findings: Finding[] = []
   const lines = hunkContent.split('\n')
 
+  const rules = lang && LANGUAGE_CONFIG[lang]
+    ? LANGUAGE_CONFIG[lang].detectionRules
+    : LANGUAGE_CONFIG.javascript.detectionRules
+  const mockPatterns = rules.mockToAvoid.mockPatterns
+
   let mockCount = 0
-  let testAssertionCount = 0
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     if (!line.startsWith('+')) continue
 
-    const matchedPatternIdx = MOCK_PATTERNS.findIndex(p => p.test(line))
+    const matchedPatternIdx = mockPatterns.findIndex(p => p.test(line))
     if (matchedPatternIdx !== -1) {
       mockCount++
+      const mockContent = line.slice(1).trim().substring(0, 120)
 
-      // MOCK_PATTERNS[0] = mock(), [1] = spyOn(), [2] = fn()
-      // fn() and spyOn() → low (common, rarely indicates cheating)
-      // mock() → high if entire module, medium if partial
       let confidence: 'high' | 'medium' | 'low'
       let explanation: string
 
-      if (matchedPatternIdx === 2) {
-        confidence = 'low'
-        explanation = 'Mock function — common test utility, verify real assertions exist.'
-      } else if (matchedPatternIdx === 1) {
-        confidence = 'low'
-        explanation = 'Method spy — common pattern, verify real behavior is also tested.'
+      // Heuristic confidence based on how many patterns exist for this language
+      if (mockPatterns.length > 3) {
+        // Lang with detailed mock patterns (JS/TS, Java, Ruby)
+        if (matchedPatternIdx <= 1) {
+          confidence = 'high'
+          explanation = 'Mock introduced in test — verify real assertions exist alongside mock.'
+        } else {
+          confidence = 'low'
+          explanation = 'Common test utility — verify real behavior is also tested.'
+        }
       } else {
-        const isEntireModule = line.includes('* as') || !line.includes('{')
-        confidence = isEntireModule ? 'high' : 'medium'
-        explanation = isEntireModule
-          ? 'Entire module mocked — may bypass real implementation.'
-          : 'Module mock — verify real path is tested alongside.'
+        confidence = 'medium'
+        explanation = 'Potential mock that may bypass real implementation.'
       }
 
       findings.push({
@@ -50,11 +48,15 @@ function scanForMocks(hunkContent: string, baseLine: number, filePath: string): 
         lineEnd: baseLine + i,
         confidence,
         explanation,
-        evidenceExcerpt: line.slice(1).trim().substring(0, 120),
+        evidenceExcerpt: mockContent,
       })
     }
+  }
 
-    if (TEST_PATTERN.test(line)) {
+  // Excessive mocking check
+  let testAssertionCount = 0
+  for (const line of lines) {
+    if (line.startsWith('+') && SIMPLE_ASSERTION_CHECK.test(line)) {
       testAssertionCount++
     }
   }
@@ -79,9 +81,12 @@ export function detectMockToAvoid(files: ParsedDiff[]): Finding[] {
 
   for (const file of files) {
     const filePath = file.newFile || file.oldFile || 'unknown'
+    if (file.newFile === '/dev/null') continue
+    if (!isTestFile(filePath)) continue
+    const lang = detectLanguage(filePath)
 
     for (const hunk of file.hunks) {
-      const hunkFindings = scanForMocks(hunk.content, hunk.newStart, filePath)
+      const hunkFindings = scanForMocks(hunk.content, hunk.newStart, filePath, lang)
       findings.push(...hunkFindings)
     }
   }
