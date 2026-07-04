@@ -108,6 +108,13 @@ export const Route = createFileRoute("/api/github/webhook")({
           } = ghApp;
           const { scanDiffAsync } = engine;
 
+          // Helper to get repo full name from payload for RAG indexing
+          const getRepoFullName = (): string | null => {
+            if (payloadAny.repository?.full_name) return payloadAny.repository.full_name
+            if (payloadAny.repositories?.[0]?.full_name) return payloadAny.repositories[0].full_name
+            return null
+          }
+
           switch (eventType) {
             // ── Installation Events ────────────────────────────────
             case "installation": {
@@ -119,7 +126,7 @@ export const Route = createFileRoute("/api/github/webhook")({
                 action === "new_permissions_accepted"
               ) {
                 const repos =
-                  (payloadAny.repositories as Array<{ id: number }>) || [];
+                  (payloadAny.repositories as Array<{ id: number; full_name?: string }>) || [];
                 await saveInstallation({
                   installationId: inst.id,
                   accountId: inst.account?.id || 0,
@@ -127,8 +134,40 @@ export const Route = createFileRoute("/api/github/webhook")({
                   accountType: inst.account?.type || "User",
                   repoIds: repos.map((r: { id: number }) => r.id),
                 });
+
+                // ── Index repo for RAG (blocking with timeout) ────
+                // Index first 50 source files (best-effort within 30s timeout).
+                // Full indexing of large repos needs a background worker.
+                for (const repo of repos) {
+                  if (repo.full_name) {
+                    const [ownerName, repoSlug] = repo.full_name.split("/")
+                    if (ownerName && repoSlug) {
+                      try {
+                        const { indexRepository } = await import("../../../server/repo-indexer")
+                        await Promise.race([
+                          indexRepository(inst.id, ownerName, repoSlug, 50),
+                          new Promise((_, reject) =>
+                            setTimeout(() => reject(new Error("Indexing timeout (30s)")), 30_000)
+                          ),
+                        ])
+                      } catch (indexErr) {
+                        console.error(`[webhook] Index error for ${repo.full_name}:`, indexErr)
+                      }
+                    }
+                  }
+                }
               } else if (action === "deleted") {
                 await removeInstallation(inst.id);
+
+                // Optionally clean up Qdrant index
+                const repoFullName = getRepoFullName()
+                if (repoFullName) {
+                  const { deleteRepoIndex } = await import("../../../server/repo-indexer")
+                  const [ownerName, repoSlug] = repoFullName.split("/")
+                  if (ownerName && repoSlug) {
+                    await deleteRepoIndex(inst.id, ownerName, repoSlug).catch(() => {})
+                  }
+                }
               }
               break;
             }
@@ -137,9 +176,9 @@ export const Route = createFileRoute("/api/github/webhook")({
             case "installation_repositories": {
               const instId = payloadAny.installation?.id as number;
               const reposAdded =
-                (payloadAny.repositories_added as Array<{ id: number }>) || [];
+                (payloadAny.repositories_added as Array<{ id: number; full_name?: string }>) || [];
               const reposRemoved =
-                (payloadAny.repositories_removed as Array<{ id: number }>) ||
+                (payloadAny.repositories_removed as Array<{ id: number; full_name?: string }>) ||
                 [];
 
               const currentRepos = await getInstallationRepos(instId);
@@ -149,6 +188,24 @@ export const Route = createFileRoute("/api/github/webhook")({
               for (const repo of reposAdded) {
                 if (!updatedRepos.includes(repo.id)) {
                   updatedRepos.push(repo.id);
+                }
+
+                // Index newly added repos (blocking with timeout)
+                if (repo.full_name) {
+                  const [ownerName, repoSlug] = repo.full_name.split("/")
+                  if (ownerName && repoSlug) {
+                    try {
+                      const { indexRepository } = await import("../../../server/repo-indexer")
+                      await Promise.race([
+                        indexRepository(instId, ownerName, repoSlug, 50),
+                        new Promise((_, reject) =>
+                          setTimeout(() => reject(new Error("Indexing timeout (30s)")), 30_000)
+                        ),
+                      ])
+                    } catch (indexErr) {
+                      console.error(`[webhook] Index error for ${repo.full_name}:`, indexErr)
+                    }
+                  }
                 }
               }
               await updateInstallationRepos(instId, updatedRepos);
@@ -176,6 +233,7 @@ export const Route = createFileRoute("/api/github/webhook")({
 
               const owner = repo.owner?.login || repo.owner?.name;
               const repoName = repo.name;
+              const repoFullName = repo.full_name || `${owner}/${repoName}`;
               const pullNumber = pr.number;
               const headSha = pr.head?.sha;
 
@@ -207,11 +265,70 @@ export const Route = createFileRoute("/api/github/webhook")({
                 }
                 const diffText = await diffRes.text();
 
-                // ── Run Mantiz scan ───────────────────────────────
+                // ── Query RAG for code context ─────────────────────
+                // Extract potential custom matcher/function names from the diff
+                // and search Qdrant for their definitions.
+                // This helps the AI judge avoid false positives on legit APIs.
+                let ragContext: string | undefined
+                try {
+                  const { searchSymbol, isQdrantConfigured } = await import("../../../server/code-rag")
+
+                  if (isQdrantConfigured()) {
+                    // Extract .methodName( patterns from diff
+                    const dotCallPattern = /\.([a-zA-Z]\w*)\s*\(/g
+                    const names = new Set<string>()
+                    let match
+                    while ((match = dotCallPattern.exec(diffText)) !== null) {
+                      const name = match[1]
+                      // Only query for potential custom matchers (not built-in JS)
+                      if (name.length > 2 && !["map", "filter", "reduce", "forEach", "then", "catch", "finally", "toUpperCase", "toLowerCase", "trim", "split", "join", "slice", "splice", "push", "pop", "shift", "unshift", "includes", "indexOf", "replace", "match", "test"].includes(name)) {
+                        names.add(name)
+                      }
+                    }
+
+                    // Query Qdrant for each name (parallel, limit to 10)
+                    const foundDefs: Array<{ name: string; filePath: string; content: string; startLine: number }> = []
+                    const nameArray = Array.from(names).slice(0, 10)
+                    const results = await Promise.all(
+                      nameArray.map((name) =>
+                        searchSymbol(name, repoFullName).then(r => ({ name, r }))
+                      )
+                    )
+                    for (const { name, r: result } of results) {
+                      if (result.found && result.definition) {
+                        foundDefs.push({
+                          name,
+                          filePath: result.definition.filePath,
+                          content: result.definition.content,
+                          startLine: result.definition.startLine,
+                        })
+                      }
+                    }
+
+                    if (foundDefs.length > 0) {
+                      const { buildRagContext } = await import("../../../server/code-rag")
+                      ragContext = buildRagContext(
+                        foundDefs.map(d => ({
+                          filePath: d.filePath,
+                          symbolName: d.name,
+                          content: d.content,
+                          startLine: d.startLine,
+                          score: 1,
+                        })),
+                        3000,
+                      )
+                    }
+                  }
+                } catch (ragErr) {
+                  // RAG query failed — continue without context
+                  console.error("[webhook] RAG query error:", ragErr)
+                }
+
+                // ── Run Mantiz scan (with RAG context) ────────────
                 const result = await scanDiffAsync(diffText, {
                   title: pr.title || "",
                   author: pr.user?.login || pr.head?.user?.login || "unknown",
-                });
+                }, ragContext);
 
                 // ── Post PR review comments ───────────────────────
                 await postPRReviewComments(octokit, {

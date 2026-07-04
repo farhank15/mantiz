@@ -300,11 +300,19 @@ export function scanDiff(rawDiff: string, prContext?: { title?: string; author?:
  * Runs static detectors first (sync), then fires AI detection.
  * Falls back gracefully if AI fails or times out.
  * prContext is passed to claim-diff mismatch detector for bot/honest-title awareness.
+ * ragContext contains retrieved code definitions (from Qdrant) — injected into AI prompt
+ * to reduce false positives on custom matchers/functions that exist in the repo.
  */
 export async function scanDiffAsync(
   rawDiff: string,
   prContext?: { title?: string; author?: string },
+  ragContext?: string,
 ): Promise<ScanResult> {
+  // Allow ragContext to flow through to AI detectors via prContext
+  // (extends prContext with ragContext for the detectWithAI call)
+  const extendedContext = ragContext
+    ? { ...prContext, ragContext }
+    : prContext
   const baseResult = scanDiff(rawDiff, prContext)
 
   console.log('[Mantiz] AI_DETECTION_ENABLED:', typeof process !== 'undefined' ? process.env.AI_DETECTION_ENABLED : 'N/A', '| AI_JUDGE_ENABLED:', typeof process !== 'undefined' ? process.env.AI_JUDGE_ENABLED : 'N/A', '| GROQ:', typeof process !== 'undefined' && process.env.GROQ_API_KEY ? 'SET' : 'NOT SET')
@@ -396,8 +404,15 @@ export async function scanDiffAsync(
     if (canAfford) {
       debug('  Detector 8 [AI-Assisted Detection]: analyzing via AI...')
       try {
-        const aiContext = prContext ? { title: prContext.title, description: prContext.author ? `Author: ${prContext.author}` : undefined } : undefined
-        const aiFindings = await detectWithAI(baseResult.files, aiContext)
+        // Build AI context with PR info + RAG context (if available)
+        const aiContext: { title?: string; description?: string; ragContext?: string } = {}
+        if (extendedContext?.title) aiContext.title = extendedContext.title
+        if (extendedContext?.author) aiContext.description = `Author: ${extendedContext.author}`
+        if (extendedContext && 'ragContext' in extendedContext) {
+          const rc = (extendedContext as any).ragContext as string | undefined
+          if (rc) aiContext.ragContext = rc
+        }
+        const aiFindings = await detectWithAI(baseResult.files, Object.keys(aiContext).length > 0 ? aiContext : undefined)
 
         if (auth) {
           await deductCredits(auth.userId, 'ai_assisted', { findingCount: aiFindings.length }).catch(() => {})

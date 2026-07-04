@@ -165,13 +165,24 @@ export async function detectWithAI(
     return /(\.(test|spec)\.(ts|tsx|js|jsx)$)|(_test\.go$)|(\/(?:__tests__|tests?|fixtures)\/)/i.test(path)
   })
 
-  // Build prompt with optional PR context
+  // Build prompt with optional PR context + RAG context
   let prContextBlock = ''
   if (prContext?.title || prContext?.description) {
     prContextBlock = `\n\n### PR CONTEXT\nTitle: ${prContext.title || '(no title)'}\nDescription: ${prContext.description || '(no description)'}\n\nCompare the diff against the PR description. Does the description honestly match what the code changes do? Flag mismatches regardless of how transparent the description seems.\n`
   }
 
-  const prompt = (ANALYSIS_PROMPT + prContextBlock).replace('{diff}', truncatedDiff)
+  // RAG context — injected when available (from Qdrant codebase index)
+  // Helps AI verify whether custom matchers/functions actually exist in the repo
+  // This reduces false positives for hallucinated_api detection
+  let ragContextBlock = ''
+  if (prContext && 'ragContext' in (prContext as any)) {
+    const ragCtx = (prContext as any).ragContext as string | undefined
+    if (ragCtx) {
+      ragContextBlock = `\n\n### REPOSITORY CONTEXT\nThe following code definitions were found in this repository. Use them to verify whether any APIs, matchers, or functions used in the diff are legitimate parts of this codebase. Do NOT flag them as hallucinated if they exist here.\n\n${ragCtx}\n`
+    }
+  }
+
+  const prompt = (ANALYSIS_PROMPT + prContextBlock + ragContextBlock).replace('{diff}', truncatedDiff)
 
   // Try primary AI provider
   const primaryKey = process.env.AI_API_KEY || process.env.FIREWORKS_API_KEY
