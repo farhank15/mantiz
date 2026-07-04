@@ -75,7 +75,6 @@ interface ShareData {
 
 const VALIDATION_BASIS = {
   disclaimer: 'Calibrated against 423 labeled PRs (16 DECEPTIVE, 407 LEGIT).',
-  datasetSize: 423,
   lastCalibrated: '2026-07-04',
   detectors: {
     D6_HallucinatedAssertion: { precision: 50.0, recall: 31.3, f1: 38.5 },
@@ -674,7 +673,7 @@ function SharePage() {
                   <div>
                     <p className="text-xs font-medium text-ink">Preliminary Calibration</p>
                     <p className="mt-0.5 text-xs text-ink-muted">
-                      {VALIDATION_BASIS.disclaimer} Dataset: {VALIDATION_BASIS.datasetSize} unique PRs (20 DECEPTIVE, 183 LEGIT).
+                      {VALIDATION_BASIS.disclaimer}
                       Last calibrated: {VALIDATION_BASIS.lastCalibrated}.
                     </p>
                   </div>
