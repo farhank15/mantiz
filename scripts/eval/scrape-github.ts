@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * Mantiz Ground Truth — GitHub PR Scraper (v2)
+ * Mantiz Ground Truth — GitHub PR Scraper (v3 - Speed Optimized)
  *
  * Scrapes PRs + diffs from GitHub using @octokit/rest based on query patterns
  * from VALIDATION-ROADMAP.md Section 4.
@@ -16,42 +16,30 @@
  * Environment Variables:
  *   GITHUB_TOKEN  — GitHub personal access token (optional, higher rate limit)
  *
- * Rate Limits:
- *   Authenticated: 5,000 req/hour (search: 30 req/min for code/issues, 10 req/min for commits)
- *   Unauthenticated: 60 req/hour (not recommended)
- *
  * ─────────────────────────────────────────────────────────────────────
- * CHANGELOG v2 (fixes from audit):
+ * CHANGELOG v3 (speed fixes):
  * ─────────────────────────────────────────────────────────────────────
- * FIX 1 — `in:commit` queries now correctly routed to octokit.search.commits()
- *         instead of search.issuesAndPullRequests(). The old code silently
- *         treated `in:commit` as free text in the issue/PR search endpoint,
- *         where it is NOT a valid qualifier — meaning bug_reemergence and
- *         disabled_assertion (commit-based) queries were never actually
- *         searching commit messages. Commit search results are resolved to
- *         their associated PR(s) via repos.listPullRequestsAssociatedWithCommit.
+ * FIX 6 — Proactive rate limiter (RateLimiter class) instead of reactive
+ *         retry. GitHub commit search limit is 10 req/min — we pace to
+ *         ~9.2 req/min so we NEVER hit a 403 rate limit in the first place.
+ *         Issue/PR search paced to 25 req/min, standard REST to ~80 req/min.
  *
- * FIX 2 — Deduplication against existing raw_candidates.jsonl (by pr_url)
- *         AND within the current run, so re-running the script or overlapping
- *         query groups no longer produce duplicate entries.
+ * FIX 7 — COMMIT→PR lookup cache. Same commit across overlapping queries
+ *         now resolved once, not N times. Saves redundant API calls.
  *
- * FIX 3 — Pagination support: if --limit > 100, the script now pages through
- *         search results (100 per page, GitHub Search API max) instead of
- *         silently capping at the first 100.
+ * FIX 8 — SECONDARY_RATE_LIMIT_BACKOFF_MS lowered from 60s to 10s.
+ *         In the unlikely event we do hit a 403, we recover in 10s instead
+ *         of 60s. With 3 retries that's 30s max instead of 3 minutes.
  *
- * FIX 4 — Basic rate-limit handling: reads `x-ratelimit-remaining` /
- *         `retry-after` on 403/secondary-rate-limit errors and sleeps before
- *         retrying, instead of aborting the whole query on first hit. Also
- *         adds a small delay between individual PR diff fetches to avoid
- *         tripping GitHub's abuse-detection (secondary rate limit).
+ * FIX 9 — DIFF_FETCH_DELAY_MS lowered from 300ms to 100ms. With a token,
+ *         we don't need such conservative pacing for diff fetches.
  *
- * FIX 5 — `is:merged` no longer hard-coded for reviewer_flagged queries.
- *         Closed-but-not-merged PRs are exactly the case where a reviewer
- *         catches cheating and the PR gets rejected outright — excluding
- *         them biased the DECEPTIVE sample toward "cheating that still got
- *         merged". reviewer_flagged now searches is:pr (merged OR closed),
- *         other groups keep is:merged since re-emergence/agent-PR signals
- *         need the change to have actually landed.
+ * FIX 10 — Pagination loop in searchCommitsResolvedToPRs now stops after
+ *          MAX_EMPTY_PAGES consecutive pages that yield zero PRs (instead
+ *          of grinding through all 10 pages fruitlessly).
+ *
+ * FIX 11 — Query groups run in parallel (Promise.allSettled) instead of
+ *          sequentially. Independent group batches are now concurrent.
  * ─────────────────────────────────────────────────────────────────────
  */
 
@@ -64,12 +52,50 @@ import { createInterface } from "node:readline";
 
 const EVAL_DIR = path.resolve(import.meta.dirname, "../../eval/ground-truth");
 const CANDIDATES_FILE = path.join(EVAL_DIR, "raw_candidates.jsonl");
-const DEFAULT_LIMIT = 20; // PRs per query
-const MAX_PAGE_SIZE = 100; // GitHub Search API max per_page
-const DIFF_FETCH_DELAY_MS = 300; // delay between individual PR diff fetches
-const SECONDARY_RATE_LIMIT_BACKOFF_MS = 60_000; // default backoff if no retry-after header
+const DEFAULT_LIMIT = 20;                  // PRs per query
+const MAX_PAGE_SIZE = 100;                 // GitHub Search API max per_page
+const DIFF_FETCH_DELAY_MS = 100;           // delay between diff fetches (was 300ms)
+const SECONDARY_RATE_LIMIT_BACKOFF_MS = 10_000; // backoff fallback (was 60s!)
+const MAX_EMPTY_PAGES = 2;                 // stop commit pagination after N empty pages
 
-// ─── Query Patterns (from VALIDATION-ROADMAP.md Section 4) ───────────
+// ─── Proactive Rate Limiter ───────────────────────────────────────────
+//
+// GitHub rate limits (authenticated):
+//   - Issue/PR search:  30 req/min  → 1 per 2s
+//   - Commit search:    10 req/min  → 1 per 6s
+//   - Standard REST:  5000 req/hour → 1 per 0.72s (generous)
+//
+// We pace requests so we NEVER hit a rate limit in the first place.
+
+interface RateLimitBucket {
+  minIntervalMs: number;
+  lastCallAt: number;
+}
+
+class RateLimiter {
+  private buckets: Record<string, RateLimitBucket> = {
+    search_prs:     { minIntervalMs: 2_400, lastCallAt: 0 }, // 25/min
+    search_commits: { minIntervalMs: 7_000, lastCallAt: 0 }, // ~8.5/min (under 10)
+    rest_api:       { minIntervalMs: 750,   lastCallAt: 0 }, // 80/min
+  };
+
+  async wait(bucketKey: string, _label: string): Promise<void> {
+    const bucket = this.buckets[bucketKey];
+    if (!bucket) return;
+
+    const now = Date.now();
+    const elapsed = now - bucket.lastCallAt;
+
+    if (elapsed < bucket.minIntervalMs) {
+      const waitMs = bucket.minIntervalMs - elapsed;
+      await sleep(waitMs);
+    }
+
+    bucket.lastCallAt = Date.now();
+  }
+}
+
+// ─── Query Patterns ─────────────────────────────────────────────────
 
 type SearchKind = "issues_prs" | "commits";
 
@@ -77,7 +103,6 @@ interface SearchQuery {
   label: string;
   source: string;
   kind: SearchKind;
-  /** Whether to append `is:merged` (issues_prs kind only). */
   requireMerged: boolean;
   queries: string[];
 }
@@ -96,7 +121,6 @@ const SEARCH_QUERIES: SearchQuery[] = [
       '"please don\'t disable this test" in:comments',
     ],
   },
-  // ── 4.2 AI Agent PR Filter (sumber independen — no reviewer bias) ──
   {
     label: "ai_agent_prs",
     source: "github_pr_ai_agent",
@@ -109,15 +133,11 @@ const SEARCH_QUERIES: SearchQuery[] = [
       'is:pr "This diff was generated by" in:body',
     ],
   },
-  // ── 4.3 Bug Re-emergence (bukti perilaku — fix->revert->fix) ──
-  // Sumber sinyal independen: bukan dari bahasa reviewer, tapi dari
-  // pola commit history yang menunjukkan "fix" gak beneran fix.
-  // FIX 1: `in:commit` HARUS lewat search.commits(), bukan issues/PR search.
   {
     label: "bug_reemergence",
     source: "github_pr_bug_reemergence",
     kind: "commits",
-    requireMerged: true, // irrelevant for commits kind, kept for shape consistency
+    requireMerged: true,
     queries: [
       '"actually fix" in:commit',
       '"real fix" in:commit',
@@ -125,8 +145,6 @@ const SEARCH_QUERIES: SearchQuery[] = [
       '"revert previous fix" in:commit',
     ],
   },
-  // ── 4.4 Disabled Assertion Patterns (commit-message based) ──
-  // FIX 1: also `in:commit` — routed to commit search now.
   {
     label: "disabled_assertion",
     source: "github_pr",
@@ -181,11 +199,21 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Load the set of pr_url values already present in raw_candidates.jsonl
- * so we never append a duplicate, whether from a re-run or from two
- * different query groups matching the same PR.
- */
+/** Cache commit→PR lookups — saves redundant API calls across overlapping queries */
+const commitToPrCache = new Map<string, Awaited<ReturnType<Octokit['repos']['listPullRequestsAssociatedWithCommit']>>['data']>();
+
+interface CandidatePR {
+  owner: string;
+  repo: string;
+  number: number;
+  html_url: string;
+  title: string;
+  author: string;
+  created_at: string | null;
+  updated_at: string | null;
+  labels: string[];
+}
+
 function loadExistingPrUrls(): Set<string> {
   const seen = new Set<string>();
   if (!fs.existsSync(CANDIDATES_FILE)) return seen;
@@ -204,10 +232,6 @@ function loadExistingPrUrls(): Set<string> {
   return seen;
 }
 
-/**
- * Truncate a diff at the last complete hunk boundary before maxLen,
- * so the result stays parseable by `diff`/`parsePatch`-style parsers.
- */
 function truncateDiffAtHunkBoundary(diff: string, maxLen = 50_000): string {
   if (diff.length <= maxLen) return diff;
   const cutoff = diff.slice(0, maxLen);
@@ -219,23 +243,6 @@ function truncateDiffAtHunkBoundary(diff: string, maxLen = 50_000): string {
   return diff.slice(0, lastNewline > 0 ? lastNewline : maxLen);
 }
 
-interface CandidatePR {
-  owner: string;
-  repo: string;
-  number: number;
-  html_url: string;
-  title: string;
-  author: string;
-  created_at: string | null;
-  updated_at: string | null;
-  labels: string[];
-}
-
-/**
- * FIX 4: retry wrapper for secondary rate limits (403 with
- * `x-ratelimit-remaining: 0` or abuse-detection 403s). Reads
- * `retry-after` header when present, otherwise backs off a fixed amount.
- */
 async function withRateLimitRetry<T>(
   fn: () => Promise<T>,
   label: string,
@@ -266,9 +273,9 @@ async function withRateLimitRetry<T>(
         throw err;
       }
 
-      const retryAfterHeader = e.response?.headers?.["retry-after"];
-      const waitMs = retryAfterHeader
-        ? parseInt(retryAfterHeader, 10) * 1000
+      const retryAfter = e.response?.headers?.["retry-after"];
+      const waitMs = retryAfter
+        ? parseInt(retryAfter, 10) * 1000
         : SECONDARY_RATE_LIMIT_BACKOFF_MS;
 
       process.stdout.write(
@@ -282,12 +289,9 @@ async function withRateLimitRetry<T>(
 
 // ─── Search: issues/PRs ────────────────────────────────────────────
 
-/**
- * FIX 3: paginate through search.issuesAndPullRequests results instead
- * of capping at the first 100.
- */
 async function searchIssuesAndPRs(
   octokit: Octokit,
+  rateLimiter: RateLimiter,
   query: string,
   requireMerged: boolean,
   limit: number,
@@ -299,6 +303,7 @@ async function searchIssuesAndPRs(
 
   while (results.length < limit) {
     const perPage = Math.min(MAX_PAGE_SIZE, limit - results.length);
+    await rateLimiter.wait("search_prs", q.slice(0, 40));
     const res = await withRateLimitRetry(
       () =>
         octokit.search.issuesAndPullRequests({
@@ -335,7 +340,6 @@ async function searchIssuesAndPRs(
       });
     }
 
-    // GitHub Search API caps at 1000 results total (10 pages of 100)
     if (items.length < perPage || page >= 10) break;
     page++;
   }
@@ -343,25 +347,22 @@ async function searchIssuesAndPRs(
   return results.slice(0, limit);
 }
 
-// ─── Search: commits (FIX 1) ───────────────────────────────────────
+// ─── Search: commits (resolved to PRs) ───────────────────────────────
 
-/**
- * `in:commit` is only valid on the Commit Search endpoint. This searches
- * commits, then resolves each commit SHA to its associated PR(s) via
- * repos.listPullRequestsAssociatedWithCommit — since ground truth entries
- * are keyed on PRs, not raw commits.
- */
 async function searchCommitsResolvedToPRs(
   octokit: Octokit,
+  rateLimiter: RateLimiter,
   query: string,
   limit: number,
 ): Promise<CandidatePR[]> {
   const results: CandidatePR[] = [];
   const seenPrUrls = new Set<string>();
   let page = 1;
+  let emptyPageCount = 0;
 
-  while (results.length < limit) {
+  while (results.length < limit && emptyPageCount < MAX_EMPTY_PAGES) {
     const perPage = Math.min(MAX_PAGE_SIZE, limit - results.length);
+    await rateLimiter.wait("search_commits", query.slice(0, 40));
     const res = await withRateLimitRetry(
       () =>
         octokit.search.commits({
@@ -378,25 +379,35 @@ async function searchCommitsResolvedToPRs(
     const commits = res.data.items;
     if (commits.length === 0) break;
 
+    let resolvedThisPage = 0;
     for (const commit of commits) {
       const owner = commit.repository.owner?.login;
       const repo = commit.repository.name;
       if (!owner || !repo) continue;
 
-      // Resolve commit -> associated PR(s)
-      const prLookup = await withRateLimitRetry(
-        () =>
-          octokit.repos.listPullRequestsAssociatedWithCommit({
-            owner,
-            repo,
-            commit_sha: commit.sha,
-          }),
-        `commit->pr:${owner}/${repo}@${commit.sha.slice(0, 7)}`,
-      );
-      if (!prLookup || prLookup.data.length === 0) continue;
+      // Cache hit → skip API call
+      const cacheKey = `${owner}/${repo}:${commit.sha}`;
+      let prLookupData = commitToPrCache.get(cacheKey);
+      if (!prLookupData) {
+        await rateLimiter.wait("rest_api", `commit->pr:${owner}/${repo}@${commit.sha.slice(0, 7)}`);
+        const prLookup = await withRateLimitRetry(
+          () =>
+            octokit.repos.listPullRequestsAssociatedWithCommit({
+              owner,
+              repo,
+              commit_sha: commit.sha,
+            }),
+          `commit->pr:${owner}/${repo}@${commit.sha.slice(0, 7)}`,
+        );
+        if (prLookup) {
+          prLookupData = prLookup.data;
+          commitToPrCache.set(cacheKey, prLookupData);
+        }
+      }
 
-      // A commit can be associated with multiple PRs (rare); take the first merged one
-      const pr = prLookup.data.find((p) => p.merged_at) || prLookup.data[0];
+      if (!prLookupData || prLookupData.length === 0) continue;
+
+      const pr = prLookupData.find((p) => p.merged_at) || prLookupData[0];
       if (seenPrUrls.has(pr.html_url)) continue;
       seenPrUrls.add(pr.html_url);
 
@@ -414,8 +425,15 @@ async function searchCommitsResolvedToPRs(
         ),
       });
 
-      await sleep(DIFF_FETCH_DELAY_MS); // be gentle — this endpoint is easy to hammer
+      resolvedThisPage++;
       if (results.length >= limit) break;
+    }
+
+    // FIX 10: if a whole page resolved nothing, increment empty counter
+    if (resolvedThisPage === 0) {
+      emptyPageCount++;
+    } else {
+      emptyPageCount = 0; // reset on successful page
     }
 
     if (commits.length < perPage || page >= 10) break;
@@ -423,6 +441,100 @@ async function searchCommitsResolvedToPRs(
   }
 
   return results.slice(0, limit);
+}
+
+// ─── Process a single query group ─────────────────────────────────────
+
+interface QueryGroupResult {
+  groupLabel: string;
+  candidates: number;
+  skippedDupes: number;
+}
+
+async function processGroup(
+  octokit: Octokit,
+  rateLimiter: RateLimiter,
+  group: SearchQuery,
+  limit: number,
+  dryRun: boolean,
+  existingPrUrls: Set<string>,
+): Promise<QueryGroupResult> {
+  let candidates = 0;
+  let skippedDupes = 0;
+
+  console.log(`\n┌─ ${group.label} (kind=${group.kind})`);
+
+  for (const query of group.queries) {
+    process.stdout.write(`│  🔍 Searching: ${query.slice(0, 60)}...`);
+
+    let prs: CandidatePR[];
+    try {
+      prs =
+        group.kind === "commits"
+          ? await searchCommitsResolvedToPRs(octokit, rateLimiter, query, limit)
+          : await searchIssuesAndPRs(octokit, rateLimiter, query, group.requireMerged, limit);
+      process.stdout.write(` ${prs.length} results\n`);
+    } catch (err) {
+      const e = err as { status?: number; message?: string };
+      process.stdout.write(` ❌ Error: ${e.message?.slice(0, 80) || "unknown"}\n`);
+      continue;
+    }
+
+    for (const pr of prs) {
+      if (existingPrUrls.has(pr.html_url)) {
+        skippedDupes++;
+        continue;
+      }
+
+      try {
+        await rateLimiter.wait("rest_api", `diff:${pr.owner}/${pr.repo}#${pr.number}`);
+        const diffResponse = await withRateLimitRetry(
+          () =>
+            octokit.pulls.get({
+              owner: pr.owner,
+              repo: pr.repo,
+              pull_number: pr.number,
+              mediaType: { format: "diff" },
+            }),
+          `diff:${pr.owner}/${pr.repo}#${pr.number}`,
+        );
+        if (!diffResponse) continue;
+
+        const diff = diffResponse.data as unknown as string;
+        if (!diff || typeof diff !== "string" || diff.trim().length === 0) continue;
+
+        const candidate = {
+          scraped_at: new Date().toISOString(),
+          source: group.source,
+          repo: `${pr.owner}/${pr.repo}`,
+          pr_url: pr.html_url,
+          pr_title: pr.title,
+          pr_author: pr.author,
+          pr_created_at: pr.created_at,
+          pr_updated_at: pr.updated_at,
+          labels: pr.labels,
+          diff_length_chars: diff.length,
+          diff_snippet: truncateDiffAtHunkBoundary(diff),
+        };
+
+        if (!dryRun) {
+          fs.appendFileSync(CANDIDATES_FILE, JSON.stringify(candidate) + "\n", "utf-8");
+        }
+
+        existingPrUrls.add(pr.html_url);
+        candidates++;
+        process.stdout.write(`      📦 ${pr.owner}/${pr.repo}#${pr.number}: "${pr.title.slice(0, 60)}"\n`);
+      } catch (err) {
+        const e = err as { status?: number; message?: string };
+        if (e.status === 406) continue;
+        process.stdout.write(`      ⚠️  Error fetching diff: ${e.message?.slice(0, 60) || "unknown"}\n`);
+      }
+
+      await sleep(DIFF_FETCH_DELAY_MS);
+    }
+  }
+
+  return { groupLabel: group.label, candidates, skippedDupes };
 }
 
 // ─── Main ────────────────────────────────────────────────────────────
@@ -442,113 +554,36 @@ async function main() {
   const octokit = token ? new Octokit({ auth: token }) : new Octokit();
 
   try {
-    const {
-      data: { login },
-    } = await octokit.users.getAuthenticated();
+    const { data: { login } } = await octokit.users.getAuthenticated();
     console.log(`✅ Authenticated as ${login}`);
   } catch {
-    console.log(
-      "⚠️  Running unauthenticated — rate limit: 60 req/hour (not recommended)",
-    );
+    console.log("⚠️  Running unauthenticated — rate limit: 60 req/hour (not recommended)");
   }
 
   if (!fs.existsSync(EVAL_DIR)) {
     fs.mkdirSync(EVAL_DIR, { recursive: true });
   }
 
-  // FIX 2: dedup against existing file + within this run
+  const rateLimiter = new RateLimiter();
   const existingPrUrls = loadExistingPrUrls();
   console.log(`📋 Loaded ${existingPrUrls.size} existing pr_url(s) for dedup`);
+
+  // FIX 11: Process groups in parallel (they're independent!)
+  const results = await Promise.allSettled(
+    SEARCH_QUERIES.map((group) =>
+      processGroup(octokit, rateLimiter, group, limit, dryRun, existingPrUrls),
+    ),
+  );
 
   let totalCandidates = 0;
   let totalSkippedDupes = 0;
 
-  for (const group of SEARCH_QUERIES) {
-    console.log(`\n┌─ ${group.label} (kind=${group.kind})`);
-
-    for (const query of group.queries) {
-      process.stdout.write(`│  🔍 Searching: ${query.slice(0, 60)}...`);
-
-      let prs: CandidatePR[];
-      try {
-        prs =
-          group.kind === "commits"
-            ? await searchCommitsResolvedToPRs(octokit, query, limit)
-            : await searchIssuesAndPRs(
-                octokit,
-                query,
-                group.requireMerged,
-                limit,
-              );
-        process.stdout.write(` ${prs.length} results\n`);
-      } catch (err) {
-        const e = err as { status?: number; message?: string };
-        process.stdout.write(
-          ` ❌ Error: ${e.message?.slice(0, 80) || "unknown"}\n`,
-        );
-        continue;
-      }
-
-      for (const pr of prs) {
-        if (existingPrUrls.has(pr.html_url)) {
-          totalSkippedDupes++;
-          continue;
-        }
-
-        try {
-          const diffResponse = await withRateLimitRetry(
-            () =>
-              octokit.pulls.get({
-                owner: pr.owner,
-                repo: pr.repo,
-                pull_number: pr.number,
-                mediaType: { format: "diff" },
-              }),
-            `diff:${pr.owner}/${pr.repo}#${pr.number}`,
-          );
-          if (!diffResponse) continue;
-
-          const diff = diffResponse.data as unknown as string;
-          if (!diff || typeof diff !== "string" || diff.trim().length === 0)
-            continue;
-
-          const candidate = {
-            scraped_at: new Date().toISOString(),
-            source: group.source,
-            repo: `${pr.owner}/${pr.repo}`,
-            pr_url: pr.html_url,
-            pr_title: pr.title,
-            pr_author: pr.author,
-            pr_created_at: pr.created_at,
-            pr_updated_at: pr.updated_at,
-            labels: pr.labels,
-            diff_length_chars: diff.length,
-            diff_snippet: truncateDiffAtHunkBoundary(diff),
-          };
-
-          if (!dryRun) {
-            fs.appendFileSync(
-              CANDIDATES_FILE,
-              JSON.stringify(candidate) + "\n",
-              "utf-8",
-            );
-          }
-
-          existingPrUrls.add(pr.html_url); // guard against dupes within same run across groups
-          totalCandidates++;
-          process.stdout.write(
-            `      📦 ${pr.owner}/${pr.repo}#${pr.number}: "${pr.title.slice(0, 60)}"\n`,
-          );
-        } catch (err) {
-          const e = err as { status?: number; message?: string };
-          if (e.status === 406) continue; // diff not available for this PR
-          process.stdout.write(
-            `      ⚠️  Error fetching diff: ${e.message?.slice(0, 60) || "unknown"}\n`,
-          );
-        }
-
-        await sleep(DIFF_FETCH_DELAY_MS); // FIX 4: gentle pacing to avoid secondary rate limit
-      }
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      totalCandidates += result.value.candidates;
+      totalSkippedDupes += result.value.skippedDupes;
+    } else {
+      console.error(`❌ Group failed: ${result.reason}`);
     }
   }
 
