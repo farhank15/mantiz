@@ -7,6 +7,18 @@ const FALLBACK_EMPTY_CATCH = /catch\s*(?:\s*\([^)]*\))?\s*\{[\s\/]*\}/
 const FALLBACK_TODO_CATCH = /catch\s*(?:\s*\([^)]*\))?\s*\{\s*\/\/\s*(TODO|FIXME|HACK)/i
 const FALLBACK_CONSOLE_CATCH = /catch\s*(?:\s*\([^)]*\))?\s*\{\s*console\.\w+\s*\([^)]*\)\s*;?\s*\}/
 
+// ─── Telemetry/Analytics exceptions ───────────────────────────────
+// Empty or near-empty catches in telemetry/analytics code are intentional.
+// The error is non-critical — silencing prevents noise, not evidence.
+const TELEMETRY_FILE_PATTERNS = [
+  /\/analytics\//i,
+  /\/telemetry\//i,
+  /\/tracking\//i,
+  /\/metrics\//i,
+  /\/monitoring\//i,
+  /\/instrument(?:ation)?\//i,
+]
+
 interface CatchMatch {
   line: string
   lineIndex: number
@@ -102,7 +114,7 @@ function patternToConfidence(pattern: CatchMatch['pattern']): Confidence {
     case 'todo':
       return 'medium'
     case 'console_only':
-      return 'medium'
+      return 'low'        // Demoted: console.error(e) IS legitimate error handling, not silent
     case 'comment_only':
       return 'medium'
     case 'empty_finally':
@@ -196,6 +208,12 @@ function scanForSilentCatches(hunkContent: string, baseLine: number, lang: strin
     if (!catchOpenPattern.test(line)) continue
 
     // Check next few lines for empty/comment-only body
+    // Skip if this is Rust's if-let pattern (not a catch block)
+    const catchLine = line.slice(1).trim()
+    if (/if\s+let\s+(Err|None)/i.test(catchLine)) continue
+    // Skip Rust expect()/unwrap() — these panic on error, not silent
+    if (/\.(expect|unwrap)\s*\(/.test(catchLine)) continue
+
     let hasRealCode = false
     let hasTodo = false
     let hasConsole = false
@@ -267,6 +285,14 @@ function scanForSilentCatches(hunkContent: string, baseLine: number, lang: strin
 }
 
 /**
+ * Check if the file path is in a telemetry/analytics directory.
+ * Silent catches in telemetry are intentional and not deceptive.
+ */
+function isTelemetryFile(filePath: string): boolean {
+  return TELEMETRY_FILE_PATTERNS.some(p => p.test(filePath))
+}
+
+/**
  * Run the silent-catch-and-pass detector across all parsed files/hunks.
  * Multi-language support via Language Registry.
  */
@@ -281,6 +307,9 @@ export function detectSilentCatch(files: ParsedDiff[]): Finding[] {
 
     // Ignore React UI component files (.tsx, .jsx) for silent catch detection
     if (/\.(tsx|jsx)$/i.test(filePath)) continue
+
+    // Skip telemetry/analytics files — empty catches here are intentional
+    if (isTelemetryFile(filePath)) continue
 
     // Detect language for pattern matching
     const lang = detectLanguage(filePath)

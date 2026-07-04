@@ -15,6 +15,27 @@ import type { Finding, ParsedDiff } from './types'
 import { detectLanguage, isTestFile, LANGUAGE_CONFIG } from './language-registry'
 
 /**
+ * Non-assertion method calls that are often mistaken as matchers.
+ * These are standard JS/TS methods that should NEVER be flagged.
+ */
+const NON_ASSERTION_METHODS = new Set([
+  'filter', 'map', 'reduce', 'forEach', 'flat', 'flatMap',
+  'then', 'catch', 'finally',
+  'entries', 'values', 'keys', 'fromEntries',
+  'every', 'some', 'find', 'findIndex',
+  'sort', 'reverse', 'splice', 'slice',
+  'join', 'split', 'trim', 'trimStart', 'trimEnd',
+  'replace', 'replaceAll', 'match', 'matchAll',
+  'test', 'exec', 'search',
+  'includes', 'indexOf', 'lastIndexOf',
+  'startsWith', 'endsWith', 'charAt', 'charCodeAt',
+  'toUpperCase', 'toLowerCase', 'toString',
+  'concat', 'push', 'pop', 'shift', 'unshift',
+  'then', 'resolve', 'reject',
+  'length', 'name', 'prototype',
+])
+
+/**
  * Matchers KNOWN to be hallucinated across ALL frameworks.
  * These have been confirmed as non-existent in any major testing library.
  */
@@ -121,17 +142,48 @@ function getValidMatchers(lang: string | null): Set<string> {
   }
 
   if (lang === 'rust') {
-    matchers.add('panic').add('unwrap').add('expect').add('ok').add('err')
+    // Core Rust test macros
+    matchers.add('assert').add('assert_eq').add('assert_ne')
+    matchers.add('assert_matches').add('assert_approx_eq')
+    matchers.add('assert_ok').add('assert_err').add('assert_none').add('assert_some')
+    // Result combinators — NOT silent catches, legitimate patterns
+    matchers.add('unwrap').add('expect')
+    matchers.add('unwrap_or').add('unwrap_or_else')
+    matchers.add('ok').add('err')
     matchers.add('is_ok').add('is_err').add('is_some').add('is_none')
+    matchers.add('map_err').add('and_then').add('or_else')
   }
 
   if (lang === 'python') {
-    matchers.add('assert_raises').add('assert_warns')
+    // Standard unittest
+    matchers.add('assertEqual').add('assertNotEqual')
+    matchers.add('assertTrue').add('assertFalse')
+    matchers.add('assertIs').add('assertIsNot')
+    matchers.add('assertIsNone').add('assertIsNotNone')
+    matchers.add('assertIn').add('assertNotIn')
+    matchers.add('assertIsInstance').add('assertNotIsInstance')
+    matchers.add('assertRaises').add('assertWarns')
+    matchers.add('assertAlmostEqual').add('assertNotAlmostEqual')
+    matchers.add('assertGreater').add('assertGreaterEqual')
+    matchers.add('assertLess').add('assertLessEqual')
+    matchers.add('assertRegex').add('assertNotRegex')
+    matchers.add('assertCountEqual')
+    matchers.add('assertLogs').add('assertNoLogs')
+    // pytest helpers
     matchers.add('raises').add('warns')
-    matchers.add('approx').add('almost_equal')
+    matchers.add('approx')
   }
 
   return matchers
+}
+
+/**
+ * Check if a method name looks like an assertion matcher.
+ * Only flag methods that look like assertions (toXxx, assertXxx, shouldXxx)
+ * or are known to be hallucinated.
+ */
+function isAssertionLike(name: string): boolean {
+  return name.startsWith('to') || name.startsWith('assert') || name.startsWith('should')
 }
 
 /**
@@ -149,16 +201,23 @@ function scanLineForHallucination(line: string, lineIndex: number, filePath: str
 
   const matcher = matcherMatch[1]
 
-  // Check if it's in the known-hallucinated list (universal across all frameworks)
-  const isKnownHallucinated = KNOWN_HALLUCINATED_MATCHERS.has(matcher)
+  // Skip non-assertion method calls (filter, map, then, catch, etc.)
+  if (NON_ASSERTION_METHODS.has(matcher)) return null
 
-  // Check if it looks like a Jest-style matcher (starts with 'to') but isn't valid
-  const looksLikeMatcher = matcher.startsWith('to') || matcher.startsWith('assert') || matcher.startsWith('should')
+  // Only analyze methods that look like assertions or are known-hallucinated
+  const isKnownHallucinated = KNOWN_HALLUCINATED_MATCHERS.has(matcher)
+  const looksLikeMatcher = isAssertionLike(matcher)
+
+  // Skip methods that clearly aren't assertions
+  if (!isKnownHallucinated && !looksLikeMatcher) return null
+
+  // Check if it's in the valid list
   const inValidList = validMatchers.has(matcher) || JEST_GLOBALS.has(matcher)
 
   // Check chained matchers: .method(...).method2(
+  // Only suspicious if the chained method also looks like an assertion
   const chainMatch = content.match(/\.\s*\w+\s*\([^)]*\)\s*\.\s*(\w+)\s*\(/)
-  const chainSuspicious = chainMatch && !validMatchers.has(chainMatch[1])
+  const chainSuspicious = chainMatch && isAssertionLike(chainMatch[1]) && !validMatchers.has(chainMatch[1])
 
   if (isKnownHallucinated || (looksLikeMatcher && !inValidList) || chainSuspicious) {
     const confidence: 'high' | 'medium' = isKnownHallucinated ? 'high' : 'medium'
