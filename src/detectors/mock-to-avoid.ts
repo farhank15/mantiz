@@ -25,24 +25,45 @@ function scanForMocks(hunkContent: string, baseLine: number, filePath: string, l
     if (!line.startsWith('+')) continue
 
     // Check against all language-specific mock patterns
-    const matchedPattern = mockPatterns.find(p => p.test(line))
-    if (matchedPattern) {
+    const matchedPatternIdx = mockPatterns.findIndex(p => p.test(line))
+    if (matchedPatternIdx !== -1) {
       mockCount++
       mockLines.push({ line: line.slice(1).trim(), index: baseLine + i })
 
-      // Determine severity based on what's being mocked
-      const isEntireModule = line.includes('* as') || !line.includes('{')
       const mockContent = line.slice(1).trim().substring(0, 120)
+
+      // Assign confidence based on which pattern matched (by index):
+      // mockPatterns[0] = mock(), [1] = spyOn(), [2] = fn()
+      // - fn() → low (too common, rarely indicates cheating)
+      // - spyOn() → low (standard testing pattern)
+      // - mock() → high if entire module, medium if partial
+      let confidence: 'high' | 'medium' | 'low'
+      let explanation: string
+
+      if (matchedPatternIdx === 2) {
+        // jest.fn() / vi.fn()
+        confidence = 'low'
+        explanation = 'Mock function — common test utility, verify real assertions exist.'
+      } else if (matchedPatternIdx === 1) {
+        // jest.spyOn() / vi.spyOn()
+        confidence = 'low'
+        explanation = 'Method spy — common pattern, verify real behavior is also tested.'
+      } else {
+        // jest.mock() / vi.mock() — module-level mocking
+        const isEntireModule = line.includes('* as') || !line.includes('{')
+        confidence = isEntireModule ? 'high' : 'medium'
+        explanation = isEntireModule
+          ? 'Entire module mocked — may bypass real implementation.'
+          : 'Module mock — verify real path is tested alongside.'
+      }
 
       findings.push({
         patternType: 'mock_to_avoid_failure',
         filePath,
         lineStart: baseLine + i,
         lineEnd: baseLine + i,
-        confidence: isEntireModule ? 'high' : 'medium',
-        explanation: isEntireModule
-          ? `Entire module mocked — may bypass real implementation.`
-          : `Partial mock introduced — check if real path is also tested.`,
+        confidence,
+        explanation,
         evidenceExcerpt: mockContent,
       })
     }
