@@ -24,16 +24,29 @@ import type { Finding, ParsedDiff } from './types'
 // ─── Agent Config File Patterns ─────────────────────────────────
 
 const AGENT_CONFIG_PATTERNS = [
+  // ── Agent instructions (root level — well-known) ──
   /(?:^|\/)CLAUDE\.md$/i,
   /(?:^|\/)GEMINI\.md$/i,
   /(?:^|\/)AGENTS\.md$/i,
   /(?:^|\/)\.cursorrules$/i,
   /(?:^|\/)\.windsurf$/i,
-  /\.github\/copilot-instructions\.md$/i,
   /(?:^|\/)\.clinerules$/i,
   /(?:^|\/)\.roomodes$/i,
+
+  // ── Agent instructions (subdirectory — agent-tool dirs) ──
+  /\.github\/copilot-instructions\.md$/i,
+  /\.github\/(?:AGENTS|CLAUDE|GEMINI)\.md$/i,
+  /(?:^|\/)\.rules\/(?:ai-agent|agent|claude|gemini|instructions?)\.(?:md|txt)$/i,
+  /(?:^|\/)\.agents\/.*\.(?:md|txt)$/i,
+
+  // ── Agent-specific tracking files ──
+  /(?:^|\/)LOOP\.md$/i,
+  /(?:^|\/)CONTEXT\.md$/i,
+
+  // ── Explicit config files ──
   /(?:^|\/)\.aider\.conf\.yml$/i,
   /(?:^|\/)\.aider\.ignore$/i,
+  /(?:^|\/)\.aider\.input\.yml$/i,
   /(?:^|\/)\.coderabbit\.ya?ml$/i,
 ]
 
@@ -77,6 +90,26 @@ const SUSPICIOUS_PATTERNS: SuspiciousPattern[] = [
     severity: 'high',
     label: 'fabricate_test',
   },
+  {
+    regex: /make\s+(?:the\s+)?tests?\s+(?:pass|green)\s+(?:without\s+)?(?:actually|making|doing)\s+(?:real|actual|proper)/i,
+    severity: 'high',
+    label: 'fake_test_pass',
+  },
+  {
+    regex: /do\s+n['’]?t\s+(?:worry|care|bother)\s+about\s+(?:tests?|coverage|assertions?)/i,
+    severity: 'medium',
+    label: 'dismiss_tests',
+  },
+  {
+    regex: /(?:generate|create|add)\s+(?:dummy|fake|placeholder|stub|trivial)\s+tests?/i,
+    severity: 'medium',
+    label: 'dummy_tests',
+  },
+  {
+    regex: /keep\s+(?:tests?|coverage)\s+(?:happy|passing|green)\s+(?:with\s+)?minimal\s+(?:effort|changes?|work)/i,
+    severity: 'high',
+    label: 'minimal_test_effort',
+  },
 
   // ── Deception / Concealment ──
   {
@@ -95,58 +128,112 @@ const SUSPICIOUS_PATTERNS: SuspiciousPattern[] = [
     label: 'disguise_directive',
   },
   {
-    regex: /don'?t\s+(?:leave|add|include)\s+(?:AI|artificial|generated|auto.?gen)\s+(?:traces?|footprints?|marks?)/i,
+    regex: /don'?t\s+(?:leave|add|include|show)\s+(?:AI|artificial|generated|auto.?gen)\s+(?:traces?|footprints?|marks?|labels?|tags?)/i,
     severity: 'high',
     label: 'conceal_ai_traces',
+  },
+  {
+    regex: /commit\s+(?:as|like)\s+(?:a\s+)?human/i,
+    severity: 'medium',
+    label: 'commit_as_human',
+  },
+  {
+    regex: /don'?t\s+(?:put|add)\s+(?:AI|co-pilot|model|assistant)\s+(?:name|credit|attribution)/i,
+    severity: 'medium',
+    label: 'conceal_authorship',
+  },
+  {
+    regex: /remove\s+(?:AI|generated|auto)\s+(?:comments?|markers?|signatures?)/i,
+    severity: 'medium',
+    label: 'strip_ai_markers',
   },
 
   // ── Evasion ──
   {
-    regex: /(?:evade|bypass|circumvent)\s+(?:detection|review|guard)/i,
+    regex: /(?:evade|bypass|circumvent)\s+(?:detection|review|audit|guard|check)/i,
     severity: 'high',
     label: 'evade_detection',
   },
   {
-    regex: /avoid\s+(?:being\s+)?(?:flagged|detected|caught|identified)/i,
+    regex: /avoid\s+(?:being\s+)?(?:flagged|detected|caught|identified|noticed)/i,
     severity: 'high',
     label: 'avoid_detection',
   },
   {
-    regex: /(?:make|add)\s+(?:it\s+)?hard\s+(?:to\s+)?(?:detect|find|trace|notice)/i,
+    regex: /(?:make|add)\s+(?:it\s+)?hard\s+(?:to\s+)?(?:detect|find|trace|notice|audit)/i,
     severity: 'medium',
     label: 'obfuscate_changes',
   },
   {
-    regex: /(?:don'?t|never|avoid)\s+(?:change|modify|update)\s+(?:too\s+)?(?:many|much)\s+(?:files|lines)/i,
+    regex: /(?:don'?t|never|avoid)\s+(?:change|modify|update|touch)\s+(?:too\s+)?(?:many|much)\s+(?:files|lines|modules)/i,
     severity: 'low',
     label: 'minimize_changes',
   },
+  {
+    regex: /(?:keep|make)\s+(?:the\s+)?diff\s+(?:small|minimal|short|focused)/i,
+    severity: 'low',
+    label: 'minimize_diff',
+  },
+  {
+    regex: /don'?t\s+(?:modify|change|edit)\s+(?:package\.json|config|dependencies|lockfile)/i,
+    severity: 'low',
+    label: 'avoid_config_changes',
+  },
 
-  // ── Unethical Instructions ──
+  // ── Quality Evasion ──
   {
     regex: /always\s+pass\s+(?:even\s+)?(?:if|when)\s+(?:tests?\s+)?fail/i,
     severity: 'high',
     label: 'always_pass',
   },
   {
-    regex: /(?:swallow|hide|suppress|ignore)\s+(?:errors?|exceptions?|failures?)/i,
+    regex: /(?:swallow|hide|suppress|ignore|silence)\s+(?:errors?|exceptions?|failures?|warnings?)/i,
     severity: 'high',
     label: 'suppress_errors',
   },
   {
-    regex: /(?:make\s+)?tests?\s+(?:pass|green)\s+(?:without\s+)?(?:actually|really)?\s*(?:testing|checking|validating)/i,
+    regex: /(?:make\s+)?tests?\s+(?:pass|green)\s+(?:without\s+)?(?:actually|really)?\s*(?:testing|checking|validating|verifying)/i,
     severity: 'high',
-    label: 'fake_test_pass',
+    label: 'bypass_testing',
   },
   {
-    regex: /(?:generate|create|add)\s+(?:dummy|fake|placeholder|stub)\s+tests/i,
-    severity: 'medium',
-    label: 'dummy_tests',
-  },
-  {
-    regex: /don'?t\s+actually\s+(?:test|check|verify|assert)\s+(?:the\s+)?(?:logic|implementation|code)/i,
+    regex: /don'?t\s+actually\s+(?:test|check|verify|assert|validate)\s+(?:the\s+)?(?:logic|implementation|code|behavior)/i,
     severity: 'high',
     label: 'bypass_real_testing',
+  },
+  {
+    regex: /don'?t\s+(?:write|add)\s+(?:meaningful|real|useful)\s+(?:tests?|assertions?)/i,
+    severity: 'high',
+    label: 'skip_meaningful_tests',
+  },
+
+  // ── Context Manipulation ──
+  {
+    regex: /ignore\s+(?:the\s+)?(?:actual|real|original)\s+(?:requirement|spec|behavior|intent)/i,
+    severity: 'high',
+    label: 'ignore_requirements',
+  },
+  {
+    regex: /don'?t\s+(?:read|look\s+at|check|examine)\s+(?:the\s+)?(?:existing|original|source)\s+(?:code|tests|implementation)/i,
+    severity: 'high',
+    label: 'skip_context_analysis',
+  },
+
+  // ── PR Manipulation ──
+  {
+    regex: /(?:generate|write|create|draft)\s+(?:convincing|plausible|believable)\s+(?:PR|commit|description|message)/i,
+    severity: 'high',
+    label: 'fake_pr_description',
+  },
+  {
+    regex: /make\s+(?:the\s+)?(?:PR|commit|description|message)\s+(?:look|sound|seem)\s+(?:good|reasonable|legitimate|innocent)/i,
+    severity: 'high',
+    label: 'embellish_pr',
+  },
+  {
+    regex: /don'?t\s+(?:mention|note|state|say)\s+(?:that|how)\s+(?:this|the)\s+(?:was|is)\s+(?:AI|generated|auto)/i,
+    severity: 'medium',
+    label: 'conceal_ai_pr',
   },
 ]
 

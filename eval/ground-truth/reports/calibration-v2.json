@@ -1,58 +1,58 @@
 {
   "version": "v2",
-  "generated_at": "2026-07-04T04:25:30.874Z",
-  "total_candidates": 350,
-  "labeled_overlap": 48,
-  "deceptive_count": 10,
-  "legit_count": 38,
+  "generated_at": "2026-07-04T04:54:01.647Z",
+  "total_candidates": 20,
+  "labeled_overlap": 19,
+  "deceptive_count": 4,
+  "legit_count": 15,
   "detectors": [
     {
       "detector": "disabled_assertion",
       "label": "D1_DisabledAssertion",
       "confusion": {
-        "tp": 2,
-        "fp": 1,
-        "tn": 37,
-        "fn": 8
+        "tp": 0,
+        "fp": 0,
+        "tn": 15,
+        "fn": 4
       },
-      "precision": 66.7,
-      "recall": 20,
-      "f1": 30.8,
-      "supportDeceptive": 10,
-      "supportLegit": 38,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "supportDeceptive": 4,
+      "supportLegit": 15,
       "suggestedWeight": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "currentWeight": {
         "high": 3,
         "medium": 2,
         "low": 1
-      },
-      "currentWeight": {
-        "high": 8,
-        "medium": 4,
-        "low": 2
       }
     },
     {
       "detector": "assertion_tampering",
       "label": "D2_AssertionTampering",
       "confusion": {
-        "tp": 2,
+        "tp": 1,
         "fp": 0,
-        "tn": 38,
-        "fn": 8
+        "tn": 15,
+        "fn": 3
       },
       "precision": 100,
-      "recall": 20,
-      "f1": 33.3,
-      "supportDeceptive": 10,
-      "supportLegit": 38,
+      "recall": 25,
+      "f1": 40,
+      "supportDeceptive": 4,
+      "supportLegit": 15,
       "suggestedWeight": {
-        "high": 4,
+        "high": 5,
         "medium": 2,
         "low": 1
       },
       "currentWeight": {
-        "high": 8,
-        "medium": 4,
+        "high": 4,
+        "medium": 2,
         "low": 1
       }
     },
@@ -60,24 +60,24 @@
       "detector": "mock_to_avoid_failure",
       "label": "D3_MockToAvoid",
       "confusion": {
-        "tp": 4,
-        "fp": 2,
-        "tn": 36,
-        "fn": 6
+        "tp": 2,
+        "fp": 1,
+        "tn": 14,
+        "fn": 2
       },
       "precision": 66.7,
-      "recall": 40,
-      "f1": 50,
-      "supportDeceptive": 10,
-      "supportLegit": 38,
+      "recall": 50,
+      "f1": 57.1,
+      "supportDeceptive": 4,
+      "supportLegit": 15,
       "suggestedWeight": {
-        "high": 6,
+        "high": 7,
         "medium": 3,
         "low": 1
       },
       "currentWeight": {
-        "high": 8,
-        "medium": 4,
+        "high": 6,
+        "medium": 3,
         "low": 1
       }
     },
@@ -87,14 +87,14 @@
       "confusion": {
         "tp": 0,
         "fp": 0,
-        "tn": 38,
-        "fn": 10
+        "tn": 15,
+        "fn": 4
       },
       "precision": 0,
       "recall": 0,
       "f1": 0,
-      "supportDeceptive": 10,
-      "supportLegit": 38,
+      "supportDeceptive": 4,
+      "supportLegit": 15,
       "suggestedWeight": {
         "high": 0,
         "medium": 0,
@@ -111,23 +111,23 @@
       "label": "D5_SilentCatch",
       "confusion": {
         "tp": 2,
-        "fp": 2,
-        "tn": 36,
-        "fn": 8
+        "fp": 1,
+        "tn": 14,
+        "fn": 2
       },
-      "precision": 50,
-      "recall": 20,
-      "f1": 28.6,
-      "supportDeceptive": 10,
-      "supportLegit": 38,
+      "precision": 66.7,
+      "recall": 50,
+      "f1": 57.1,
+      "supportDeceptive": 4,
+      "supportLegit": 15,
       "suggestedWeight": {
-        "high": 5,
-        "medium": 2,
-        "low": -1
+        "high": 7,
+        "medium": 4,
+        "low": 0
       },
       "currentWeight": {
-        "high": 3,
-        "medium": 1,
+        "high": 4,
+        "medium": 2,
         "low": 0
       }
     },
@@ -135,24 +135,24 @@
       "detector": "hallucinated_assertion",
       "label": "D6_HallucinatedAssertion",
       "confusion": {
-        "tp": 6,
-        "fp": 3,
-        "tn": 35,
-        "fn": 4
+        "tp": 2,
+        "fp": 2,
+        "tn": 13,
+        "fn": 2
       },
-      "precision": 66.7,
-      "recall": 60,
-      "f1": 63.2,
-      "supportDeceptive": 10,
-      "supportLegit": 38,
+      "precision": 50,
+      "recall": 50,
+      "f1": 50,
+      "supportDeceptive": 4,
+      "supportLegit": 15,
       "suggestedWeight": {
-        "high": 8,
-        "medium": 4,
+        "high": 6,
+        "medium": 3,
         "low": 1
       },
       "currentWeight": {
-        "high": 6,
-        "medium": 3,
+        "high": 8,
+        "medium": 4,
         "low": 1
       }
     },
@@ -161,15 +161,15 @@
       "label": "D8_AIAssisted",
       "confusion": {
         "tp": 0,
-        "fp": 0,
-        "tn": 38,
-        "fn": 10
+        "fp": 1,
+        "tn": 14,
+        "fn": 4
       },
       "precision": 0,
       "recall": 0,
       "f1": 0,
-      "supportDeceptive": 10,
-      "supportLegit": 38,
+      "supportDeceptive": 4,
+      "supportLegit": 15,
       "suggestedWeight": {
         "high": 0,
         "medium": 0,
@@ -187,14 +187,14 @@
       "confusion": {
         "tp": 0,
         "fp": 0,
-        "tn": 38,
-        "fn": 10
+        "tn": 15,
+        "fn": 4
       },
       "precision": 0,
       "recall": 0,
       "f1": 0,
-      "supportDeceptive": 10,
-      "supportLegit": 38,
+      "supportDeceptive": 4,
+      "supportLegit": 15,
       "suggestedWeight": {
         "high": 0,
         "medium": 0,
@@ -210,24 +210,24 @@
       "detector": "mutation_susceptibility",
       "label": "D10_MutationSusceptibility",
       "confusion": {
-        "tp": 6,
-        "fp": 2,
-        "tn": 36,
-        "fn": 4
+        "tp": 4,
+        "fp": 1,
+        "tn": 14,
+        "fn": 0
       },
-      "precision": 75,
-      "recall": 60,
-      "f1": 66.7,
-      "supportDeceptive": 10,
-      "supportLegit": 38,
+      "precision": 80,
+      "recall": 100,
+      "f1": 88.9,
+      "supportDeceptive": 4,
+      "supportLegit": 15,
       "suggestedWeight": {
-        "high": 9,
-        "medium": 4,
+        "high": 10,
+        "medium": 5,
         "low": 0
       },
       "currentWeight": {
-        "high": 2,
-        "medium": 1,
+        "high": 9,
+        "medium": 4,
         "low": 0
       }
     },
@@ -237,30 +237,30 @@
       "confusion": {
         "tp": 0,
         "fp": 0,
-        "tn": 38,
-        "fn": 10
+        "tn": 15,
+        "fn": 4
       },
       "precision": 0,
       "recall": 0,
       "f1": 0,
-      "supportDeceptive": 10,
-      "supportLegit": 38,
+      "supportDeceptive": 4,
+      "supportLegit": 15,
       "suggestedWeight": {
         "high": 0,
         "medium": 0,
         "low": 0
       },
       "currentWeight": {
-        "high": 10,
-        "medium": 5,
-        "low": 2
+        "high": 0,
+        "medium": 0,
+        "low": 0
       }
     }
   ],
   "score_distribution": {
-    "avg": 95.9,
-    "clean": 325,
-    "suspicious": 18,
-    "deceptive": 7
+    "avg": 88.1,
+    "clean": 17,
+    "suspicious": 1,
+    "deceptive": 2
   }
 }

@@ -90,7 +90,7 @@ const DETECTOR_PENALTIES: Record<string, { high: number; medium: number; low: nu
   'ai_assisted_detection':   { high: 10, medium: 5, low: 2 },  // fallback — no calibration data (async-only)
   'historical_behavioral':   { high: 5,  medium: 3, low: 1 },  // fallback — no calibration data (async-only)
   'mutation_susceptibility': { high: 9,  medium: 4, low: 0 },  // F1=67  — Precision 75%, Recall 60%
-  'agent_instruction_scan':  { high: 10, medium: 5, low: 2 },  // fallback — no calibration data (needs agent config files)
+  'agent_instruction_scan':  { high: 0,  medium: 0, low: 0 },  // 0 TP across 350 PRs, disabled until labeled data available
 }
 
 /**
