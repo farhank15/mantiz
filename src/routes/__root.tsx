@@ -46,6 +46,20 @@ export const Route = createRootRoute({
         content: "Detect when AI agents fake a passing test suite. 11 detection engines scan diffs and PRs for cheating patterns. Free, no signup.",
       },
 
+      // ── OG Image ──
+      {
+        property: "og:image",
+        content: "https://mantiz-wine.vercel.app/og-image.png",
+      },
+      {
+        property: "og:image:width",
+        content: "1200",
+      },
+      {
+        property: "og:image:height",
+        content: "630",
+      },
+
       // ── Twitter Card ──
       {
         name: "twitter:card",
@@ -58,6 +72,10 @@ export const Route = createRootRoute({
       {
         name: "twitter:description",
         content: "Detect when AI agents fake a passing test suite. 11 detection engines scan diffs for cheating patterns. Free.",
+      },
+      {
+        name: "twitter:image",
+        content: "https://mantiz-wine.vercel.app/og-image.png",
       },
 
       // ── Robots ──

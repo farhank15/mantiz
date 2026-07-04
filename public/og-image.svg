@@ -1,0 +1,98 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Dark gradient background -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0a1a"/>
+      <stop offset="50%" stop-color="#0f0f2a"/>
+      <stop offset="100%" stop-color="#0a0a1a"/>
+    </linearGradient>
+
+    <!-- Accent gradient -->
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+
+    <!-- Glow filter -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <!-- Soft glow -->
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="40" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+    </filter>
+
+    <!-- Grid pattern -->
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1a1a3e" stroke-width="1" opacity="0.5"/>
+    </pattern>
+
+    <!-- Code bracket icon -->
+    <symbol id="bracket" viewBox="0 0 48 48">
+      <path d="M30 8l14 16-14 16M18 8L4 24l14 16" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Grid overlay -->
+  <rect width="1200" height="630" fill="url(#grid)"/>
+
+  <!-- Decorative glow orbs -->
+  <circle cx="200" cy="315" r="180" fill="#6366f1" opacity="0.08" filter="url(#softGlow)"/>
+  <circle cx="1000" cy="315" r="220" fill="#a855f7" opacity="0.08" filter="url(#softGlow)"/>
+  <circle cx="600" cy="100" r="120" fill="#6366f1" opacity="0.05" filter="url(#softGlow)"/>
+
+  <!-- Decorative code bracket large (left) -->
+  <use href="#bracket" x="60" y="240" width="80" height="80" stroke="url(#accent)" opacity="0.15"/>
+
+  <!-- Decorative code bracket (right) -->
+  <use href="#bracket" x="1060" y="280" width="60" height="60" stroke="url(#accent)" opacity="0.12" transform="scale(-1, 1) translate(-1200, 0)"/>
+
+  <!-- Horizontal line accent -->
+  <rect x="100" y="380" width="100" height="3" rx="1.5" fill="url(#accent)"/>
+
+  <!-- Main title -->
+  <text x="120" y="210" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="72" font-weight="800" fill="#ffffff">
+    Mantiz
+  </text>
+
+  <!-- Subtitle -->
+  <text x="120" y="270" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="32" font-weight="500" fill="#a1a1aa">
+    AI Lie Detector for Code
+  </text>
+
+  <!-- Tagline -->
+  <text x="120" y="360" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="20" font-weight="400" fill="#71717a">
+    Detect AI-cheating in pull requests with confidence scoring
+  </text>
+
+  <!-- Feature pills -->
+  <rect x="120" y="420" width="110" height="32" rx="16" fill="#1a1a3e" stroke="#6366f1" stroke-width="1" opacity="0.8"/>
+  <text x="175" y="441" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="500" fill="#a5b4fc" text-anchor="middle">Static Analysis</text>
+
+  <rect x="245" y="420" width="100" height="32" rx="16" fill="#1a1a3e" stroke="#6366f1" stroke-width="1" opacity="0.8"/>
+  <text x="295" y="441" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="500" fill="#a5b4fc" text-anchor="middle">AI Detection</text>
+
+  <rect x="360" y="420" width="110" height="32" rx="16" fill="#1a1a3e" stroke="#6366f1" stroke-width="1" opacity="0.8"/>
+  <text x="415" y="441" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="500" fill="#a5b4fc" text-anchor="middle">Trust Score</text>
+
+  <!-- Bottom bar -->
+  <rect x="0" y="600" width="1200" height="30" fill="url(#accent)" opacity="0.08"/>
+
+  <!-- URL at bottom-right -->
+  <text x="1080" y="618" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#52525b" text-anchor="end">mantiz.dev</text>
+
+  <!-- Shield/check icon (right side decorative) -->
+  <g transform="translate(880, 130)" opacity="0.08">
+    <path d="M60 0l60 30v90c0 40-30 75-60 85-30-10-60-45-60-85V30L60 0z" fill="url(#accent)"/>
+    <path d="M40 70l15 15 30-30" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
