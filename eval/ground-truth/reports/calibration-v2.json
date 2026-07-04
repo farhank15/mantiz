@@ -1,6 +1,6 @@
 {
   "version": "v2",
-  "generated_at": "2026-07-04T10:40:40.299Z",
+  "generated_at": "2026-07-04T12:36:15.143Z",
   "total_candidates": 433,
   "labeled_overlap": 419,
   "deceptive_count": 16,
@@ -259,8 +259,8 @@
   ],
   "score_distribution": {
     "avg": 98.5,
-    "clean": 424,
-    "suspicious": 7,
+    "clean": 425,
+    "suspicious": 6,
     "deceptive": 2
   }
 }
