@@ -21,16 +21,16 @@ import type { Finding, PatternType, ParsedDiff, Confidence } from "../../src/det
 // ─── Weights (mirrors engine.ts — keep in sync!) ───────────────────
 
 export const DETECTOR_PENALTIES: Record<string, { high: number; medium: number; low: number }> = {
-  disabled_assertion:      { high: 3,  medium: 2, low: 1 },
+  disabled_assertion:      { high: 3,  medium: 2, low: 1 },  // mirrors engine.ts
   assertion_tampering:     { high: 4,  medium: 2, low: 1 },
   mock_to_avoid_failure:   { high: 6,  medium: 3, low: 1 },
   claim_diff_mismatch:     { high: 0,  medium: 0, low: 0 },
   silent_catch_and_pass:   { high: 4,  medium: 2, low: 0 },
   hallucinated_assertion:  { high: 8,  medium: 4, low: 1 },
-  ai_assisted_detection:   { high: 10, medium: 5, low: 2 },
-  historical_behavioral:   { high: 5,  medium: 3, low: 1 },
+  ai_assisted_detection:   { high: 0,  medium: 0, low: 0 },
+  historical_behavioral:   { high: 5,  medium: 3, low: 1 },  // fallback — async-only
   mutation_susceptibility: { high: 9,  medium: 4, low: 0 },
-  agent_instruction_scan:  { high: 0,  medium: 0, low: 0 },
+  agent_instruction_scan:  { high: 0,  medium: 0, low: 0 }
 };
 
 export const IMPORTANCE_MULTIPLIER: Record<string, number> = {
@@ -243,18 +243,7 @@ export function distributeWeight(weight: number, hR: number, mR: number): { high
   return { high: hCapped, medium: mCapped, low: Math.max(0, weight - hCapped - mCapped) };
 }
 
-export const CURRENT_WEIGHTS: Record<string, { high: number; medium: number; low: number }> = {
-  disabled_assertion: { high: 3, medium: 2, low: 1 },
-  assertion_tampering: { high: 4, medium: 2, low: 1 },
-  mock_to_avoid_failure: { high: 6, medium: 3, low: 1 },
-  claim_diff_mismatch: { high: 0, medium: 0, low: 0 },
-  silent_catch_and_pass: { high: 4, medium: 2, low: 0 },
-  hallucinated_assertion: { high: 8, medium: 4, low: 1 },
-  ai_assisted_detection: { high: 10, medium: 5, low: 2 },
-  historical_behavioral: { high: 5, medium: 3, low: 1 },
-  mutation_susceptibility: { high: 9, medium: 4, low: 0 },
-  agent_instruction_scan: { high: 0, medium: 0, low: 0 },
-};
+export const CURRENT_WEIGHTS: Record<string, { high: number; medium: number; low: number }> = { ...DETECTOR_PENALTIES };
 
 // ─── CSV Parser ─────────────────────────────────────────────────────
 

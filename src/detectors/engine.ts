@@ -87,7 +87,7 @@ const DETECTOR_PENALTIES: Record<string, { high: number; medium: number; low: nu
   'claim_diff_mismatch':     { high: 0,  medium: 0, low: 0 },  // Precision 0% — disabled, data collection only
   'silent_catch_and_pass':   { high: 4,  medium: 2, low: 0 },  // F1=29  — Precision 50%, Recall 20%
   'hallucinated_assertion':  { high: 8,  medium: 4, low: 1 },  // F1=63  — Precision 67%, Recall 60% (best detector)
-  'ai_assisted_detection':   { high: 10, medium: 5, low: 2 },  // fallback — no calibration data (async-only)
+  'ai_assisted_detection':   { high: 0,  medium: 0, low: 0 },  // 0 TP, 3 FP across 350 PRs — disabled until prompt tuning
   'historical_behavioral':   { high: 5,  medium: 3, low: 1 },  // fallback — no calibration data (async-only)
   'mutation_susceptibility': { high: 9,  medium: 4, low: 0 },  // F1=67  — Precision 75%, Recall 60%
   'agent_instruction_scan':  { high: 0,  medium: 0, low: 0 },  // 0 TP across 350 PRs, disabled until labeled data available

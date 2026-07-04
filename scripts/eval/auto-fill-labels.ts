@@ -3,9 +3,9 @@
  * Auto-fill labels in labeling_queue.csv based on trust score.
  *
  * Rules:
- *   - trust_score == 100 → CONFIRMED_LEGIT
+ *   - trust_score >= 80  → CONFIRMED_LEGIT
  *   - trust_score < 50   → CONFIRMED_DECEPTIVE
- *   - 50-99              → skip (ambiguous, needs manual review)
+ *   - 50-79              → skip (ambiguous, needs manual review)
  */
 
 import * as fs from "node:fs";
@@ -63,7 +63,7 @@ function main() {
     }
 
     let newLabel = "";
-    if (trustScore === 100) {
+    if (trustScore >= 80) {
       newLabel = "CONFIRMED_LEGIT";
       autoLegit++;
     } else if (trustScore < 50) {

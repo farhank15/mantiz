@@ -1,28 +1,28 @@
 {
   "version": "v2",
-  "generated_at": "2026-07-04T04:54:01.647Z",
-  "total_candidates": 20,
-  "labeled_overlap": 19,
-  "deceptive_count": 4,
-  "legit_count": 15,
+  "generated_at": "2026-07-04T05:05:59.131Z",
+  "total_candidates": 350,
+  "labeled_overlap": 336,
+  "deceptive_count": 18,
+  "legit_count": 318,
   "detectors": [
     {
       "detector": "disabled_assertion",
       "label": "D1_DisabledAssertion",
       "confusion": {
-        "tp": 0,
-        "fp": 0,
-        "tn": 15,
-        "fn": 4
+        "tp": 3,
+        "fp": 4,
+        "tn": 314,
+        "fn": 15
       },
-      "precision": 0,
-      "recall": 0,
-      "f1": 0,
-      "supportDeceptive": 4,
-      "supportLegit": 15,
+      "precision": 42.9,
+      "recall": 16.7,
+      "f1": 24,
+      "supportDeceptive": 18,
+      "supportLegit": 318,
       "suggestedWeight": {
-        "high": 0,
-        "medium": 0,
+        "high": 3,
+        "medium": 2,
         "low": 0
       },
       "currentWeight": {
@@ -35,19 +35,19 @@
       "detector": "assertion_tampering",
       "label": "D2_AssertionTampering",
       "confusion": {
-        "tp": 1,
-        "fp": 0,
-        "tn": 15,
-        "fn": 3
+        "tp": 3,
+        "fp": 4,
+        "tn": 314,
+        "fn": 15
       },
-      "precision": 100,
-      "recall": 25,
-      "f1": 40,
-      "supportDeceptive": 4,
-      "supportLegit": 15,
+      "precision": 42.9,
+      "recall": 16.7,
+      "f1": 24,
+      "supportDeceptive": 18,
+      "supportLegit": 318,
       "suggestedWeight": {
-        "high": 5,
-        "medium": 2,
+        "high": 3,
+        "medium": 1,
         "low": 1
       },
       "currentWeight": {
@@ -60,19 +60,19 @@
       "detector": "mock_to_avoid_failure",
       "label": "D3_MockToAvoid",
       "confusion": {
-        "tp": 2,
-        "fp": 1,
-        "tn": 14,
-        "fn": 2
+        "tp": 7,
+        "fp": 9,
+        "tn": 309,
+        "fn": 11
       },
-      "precision": 66.7,
-      "recall": 50,
-      "f1": 57.1,
-      "supportDeceptive": 4,
-      "supportLegit": 15,
+      "precision": 43.8,
+      "recall": 38.9,
+      "f1": 41.2,
+      "supportDeceptive": 18,
+      "supportLegit": 318,
       "suggestedWeight": {
-        "high": 7,
-        "medium": 3,
+        "high": 5,
+        "medium": 2,
         "low": 1
       },
       "currentWeight": {
@@ -86,15 +86,15 @@
       "label": "D4_ClaimDiffMismatch",
       "confusion": {
         "tp": 0,
-        "fp": 0,
-        "tn": 15,
-        "fn": 4
+        "fp": 7,
+        "tn": 311,
+        "fn": 18
       },
       "precision": 0,
       "recall": 0,
       "f1": 0,
-      "supportDeceptive": 4,
-      "supportLegit": 15,
+      "supportDeceptive": 18,
+      "supportLegit": 318,
       "suggestedWeight": {
         "high": 0,
         "medium": 0,
@@ -110,19 +110,19 @@
       "detector": "silent_catch_and_pass",
       "label": "D5_SilentCatch",
       "confusion": {
-        "tp": 2,
-        "fp": 1,
-        "tn": 14,
-        "fn": 2
+        "tp": 3,
+        "fp": 28,
+        "tn": 290,
+        "fn": 15
       },
-      "precision": 66.7,
-      "recall": 50,
-      "f1": 57.1,
-      "supportDeceptive": 4,
-      "supportLegit": 15,
+      "precision": 9.7,
+      "recall": 16.7,
+      "f1": 12.2,
+      "supportDeceptive": 18,
+      "supportLegit": 318,
       "suggestedWeight": {
-        "high": 7,
-        "medium": 4,
+        "high": 1,
+        "medium": 1,
         "low": 0
       },
       "currentWeight": {
@@ -135,16 +135,16 @@
       "detector": "hallucinated_assertion",
       "label": "D6_HallucinatedAssertion",
       "confusion": {
-        "tp": 2,
-        "fp": 2,
-        "tn": 13,
-        "fn": 2
+        "tp": 14,
+        "fp": 22,
+        "tn": 296,
+        "fn": 4
       },
-      "precision": 50,
-      "recall": 50,
-      "f1": 50,
-      "supportDeceptive": 4,
-      "supportLegit": 15,
+      "precision": 38.9,
+      "recall": 77.8,
+      "f1": 51.9,
+      "supportDeceptive": 18,
+      "supportLegit": 318,
       "suggestedWeight": {
         "high": 6,
         "medium": 3,
@@ -161,15 +161,15 @@
       "label": "D8_AIAssisted",
       "confusion": {
         "tp": 0,
-        "fp": 1,
-        "tn": 14,
-        "fn": 4
+        "fp": 0,
+        "tn": 318,
+        "fn": 18
       },
       "precision": 0,
       "recall": 0,
       "f1": 0,
-      "supportDeceptive": 4,
-      "supportLegit": 15,
+      "supportDeceptive": 18,
+      "supportLegit": 318,
       "suggestedWeight": {
         "high": 0,
         "medium": 0,
@@ -187,14 +187,14 @@
       "confusion": {
         "tp": 0,
         "fp": 0,
-        "tn": 15,
-        "fn": 4
+        "tn": 318,
+        "fn": 18
       },
       "precision": 0,
       "recall": 0,
       "f1": 0,
-      "supportDeceptive": 4,
-      "supportLegit": 15,
+      "supportDeceptive": 18,
+      "supportLegit": 318,
       "suggestedWeight": {
         "high": 0,
         "medium": 0,
@@ -210,19 +210,19 @@
       "detector": "mutation_susceptibility",
       "label": "D10_MutationSusceptibility",
       "confusion": {
-        "tp": 4,
-        "fp": 1,
-        "tn": 14,
-        "fn": 0
+        "tp": 13,
+        "fp": 11,
+        "tn": 307,
+        "fn": 5
       },
-      "precision": 80,
-      "recall": 100,
-      "f1": 88.9,
-      "supportDeceptive": 4,
-      "supportLegit": 15,
+      "precision": 54.2,
+      "recall": 72.2,
+      "f1": 61.9,
+      "supportDeceptive": 18,
+      "supportLegit": 318,
       "suggestedWeight": {
-        "high": 10,
-        "medium": 5,
+        "high": 8,
+        "medium": 4,
         "low": 0
       },
       "currentWeight": {
@@ -237,14 +237,14 @@
       "confusion": {
         "tp": 0,
         "fp": 0,
-        "tn": 15,
-        "fn": 4
+        "tn": 318,
+        "fn": 18
       },
       "precision": 0,
       "recall": 0,
       "f1": 0,
-      "supportDeceptive": 4,
-      "supportLegit": 15,
+      "supportDeceptive": 18,
+      "supportLegit": 318,
       "suggestedWeight": {
         "high": 0,
         "medium": 0,
@@ -258,9 +258,9 @@
     }
   ],
   "score_distribution": {
-    "avg": 88.1,
-    "clean": 17,
-    "suspicious": 1,
-    "deceptive": 2
+    "avg": 95.2,
+    "clean": 321,
+    "suspicious": 18,
+    "deceptive": 11
   }
 }
