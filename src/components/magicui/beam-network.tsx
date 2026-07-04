@@ -11,9 +11,9 @@ const Circle = forwardRef<
       ref={ref}
       className={cn(
         "z-10 flex size-14 items-center justify-center rounded-full border-2",
-        "border-[var(--border)] bg-[var(--surface-1)]",
+        "border-(--border) bg-(--surface-1)",
         "shadow-[0_0_20px_-8px_rgba(0,0,0,0.6)]",
-        "transition-all duration-300 hover:border-[var(--interactive)] hover:shadow-[0_0_15px_rgba(88,166,255,0.15)]",
+        "transition-all duration-300 hover:border-(--interactive) hover:shadow-[0_0_15px_rgba(88,166,255,0.15)]",
         className,
       )}
     >
@@ -173,7 +173,7 @@ function MantizIcon() {
 function DiffIcon() {
   return (
     <svg
-      className="h-5 w-5 text-[var(--severity-critical)]"
+      className="h-5 w-5 text-(--severity-critical)"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -191,7 +191,7 @@ function DiffIcon() {
 function PatternIcon() {
   return (
     <svg
-      className="h-5 w-5 text-[var(--severity-medium)]"
+      className="h-5 w-5 text-(--severity-medium)"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -209,7 +209,7 @@ function PatternIcon() {
 function MockIcon() {
   return (
     <svg
-      className="h-5 w-5 text-[var(--severity-high)]"
+      className="h-5 w-5 text-(--severity-high)"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -227,7 +227,7 @@ function MockIcon() {
 function CatchIcon() {
   return (
     <svg
-      className="h-5 w-5 text-[var(--success)]"
+      className="h-5 w-5 text-(--success)"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -245,7 +245,7 @@ function CatchIcon() {
 function AssertIcon() {
   return (
     <svg
-      className="h-5 w-5 text-[var(--severity-critical)]"
+      className="h-5 w-5 text-(--severity-critical)"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -263,7 +263,7 @@ function AssertIcon() {
 function VerdictIcon() {
   return (
     <svg
-      className="h-5 w-5 text-[var(--severity-low)]"
+      className="h-5 w-5 text-(--severity-low)"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"

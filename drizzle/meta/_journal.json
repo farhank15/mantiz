@@ -57,6 +57,13 @@
       "when": 1783173933649,
       "tag": "0007_perpetual_monster_badoon",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783182162276,
+      "tag": "0008_eminent_miracleman",
+      "breakpoints": true
     }
   ]
 }

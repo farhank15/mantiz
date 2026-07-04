@@ -74,9 +74,6 @@ for (const c of candidates) {
   const d6Count = result.findings.filter(f => f.patternType === 'hallucinated_assertion').length
   const allPatterns = [...new Set(result.findings.map(f => f.patternType))]
 
-  // Find D6 findings specifically
-  const d6Findings = result.findings.filter(f => f.patternType === 'hallucinated_assertion')
-
   if (d6Count === 0) {
     // MISSED by D6 — extract evidence
     // Try to find the relevant part of the diff (test files)

@@ -16,7 +16,7 @@
 
 import type { Finding, ParsedDiff } from './types'
 import { detectLanguage, isTestFile, LANGUAGE_CONFIG } from './language-registry'
-import { isCustomMatcher, registerCustomMatchersFromDiff } from './custom-matchers'
+import { isCustomMatcher } from './custom-matchers'
 
 /**
  * Non-assertion method calls that start with 'to' but are NOT matchers.
@@ -240,7 +240,6 @@ function scanLineForHallucination(line: string, lineIndex: number, filePath: str
   // Without checking all methods, we'd miss hallucinated assertions in chains.
   let flaggedMethod: string | null = null
   let isKnownHallucinated = false
-  let fromChain = false
 
   for (const method of methods) {
     if (NON_ASSERTION_METHODS.has(method)) continue
@@ -254,7 +253,6 @@ function scanLineForHallucination(line: string, lineIndex: number, filePath: str
     if (isAssertionLike(method) && !validMatchers.has(method) && !JEST_GLOBALS.has(method)) {
       flaggedMethod = method
       isKnownHallucinated = false
-      fromChain = method !== methods[0]
       break
     }
   }

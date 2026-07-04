@@ -73,7 +73,6 @@ function showDiff(c: any, label: string) {
   console.log(`\n--- ALL .methodName() calls in diff ---`)
   const methodCalls = new Map<string, number>()
   for (const file of result.files) {
-    const path = file.newFile || file.oldFile || 'unknown'
     for (const hunk of file.hunks) {
       for (const line of hunk.content.split('\n')) {
         if (!line.startsWith('+')) continue

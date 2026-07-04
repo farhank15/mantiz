@@ -11,7 +11,6 @@ const OUTPUT = "eval/ground-truth/batch_import.csv";
 const lines = fs.readFileSync(QUEUE, "utf-8").split("\n").filter(l => l.trim());
 const header = lines[0];
 const urlIdx = header.split(",").indexOf("pr_url");
-const verdictIdx = header.split(",").indexOf("verdict");
 
 // Collect PRs that are unlabeled AND are CLEAN or SUSPICIOUS/LIKELY_DECEPTIVE
 // Based on manual review: all 5 LIKELY_DECEPTIVE are actually LEGIT (D3 FP)
