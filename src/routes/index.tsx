@@ -670,7 +670,8 @@ function App() {
             className="mb-10 text-center"
           >
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-severity-critical/20 bg-severity-critical/8 px-4 py-1.5 text-xs font-semibold text-severity-critical">
-              <Swords className="h-3.5 w-3.5" />11 Detection Engines
+              <Swords className="h-3.5 w-3.5" />
+              11 Detection Engines
             </div>
             <h2 className="text-3xl font-bold text-ink sm:text-4xl">
               What <AnimatedGradientText>Mantiz Detects</AnimatedGradientText>
@@ -857,9 +858,9 @@ function App() {
               How <AnimatedGradientText>Detection</AnimatedGradientText> Works
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-ink-muted">
-              Mantiz analyzes diffs through a multi-stage pipeline: static pattern
-              matching, AST parsing, behavioral analysis, and optional AI-powered
-              detection.
+              Mantiz analyzes diffs through a multi-stage pipeline: static
+              pattern matching, AST parsing, behavioral analysis, and optional
+              AI-powered detection.
             </p>
           </motion.div>
 
@@ -935,8 +936,9 @@ function App() {
                   AI + Behavioral
                 </h3>
                 <p className="text-sm text-ink-muted">
-                  Optional LLM-powered analysis detects semantic bypass and coverage
-                  reduction. Historical tracking catches author pattern anomalies.
+                  Optional LLM-powered analysis detects semantic bypass and
+                  coverage reduction. Historical tracking catches author pattern
+                  anomalies.
                 </p>
               </div>
             </motion.div>
@@ -1039,7 +1041,6 @@ function App() {
           </motion.div>
         </div>
       </section>
-
     </main>
   );
 }

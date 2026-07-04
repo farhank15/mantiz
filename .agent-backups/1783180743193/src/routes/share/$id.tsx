@@ -214,8 +214,8 @@ function SharePage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-6 text-center"
         >
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-surface-2 border border-surface-3 shadow-md">
-            <img src="/mantiz.png" alt="Mantiz Logo" className="h-full w-full object-cover" />
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-interactive/10">
+            <BugPlay className="h-7 w-7 text-interactive" />
           </div>
           <h1 className="text-2xl font-bold text-ink">Mantiz Scan Report</h1>
           <div className="mt-2 flex items-center justify-center gap-3 text-xs text-ink-muted">

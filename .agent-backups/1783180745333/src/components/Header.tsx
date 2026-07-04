@@ -293,7 +293,7 @@ export default function Header() {
           to="/"
           className="shrink-0 inline-flex items-center gap-2.5 rounded-full px-3 py-1.5 transition hover:opacity-80"
         >
-          <img src="/mantiz.png" alt="Mantiz Logo" className="h-5 w-5 object-contain rounded" />
+          <span className="flex h-2 w-2 rounded-full bg-linear-to-r from-[#EE3124] to-severity-high shadow-[0_0_6px_rgba(238,49,36,0.4)]" />
           <span className="text-base font-bold tracking-tight text-ink">
             Mantiz
           </span>

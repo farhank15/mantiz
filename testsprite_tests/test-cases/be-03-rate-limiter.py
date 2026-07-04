@@ -9,19 +9,18 @@ def test_rate_limiter():
     url = f"{TARGET_URL}/api/share/{valid_id}"
     
     # We will make up to 15 requests until we hit a 429.
-    # Since the limit is 10, we must hit a 429 by the 11th request (or earlier if there was prior activity).
+    # We append a unique query parameter to bypass Vercel Edge caching.
     print("Starting rate limit verification...")
     
     hit_429 = False
-    first_request_status = None
     
     for i in range(15):
-        r = requests.get(url, timeout=10)
+        url_with_param = f"{url}?bypass_cache={i}"
+        r = requests.get(url_with_param, timeout=10)
         status = r.status_code
         print(f"Request {i+1}: Status {status}")
         
         if i == 0:
-            first_request_status = status
             assert status == 200, f"First request should succeed, got {status}: {r.text[:200]}"
             
         if status == 429:
@@ -34,7 +33,8 @@ def test_rate_limiter():
             assert "error" in data
             assert "rate limit exceeded" in data["error"].lower()
             # If we hit 429, the next one should also be blocked
-            r_next = requests.get(url, timeout=10)
+            url_next = f"{url}?bypass_cache={i+1}"
+            r_next = requests.get(url_next, timeout=10)
             assert r_next.status_code == 429, f"Subsequent request after block should also be 429, got {r_next.status_code}"
             print("Successfully verified rate limit block on consecutive requests!")
             break
