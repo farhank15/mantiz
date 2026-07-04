@@ -122,7 +122,7 @@ export const Route = createFileRoute('/api/share/$id')({
                 ...baseCors,
                 ...rateLimitHeaders(rateResult),
                 'Content-Type': 'application/json',
-                'Cache-Control': 'public, max-age=60, s-maxage=300',
+                'Cache-Control': 'public, max-age=3600, s-maxage=86400, immutable',
               },
             },
           )

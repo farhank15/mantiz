@@ -9,6 +9,9 @@
  * 2. Compare values between old and new assertions
  * 3. CONTEXT-AWARE: If corresponding source files also changed, reduce confidence
  *    (coordinated test + source updates are legitimate, not tampering)
+ * 4. VALUE-AWARE: Detect hardcoded string → variable refactoring.
+ *    If old value is a quoted string literal and new value is an unquoted variable,
+ *    it's REFACTORING, not tampering — confidence drops to LOW.
  *
  * Supported: JavaScript/TypeScript (full), Python/Go/Java/Ruby/PHP (basic)
  */
@@ -254,7 +257,25 @@ function findTamperedAssertions(
         const isValueSwap = oldValueAppearsInNew && nwValueExistedInOld
         const isExpansion = oldValueAppearsInNew
 
-        if (isValueSwap) {
+        // VALUE-AWARE: detect hardcoded string → variable refactoring
+        // If old value is a quoted string literal and new value is an unquoted identifier,
+        // this indicates the assertion was refactored (not weakened).
+        const oldIsQuoted = /^['"`]/.test(old.value) && /['"`]$/.test(old.value)
+        const newIsUnquoted = /^[a-zA-Z_$][a-zA-Z0-9_$.]*$/.test(nw.value) && !/^['"`]/.test(nw.value)
+        const isRefactoring = oldIsQuoted && newIsUnquoted
+
+        if (isRefactoring) {
+          // Hardcoded → variable = refactoring, LOWEST confidence
+          findings.push({
+            patternType: 'assertion_tampering',
+            filePath: '',
+            lineStart: nw.lineIndex,
+            lineEnd: nw.lineIndex,
+            confidence: 'low' as Confidence,
+            explanation: `Assertion refactored: hardcoded value ${old.value} extracted to variable ${nw.value} — likely legitimate test improvement.`,
+            evidenceExcerpt: nw.rawContent,
+          })
+        } else if (isValueSwap) {
           findings.push({
             patternType: 'assertion_tampering',
             filePath: '',

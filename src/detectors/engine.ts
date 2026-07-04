@@ -8,6 +8,7 @@ import { detectSilentCatch } from './silent-catch'
 import { detectHallucinatedAssertions } from './hallucination'
 import { detectWithAI } from './ai-assisted'
 import { evaluateFindings, isAIJudgeEnabled } from './ai-judge'
+import { registerCustomMatchersFromDiff, resetCustomMatchers } from './custom-matchers'
 import { detectMutationSusceptibility } from './mutation-susceptibility'
 import { detectAgentInstructions } from './agent-instruction'
 import { ensureCredits, deductCredits, CREDIT_COSTS } from '../server/credits'
@@ -86,7 +87,7 @@ const IMPORTANCE_MULTIPLIER: Record<string, number> = {
 //   D8: 0→{1,1,0} — first activation after prompt tuning (1 TP, 0 FP in calibration)
 const DETECTOR_PENALTIES: Record<string, { high: number; medium: number; low: number }> = {
   'disabled_assertion':      { high: 3,  medium: 2, low: 0 },  // F1=23  — TP=3, FP=5, FN=15
-  'assertion_tampering':     { high: 2,  medium: 1, low: 1 },  // F1=22  — TP=3, FP=6, FN=15
+  'assertion_tampering':     { high: 2,  medium: 1, low: 0 },  // F1=22  — TP=3, FP=6, FN=15 — LOW=0: assertion change alone = no penalty
   'mock_to_avoid_failure':   { high: 5,  medium: 2, low: 1 },  // F1=39  — TP=7, FP=11, FN=11
   'claim_diff_mismatch':     { high: 0,  medium: 0, low: 0 },  // F1=0   — Precision 0%, data collection only
   'silent_catch_and_pass':   { high: 1,  medium: 1, low: 0 },  // F1=10  — TP=2, FP=21, FN=16
@@ -119,20 +120,52 @@ function dedupFindings(findings: Finding[]): Finding[] {
 }
 
 /**
- * Calculate penalty — deterministic, no global state.
+ * Calculate penalty with Weak Signal Fusion.
  * Uses per-detector penalty (from calibration) × file importance multiplier.
+ *
+ * Weak Signal Fusion: multiple LOW/MEDIUM findings in the SAME file
+ * should NOT stack linearly. Instead:
+ *   - 1st finding: full penalty
+ *   - 2nd-5th finding: 50% penalty
+ *   - 6th+: 25% penalty
+ * This prevents "28 findings from 1 file = 28× penalty" false positives.
+ *
  * Same diff always gets same score (critical for "lie detector").
  */
 function calculatePenalty(findings: Finding[]): number {
   let total = 0
+
+  // Group findings by (file, patternType) for cluster-aware discounting
+  const clusters = new Map<string, Finding[]>()
   for (const f of findings) {
-    const detectorPenalty = DETECTOR_PENALTIES[f.patternType]
-    const base = detectorPenalty
-      ? (f.confidence === 'high' ? detectorPenalty.high : f.confidence === 'medium' ? detectorPenalty.medium : detectorPenalty.low)
-      : (f.confidence === 'high' ? 10 : f.confidence === 'medium' ? 5 : 2)  // fallback for unknown detectors
-    const mult = IMPORTANCE_MULTIPLIER[f.fileImportance ?? 'source'] ?? 1
-    total += base * mult
+    const key = `${f.filePath}::${f.patternType}`
+    const group = clusters.get(key) || []
+    group.push(f)
+    clusters.set(key, group)
   }
+
+  for (const group of clusters.values()) {
+    for (let i = 0; i < group.length; i++) {
+      const f = group[i]
+      const detectorPenalty = DETECTOR_PENALTIES[f.patternType]
+      let base = detectorPenalty
+        ? (f.confidence === 'high' ? detectorPenalty.high : f.confidence === 'medium' ? detectorPenalty.medium : detectorPenalty.low)
+        : (f.confidence === 'high' ? 10 : f.confidence === 'medium' ? 5 : 2)
+
+      // Weak Signal Fusion: discount subsequent findings in same file+detector
+      if (i >= 1 && f.confidence !== 'high') {
+        if (i < 5) {
+          base = Math.round(base * 0.5)  // 2nd-5th: 50%
+        } else {
+          base = Math.round(base * 0.25) // 6th+: 25%
+        }
+      }
+
+      const mult = IMPORTANCE_MULTIPLIER[f.fileImportance ?? 'source'] ?? 1
+      total += base * mult
+    }
+  }
+
   return Math.max(0, Math.round(total))
 }
 
@@ -156,6 +189,11 @@ export function scanDiff(rawDiff: string, prContext?: { title?: string; author?:
   }
 
   const functionalFiles = files.filter(f => !isNonFunctional(f.newFile || f.oldFile || ''))
+
+  // Register custom matchers from expect.extend() calls in the diff
+  // Reset first to prevent context leaking between scans in long-running processes
+  resetCustomMatchers()
+  registerCustomMatchersFromDiff(files)
 
   debug(`🔍 Parsing ${files.length} files (${functionalFiles.length} functional) from diff`)
 

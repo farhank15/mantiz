@@ -5,6 +5,9 @@
  * AI agents often "hallucinate" fake assertion methods that look plausible
  * but would cause runtime errors.
  *
+ * Custom matchers registered via `expect.extend()` are auto-detected
+ * via the Custom Matcher Registry (custom-matchers.ts) to prevent FP.
+ *
  * Uses the Language Registry for per-language valid assertion lists.
  * Cross-references matchers against the correct language's known assertions.
  *
@@ -13,6 +16,7 @@
 
 import type { Finding, ParsedDiff } from './types'
 import { detectLanguage, isTestFile, LANGUAGE_CONFIG } from './language-registry'
+import { isCustomMatcher, registerCustomMatchersFromDiff } from './custom-matchers'
 
 /**
  * Non-assertion method calls that start with 'to' but are NOT matchers.
@@ -98,6 +102,7 @@ const JEST_MATCHERS = new Set([
   'toBeFocused', 'toBeHidden', 'toBeInViewport', 'toBeOK',
   'toBePartiallyChecked',
   'toHaveAccessibleName', 'toHaveAccessibleDescription', 'toHaveRole',
+  'toHaveAccessibleErrorMessage',
 ])
 
 /**
@@ -211,6 +216,7 @@ function isAssertionLike(name: string): boolean {
 
 /**
  * Scan a single line for potentially hallucinated assertion matchers.
+ * Also checks the Custom Matcher Registry to avoid FP on legitimate custom matchers.
  */
 function scanLineForHallucination(line: string, lineIndex: number, filePath: string, lang: string | null): Finding | null {
   const content = line.startsWith('+') ? line.slice(1).trim() : ''
@@ -243,6 +249,8 @@ function scanLineForHallucination(line: string, lineIndex: number, filePath: str
       isKnownHallucinated = true
       break
     }
+    // Check Custom Matcher Registry before flagging as unknown
+    if (isCustomMatcher(method)) continue
     if (isAssertionLike(method) && !validMatchers.has(method) && !JEST_GLOBALS.has(method)) {
       flaggedMethod = method
       isKnownHallucinated = false
