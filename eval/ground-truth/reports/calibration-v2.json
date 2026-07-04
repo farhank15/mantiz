@@ -1,25 +1,25 @@
 {
   "version": "v2",
-  "generated_at": "2026-07-04T05:05:59.131Z",
+  "generated_at": "2026-07-04T05:22:08.860Z",
   "total_candidates": 350,
-  "labeled_overlap": 336,
+  "labeled_overlap": 346,
   "deceptive_count": 18,
-  "legit_count": 318,
+  "legit_count": 328,
   "detectors": [
     {
       "detector": "disabled_assertion",
       "label": "D1_DisabledAssertion",
       "confusion": {
         "tp": 3,
-        "fp": 4,
-        "tn": 314,
+        "fp": 5,
+        "tn": 323,
         "fn": 15
       },
-      "precision": 42.9,
+      "precision": 37.5,
       "recall": 16.7,
-      "f1": 24,
+      "f1": 23.1,
       "supportDeceptive": 18,
-      "supportLegit": 318,
+      "supportLegit": 328,
       "suggestedWeight": {
         "high": 3,
         "medium": 2,
@@ -36,17 +36,17 @@
       "label": "D2_AssertionTampering",
       "confusion": {
         "tp": 3,
-        "fp": 4,
-        "tn": 314,
+        "fp": 6,
+        "tn": 322,
         "fn": 15
       },
-      "precision": 42.9,
+      "precision": 33.3,
       "recall": 16.7,
-      "f1": 24,
+      "f1": 22.2,
       "supportDeceptive": 18,
-      "supportLegit": 318,
+      "supportLegit": 328,
       "suggestedWeight": {
-        "high": 3,
+        "high": 2,
         "medium": 1,
         "low": 1
       },
@@ -61,15 +61,15 @@
       "label": "D3_MockToAvoid",
       "confusion": {
         "tp": 7,
-        "fp": 9,
-        "tn": 309,
+        "fp": 11,
+        "tn": 317,
         "fn": 11
       },
-      "precision": 43.8,
+      "precision": 38.9,
       "recall": 38.9,
-      "f1": 41.2,
+      "f1": 38.9,
       "supportDeceptive": 18,
-      "supportLegit": 318,
+      "supportLegit": 328,
       "suggestedWeight": {
         "high": 5,
         "medium": 2,
@@ -87,14 +87,14 @@
       "confusion": {
         "tp": 0,
         "fp": 7,
-        "tn": 311,
+        "tn": 321,
         "fn": 18
       },
       "precision": 0,
       "recall": 0,
       "f1": 0,
       "supportDeceptive": 18,
-      "supportLegit": 318,
+      "supportLegit": 328,
       "suggestedWeight": {
         "high": 0,
         "medium": 0,
@@ -111,15 +111,15 @@
       "label": "D5_SilentCatch",
       "confusion": {
         "tp": 3,
-        "fp": 28,
-        "tn": 290,
+        "fp": 31,
+        "tn": 297,
         "fn": 15
       },
-      "precision": 9.7,
+      "precision": 8.8,
       "recall": 16.7,
-      "f1": 12.2,
+      "f1": 11.5,
       "supportDeceptive": 18,
-      "supportLegit": 318,
+      "supportLegit": 328,
       "suggestedWeight": {
         "high": 1,
         "medium": 1,
@@ -136,19 +136,19 @@
       "label": "D6_HallucinatedAssertion",
       "confusion": {
         "tp": 14,
-        "fp": 22,
-        "tn": 296,
+        "fp": 30,
+        "tn": 298,
         "fn": 4
       },
-      "precision": 38.9,
+      "precision": 31.8,
       "recall": 77.8,
-      "f1": 51.9,
+      "f1": 45.2,
       "supportDeceptive": 18,
-      "supportLegit": 318,
+      "supportLegit": 328,
       "suggestedWeight": {
         "high": 6,
         "medium": 3,
-        "low": 1
+        "low": 0
       },
       "currentWeight": {
         "high": 8,
@@ -162,23 +162,23 @@
       "confusion": {
         "tp": 0,
         "fp": 0,
-        "tn": 318,
+        "tn": 328,
         "fn": 18
       },
       "precision": 0,
       "recall": 0,
       "f1": 0,
       "supportDeceptive": 18,
-      "supportLegit": 318,
+      "supportLegit": 328,
       "suggestedWeight": {
         "high": 0,
         "medium": 0,
         "low": 0
       },
       "currentWeight": {
-        "high": 10,
-        "medium": 5,
-        "low": 2
+        "high": 0,
+        "medium": 0,
+        "low": 0
       }
     },
     {
@@ -187,14 +187,14 @@
       "confusion": {
         "tp": 0,
         "fp": 0,
-        "tn": 318,
+        "tn": 328,
         "fn": 18
       },
       "precision": 0,
       "recall": 0,
       "f1": 0,
       "supportDeceptive": 18,
-      "supportLegit": 318,
+      "supportLegit": 328,
       "suggestedWeight": {
         "high": 0,
         "medium": 0,
@@ -211,18 +211,18 @@
       "label": "D10_MutationSusceptibility",
       "confusion": {
         "tp": 13,
-        "fp": 11,
-        "tn": 307,
+        "fp": 15,
+        "tn": 313,
         "fn": 5
       },
-      "precision": 54.2,
+      "precision": 46.4,
       "recall": 72.2,
-      "f1": 61.9,
+      "f1": 56.5,
       "supportDeceptive": 18,
-      "supportLegit": 318,
+      "supportLegit": 328,
       "suggestedWeight": {
         "high": 8,
-        "medium": 4,
+        "medium": 3,
         "low": 0
       },
       "currentWeight": {
@@ -237,14 +237,14 @@
       "confusion": {
         "tp": 0,
         "fp": 0,
-        "tn": 318,
+        "tn": 328,
         "fn": 18
       },
       "precision": 0,
       "recall": 0,
       "f1": 0,
       "supportDeceptive": 18,
-      "supportLegit": 318,
+      "supportLegit": 328,
       "suggestedWeight": {
         "high": 0,
         "medium": 0,
@@ -258,7 +258,7 @@
     }
   ],
   "score_distribution": {
-    "avg": 95.2,
+    "avg": 95.3,
     "clean": 321,
     "suspicious": 18,
     "deceptive": 11

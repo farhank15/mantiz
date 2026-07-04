@@ -72,25 +72,29 @@ const IMPORTANCE_MULTIPLIER: Record<string, number> = {
   artifact: 0.05,
 }
 
-// ─── Per-Detector Penalty Calibration (v2 - empirical) ────────
+// ─── Per-Detector Penalty Calibration (v3 — 346 overlap, 18 DECEPTIVE) ─
 // Calibrated by calibrate-standalone.ts against 350 raw candidates
-// with 48 ground-truth-labeled overlaps (10 DECEPTIVE, 38 LEGIT).
+// with 346 ground-truth-labeled overlaps (18 DECEPTIVE, 328 LEGIT).
 // Weight formula: round(F1 * 20), distributed by current ratio, capped at 15.
 //
-// D8/D9/D11 keep fallback weights (no labeled support in current dataset —
-// D8/D9 are async-only, D11 needs agent config files).
-// D4 intentionally disabled (0% precision in all evaluations).
+// D4 disabled (0% precision). D8/D11 still 0 TP (kept at 0/0/0).
+// D9 kept as fallback (async-only, not in calibration data).
+//
+// Key changes from v2 (48 overlap):
+//   D5: F1 29→12 — precision tanked 50%→9% (31 FP from silent catch on legit code)
+//   D6: F1 63→45 — FP naik dari 1→30 (custom matchers & foreign language patterns)
+//   D2: F1 33→22 — precision turun 100%→33% (assertion tampering more FP with scale)
 const DETECTOR_PENALTIES: Record<string, { high: number; medium: number; low: number }> = {
-  'disabled_assertion':      { high: 3,  medium: 2, low: 1 },  // F1=31  — Precision 67%, Recall 20%
-  'assertion_tampering':     { high: 4,  medium: 2, low: 1 },  // F1=33  — Precision 100%, Recall 20%
-  'mock_to_avoid_failure':   { high: 6,  medium: 3, low: 1 },  // F1=50  — Precision 67%, Recall 40%
-  'claim_diff_mismatch':     { high: 0,  medium: 0, low: 0 },  // Precision 0% — disabled, data collection only
-  'silent_catch_and_pass':   { high: 4,  medium: 2, low: 0 },  // F1=29  — Precision 50%, Recall 20%
-  'hallucinated_assertion':  { high: 8,  medium: 4, low: 1 },  // F1=63  — Precision 67%, Recall 60% (best detector)
-  'ai_assisted_detection':   { high: 0,  medium: 0, low: 0 },  // 0 TP, 3 FP across 350 PRs — disabled until prompt tuning
-  'historical_behavioral':   { high: 5,  medium: 3, low: 1 },  // fallback — no calibration data (async-only)
-  'mutation_susceptibility': { high: 9,  medium: 4, low: 0 },  // F1=67  — Precision 75%, Recall 60%
-  'agent_instruction_scan':  { high: 0,  medium: 0, low: 0 },  // 0 TP across 350 PRs, disabled until labeled data available
+  'disabled_assertion':      { high: 3,  medium: 2, low: 0 },  // F1=23  — TP=3, FP=5, FN=15
+  'assertion_tampering':     { high: 2,  medium: 1, low: 1 },  // F1=22  — TP=3, FP=6, FN=15
+  'mock_to_avoid_failure':   { high: 5,  medium: 2, low: 1 },  // F1=39  — TP=7, FP=11, FN=11
+  'claim_diff_mismatch':     { high: 0,  medium: 0, low: 0 },  // F1=0   — Precision 0%, data collection only
+  'silent_catch_and_pass':   { high: 1,  medium: 1, low: 0 },  // F1=12  — TP=3, FP=31 (!), FN=15
+  'hallucinated_assertion':  { high: 6,  medium: 3, low: 0 },  // F1=45  — TP=14, FP=30, FN=4
+  'ai_assisted_detection':   { high: 0,  medium: 0, low: 0 },  // 0 TP, prompt tuned — needs async eval
+  'historical_behavioral':   { high: 5,  medium: 3, low: 1 },  // fallback — async-only, no calibration data
+  'mutation_susceptibility': { high: 8,  medium: 3, low: 0 },  // F1=57  — TP=13, FP=15, FN=5
+  'agent_instruction_scan':  { high: 0,  medium: 0, low: 0 },  // 0 TP — needs labeled data
 }
 
 /**
