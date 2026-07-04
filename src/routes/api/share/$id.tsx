@@ -12,6 +12,11 @@ import { createFileRoute } from '@tanstack/react-router'
 import { db } from '../../../lib/db'
 import { sharedScans } from '../../../schemas/index'
 import { eq } from 'drizzle-orm'
+import { checkRateLimit, rateLimitHeaders } from '../../../server/rate-limiter'
+
+// ─── Constants ──────────────────────────────────────────────────
+
+const MAX_ID_LENGTH = 64
 
 const ALLOWED_ORIGINS = [
   'https://mantiz-wine.vercel.app',
@@ -33,6 +38,16 @@ function corsHeaders(origin: string): Record<string, string> {
   }
 }
 
+/**
+ * Extract client IP from request headers.
+ * Vercel sets x-forwarded-for; x-real-ip is a fallback.
+ */
+function getClientIP(request: Request): string {
+  const forwarded = request.headers.get('x-forwarded-for')
+  if (forwarded) return forwarded.split(',')[0].trim()
+  return request.headers.get('x-real-ip') || 'unknown'
+}
+
 export const Route = createFileRoute('/api/share/$id')({
   component: () => null,
   server: {
@@ -49,19 +64,38 @@ export const Route = createFileRoute('/api/share/$id')({
         const baseCors = corsHeaders(origin)
 
         try {
-          // Extract ID from URL path: /api/share/:id
-          // Filter empty segments to handle trailing slashes
+          // ── Extract ID from URL path ───────────────────────────
           const segments = new URL(request.url).pathname.split('/').filter(Boolean)
           const segmentParent = segments.at(-2)
           const id = segments.at(-1)
 
-          if (!id || segmentParent !== 'share') {
+          if (!id || segmentParent !== 'share' || id.length > MAX_ID_LENGTH) {
             return Response.json(
               { error: 'Invalid share URL. Expected: /api/share/:id' },
               { status: 400, headers: { ...baseCors, 'Content-Type': 'application/json' } },
             )
           }
 
+          // ── Rate limiting (anonymous, IP-based, 10 req/min) ────
+          const clientIP = getClientIP(request)
+          const rateResult = checkRateLimit('anonymous', `share:${clientIP}`)
+
+          if (!rateResult.allowed) {
+            return Response.json(
+              { error: 'Rate limit exceeded. Try again later.' },
+              {
+                status: 429,
+                headers: {
+                  ...baseCors,
+                  ...rateLimitHeaders(rateResult),
+                  'Content-Type': 'application/json',
+                  'Retry-After': String(Math.ceil(rateResult.resetMs / 1000)),
+                },
+              },
+            )
+          }
+
+          // ── DB lookup ───────────────────────────────────────────
           const record = await db.query.sharedScans.findFirst({
             where: eq(sharedScans.id, id),
           })
@@ -73,6 +107,7 @@ export const Route = createFileRoute('/api/share/$id')({
             )
           }
 
+          // ── Success ─────────────────────────────────────────────
           return Response.json(
             {
               id: record.id,
@@ -85,7 +120,9 @@ export const Route = createFileRoute('/api/share/$id')({
               status: 200,
               headers: {
                 ...baseCors,
+                ...rateLimitHeaders(rateResult),
                 'Content-Type': 'application/json',
+                'Cache-Control': 'public, max-age=60, s-maxage=300',
               },
             },
           )
