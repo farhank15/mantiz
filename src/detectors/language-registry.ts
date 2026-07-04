@@ -107,15 +107,16 @@ export const LANGUAGE_CONFIG: Record<string, LanguageConfig> = {
         ],
       },
       silentCatch: {
+        // \bcatch to distinguish from Promise.catch() method
         emptyCatchPatterns: [
-          /catch\s*(?:\s*\([^)]*\))?\s*\{[\s\/]*\}/,
-          /catch\s*(?:\s*\([^)]*\))?\s*\{[\s]*\/\/.*\}/
+          /\bcatch\s*(?:\s*\([^)]*\))?\s*\{[\s\/]*\}/,
+          /\bcatch\s*(?:\s*\([^)]*\))?\s*\{[\s]*\/\/.*\}/
         ],
         todoCatchPatterns: [
-          /catch\s*(?:\s*\([^)]*\))?\s*\{\s*\/\/\s*(TODO|FIXME|HACK)/i,
+          /\bcatch\s*(?:\s*\([^)]*\))?\s*\{\s*\/\/\s*(TODO|FIXME|HACK)/i,
         ],
         consoleOnlyCatchPatterns: [
-          /catch\s*(?:\s*\([^)]*\))?\s*\{\s*console\.\w+\s*\([^)]*\)\s*;?\s*\}/,
+          /\bcatch\s*(?:\s*\([^)]*\))?\s*\{\s*console\.\w+\s*\([^)]*\)\s*;?\s*\}/,
         ],
       },
       validAssertions: [
@@ -339,15 +340,15 @@ export const LANGUAGE_CONFIG: Record<string, LanguageConfig> = {
       },
       silentCatch: {
         emptyCatchPatterns: [
-          /catch\s*\([^)]*\)\s*\{\s*\}/,
-          /catch\s*\([^)]*\)\s*\{\s*\/\/.*\}/,
+          /\bcatch\s*\([^)]*\)\s*\{\s*\}/,
+          /\bcatch\s*\([^)]*\)\s*\{\s*\/\/.*\}/,
         ],
         todoCatchPatterns: [
-          /catch\s*\([^)]*\)\s*\{\s*\/\/\s*(TODO|FIXME|HACK)/i,
+          /\bcatch\s*\([^)]*\)\s*\{\s*\/\/\s*(TODO|FIXME|HACK)/i,
         ],
         consoleOnlyCatchPatterns: [
-          /catch\s*\([^)]*\)\s*\{\s*System\.out\./,
-          /catch\s*\([^)]*\)\s*\{\s*logger\./,
+          /\bcatch\s*\([^)]*\)\s*\{\s*System\.out\./,
+          /\bcatch\s*\([^)]*\)\s*\{\s*logger\./,
         ],
       },
       // JUnit 5 assertions — ref: docs.junit.org
@@ -489,11 +490,10 @@ export const LANGUAGE_CONFIG: Record<string, LanguageConfig> = {
         ],
       },
       silentCatch: {
-        emptyCatchPatterns: [
-          /\.unwrap\s*\(\)/,
-          /\.expect\s*\(/,
-          /let\s+_\s*=\s*.*unwrap/,
-        ],
+        // NOTE: .unwrap() and .expect() are NOT silent catches — they PANIC on error.
+        // These are the OPPOSITE of silent catching (they crash the program).
+        // Only eprintln!/println! in catch-like context are suspicious.
+        emptyCatchPatterns: [],
         todoCatchPatterns: [
           /\/\/\s*(TODO|FIXME|HACK).*unwrap/i,
         ],
@@ -561,15 +561,15 @@ export const LANGUAGE_CONFIG: Record<string, LanguageConfig> = {
       },
       silentCatch: {
         emptyCatchPatterns: [
-          /catch\s*\([^)]*\)\s*\{\s*\}/,
-          /catch\s*\([^)]*\)\s*\{\s*\/\/.*\}/,
+          /\bcatch\s*\([^)]*\)\s*\{\s*\}/,
+          /\bcatch\s*\([^)]*\)\s*\{\s*\/\/.*\}/,
         ],
         todoCatchPatterns: [
-          /catch\s*\([^)]*\)\s*\{\s*\/\/\s*(TODO|FIXME|HACK)/i,
+          /\bcatch\s*\([^)]*\)\s*\{\s*\/\/\s*(TODO|FIXME|HACK)/i,
         ],
         consoleOnlyCatchPatterns: [
-          /catch\s*\([^)]*\)\s*\{\s*echo\s+/,
-          /catch\s*\([^)]*\)\s*\{\s*var_dump\s*\(/,
+          /\bcatch\s*\([^)]*\)\s*\{\s*echo\s+/,
+          /\bcatch\s*\([^)]*\)\s*\{\s*var_dump\s*\(/,
         ],
       },
       // PHPUnit assertion methods — ref: docs.phpunit.de

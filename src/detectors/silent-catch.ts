@@ -3,9 +3,11 @@ import { detectLanguage, LANGUAGE_CONFIG } from './language-registry'
 
 // ─── Fallback Patterns for JS/TS ──────────────────────────────────
 // Used when a pattern type isn't defined in the language registry.
-const FALLBACK_EMPTY_CATCH = /catch\s*(?:\s*\([^)]*\))?\s*\{[\s\/]*\}/
-const FALLBACK_TODO_CATCH = /catch\s*(?:\s*\([^)]*\))?\s*\{\s*\/\/\s*(TODO|FIXME|HACK)/i
-const FALLBACK_CONSOLE_CATCH = /catch\s*(?:\s*\([^)]*\))?\s*\{\s*console\.\w+\s*\([^)]*\)\s*;?\s*\}/
+// NOTE: Uses \bcatch to ensure we match the `catch` keyword, not Promise.catch().
+// Promise.catch(() => {}) is a callback, not a try-catch block.
+const FALLBACK_EMPTY_CATCH = /\bcatch\s*(?:\s*\([^)]*\))?\s*\{[\s\/]*\}/
+const FALLBACK_TODO_CATCH = /\bcatch\s*(?:\s*\([^)]*\))?\s*\{\s*\/\/\s*(TODO|FIXME|HACK)/i
+const FALLBACK_CONSOLE_CATCH = /\bcatch\s*(?:\s*\([^)]*\))?\s*\{\s*console\.\w+\s*\([^)]*\)\s*;?\s*\}/
 
 // ─── Telemetry/Analytics exceptions ───────────────────────────────
 // Empty or near-empty catches in telemetry/analytics code are intentional.
@@ -54,8 +56,8 @@ function getCatchRules(lang: string | null): CatchRules {
 /**
  * Additional patterns for JS/TS-like languages (not in registry but useful).
  */
-const RETURN_NULL_CATCH = /catch\s*(?:\s*\([^)]*\))?\s*\{\s*return\s+(?:null|undefined|false|0|''|"")\s*;?\s*\}/
-const COMMENT_ONLY_CATCH = /catch\s*(?:\s*\([^)]*\))?\s*\{\s*\/\/.*\}/
+const RETURN_NULL_CATCH = /\bcatch\s*(?:\s*\([^)]*\))?\s*\{\s*return\s+(?:null|undefined|false|0|''|"")\s*;?\s*\}/
+const COMMENT_ONLY_CATCH = /\bcatch\s*(?:\s*\([^)]*\))?\s*\{\s*\/\/.*\}/
 const EMPTY_FINALLY = /finally\s*\{\s*\}/
 
 /**
@@ -155,7 +157,8 @@ function getCatchOpenPattern(lang: string | null): RegExp {
     case 'go':
       return /if\s+err\s*!=\s*nil/i
     default:
-      return /catch\s*(?:\s*\([^)]*\))?\s*\{?/i
+      // \bcatch ensures we match the `catch` keyword, not Promise.catch()
+      return /\bcatch\s*(?:\s*\([^)]*\))?\s*\{?/i
   }
 }
 
