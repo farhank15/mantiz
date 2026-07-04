@@ -71,6 +71,16 @@ const LANGUAGE_WASM: Record<string, LanguageWasmConfig> = {
     localPath: 'node_modules/tree-sitter-php/tree-sitter-php.wasm',
     verified: true,
   },
+  typescript: {
+    cdnUrl: 'https://cdn.jsdelivr.net/npm/tree-sitter-typescript@0.23.2/tree-sitter-typescript.wasm',
+    localPath: 'node_modules/tree-sitter-typescript/tree-sitter-typescript.wasm',
+    verified: true,
+  },
+  javascript: {
+    cdnUrl: 'https://cdn.jsdelivr.net/npm/tree-sitter-javascript@0.23.1/tree-sitter-javascript.wasm',
+    localPath: 'node_modules/tree-sitter-javascript/tree-sitter-javascript.wasm',
+    verified: true,
+  },
 }
 
 // ─── Cached Parsers ──────────────────────────────────────────────

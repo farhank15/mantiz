@@ -205,8 +205,9 @@ function parseAIResponse(content: string): AIAnalysis | null {
  *
  * @param files  Parsed diff files
  * @param prContext  Optional PR context (title, description) for cross-referencing
+ * @param ragContext  Optional RAG context (code definitions from repo) — injected into prompt when available
  */
-export async function detectWithAI(files: ParsedDiff[], prContext?: { title?: string; description?: string }): Promise<Finding[]> {
+export async function detectWithAI(files: ParsedDiff[], prContext?: { title?: string; description?: string }, ragContext?: string): Promise<Finding[]> {
   // Check if AI detection is enabled
   const enabled = typeof process !== 'undefined'
     ? process.env.AI_DETECTION_ENABLED === 'true'
@@ -235,13 +236,21 @@ export async function detectWithAI(files: ParsedDiff[], prContext?: { title?: st
     return /(\.(test|spec)\.(ts|tsx|js|jsx)$)|(_test\.go$)|(\/(?:__tests__|tests?|fixtures)\/)/i.test(path)
   })
 
-  // Build prompt with optional PR context
-  let prContextBlock = ''
+  // Build prompt with optional PR context + RAG context
+  let contextBlock = ''
+
+  // PR context
   if (prContext?.title || prContext?.description) {
-    prContextBlock = `\n\n### PR CONTEXT\nTitle: ${prContext.title || '(no title)'}\nDescription: ${prContext.description || '(no description)'}\n\nCross-check whether the PR description honestly describes the changes before flagging semantic bypass or test weakening. If the description transparently explains the change, that is a STRONG signal against suspicion of intentional hiding.\n`
+    contextBlock += `\n\n### PR CONTEXT\nTitle: ${prContext.title || '(no title)'}\nDescription: ${prContext.description || '(no description)'}\n\nCross-check whether the PR description honestly describes the changes before flagging semantic bypass or test weakening. If the description transparently explains the change, that is a STRONG signal against suspicion of intentional hiding.\n`
   }
 
-  const prompt = (ANALYSIS_PROMPT + prContextBlock).replace('{diff}', truncatedDiff)
+  // RAG context — inject retrieved code definitions so AI can verify
+  // whether custom matchers, functions, or APIs actually exist in the repo
+  if (ragContext) {
+    contextBlock += `\n\n### REPOSITORY CONTEXT (Retrieved from codebase)\nThe following code definitions were found in the repository. Use them to verify whether any APIs, matchers, or functions used in the diff are legitimate parts of this codebase — do NOT flag them as hallucinated if they exist here.\n\n${ragContext}\n`
+  }
+
+  const prompt = (ANALYSIS_PROMPT + contextBlock).replace('{diff}', truncatedDiff)
 
   // Try Fireworks first, then Groq as fallback
   let aiResult: string | null = null
