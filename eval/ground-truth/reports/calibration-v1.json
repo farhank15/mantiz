@@ -1,24 +1,24 @@
 {
-  "deceptive_count": 21,
-  "legit_count": 292,
+  "deceptive_count": 20,
+  "legit_count": 183,
   "detectors": [
     {
       "detector": "D1_DisabledAssertion",
-      "precision": 22.2,
-      "recall": 19,
-      "f1": 20.5
+      "precision": 45.5,
+      "recall": 25,
+      "f1": 32.3
     },
     {
       "detector": "D2_AssertionTampering",
       "precision": 100,
-      "recall": 19,
-      "f1": 32
+      "recall": 15,
+      "f1": 26.1
     },
     {
       "detector": "D3_MockToAvoid",
       "precision": 100,
-      "recall": 9.5,
-      "f1": 17.4
+      "recall": 5,
+      "f1": 9.5
     },
     {
       "detector": "D4_ClaimDiffMismatch",
@@ -28,21 +28,21 @@
     },
     {
       "detector": "D5_SilentCatch",
-      "precision": 37.5,
-      "recall": 14.3,
-      "f1": 20.7
+      "precision": 33.3,
+      "recall": 10,
+      "f1": 15.4
     },
     {
       "detector": "D6_HallucinatedAssertion",
-      "precision": 66.7,
-      "recall": 95.2,
-      "f1": 78.4
+      "precision": 77.8,
+      "recall": 70,
+      "f1": 73.7
     },
     {
       "detector": "D10_MutationSusceptibility",
-      "precision": 17.7,
-      "recall": 52.4,
-      "f1": 26.5
+      "precision": 30,
+      "recall": 60,
+      "f1": 40
     }
   ]
 }
