@@ -28,7 +28,7 @@ export const DETECTOR_PENALTIES: Record<string, { high: number; medium: number; 
   claim_diff_mismatch:     { high: 0,  medium: 0, low: 0 },  // F1=0
   silent_catch_and_pass:   { high: 1,  medium: 1, low: 0 },  // F1=10
   hallucinated_assertion:  { high: 3,  medium: 2, low: 0 },  // F1=25  — suggested from calibration
-  ai_assisted_detection:   { high: 1,  medium: 1, low: 0 },  // F1=10  — 1 TP, activated gradual
+  ai_assisted_detection:   { high: 0,  medium: 0, low: 0 },  // F1=0   — 0 TP, 2 FP. Reverted to data-collection only.
   historical_behavioral:   { high: 0,  medium: 0, low: 0 },  // Disabled — 0 TP
   mutation_susceptibility: { high: 8,  medium: 3, low: 0 },  // F1=55
   agent_instruction_scan:  { high: 0,  medium: 0, low: 0 },  // 0 TP

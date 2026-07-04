@@ -77,7 +77,7 @@ const IMPORTANCE_MULTIPLIER: Record<string, number> = {
 // with 354 ground-truth-labeled overlaps (18 DECEPTIVE, 336 LEGIT).
 // Weight formula: round(F1 * 20), distributed by current ratio, capped at 15.
 //
-// D4 disabled (0% precision). D8 active with low weight (1 TP proven). D11 0 TP.
+// D4 disabled (0% precision). D8 reverted to data-collection only (0 TP, 2 FP). D11 0 TP.
 // D9 disabled (0 TP — no historical data to calibrate against).
 //
 // Key changes from v3 (346 overlap):
@@ -91,7 +91,7 @@ const DETECTOR_PENALTIES: Record<string, { high: number; medium: number; low: nu
   'claim_diff_mismatch':     { high: 0,  medium: 0, low: 0 },  // F1=0   — Precision 0%, data collection only
   'silent_catch_and_pass':   { high: 1,  medium: 1, low: 0 },  // F1=10  — TP=2, FP=21, FN=16
   'hallucinated_assertion':  { high: 3,  medium: 2, low: 0 },  // F1=25  — TP=3, FP=3, FN=15 (suggested)
-  'ai_assisted_detection':   { high: 1,  medium: 1, low: 0 },  // F1=10  — 1 TP proven (prompt tuned)
+  'ai_assisted_detection':   { high: 0,  medium: 0, low: 0 },  // F1=0   — 0 TP, 2 FP. Reverted to data-collection only.
   'historical_behavioral':   { high: 0,  medium: 0, low: 0 },  // Disabled — 0 TP in calibration
   'mutation_susceptibility': { high: 8,  medium: 3, low: 0 },  // F1=55  — TP=13, FP=16, FN=5
   'agent_instruction_scan':  { high: 0,  medium: 0, low: 0 },  // 0 TP — needs labeled data
