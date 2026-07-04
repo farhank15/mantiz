@@ -625,7 +625,7 @@ export const scanDiff = createServerFn({ method: "POST" })
     }
 
     // Rate limit: 20 manual scans per minute per user
-    const rateResult = await checkRateLimit('session', `scan_diff:${session.dbUserId}`);
+    const rateResult = checkRateLimit('session', `scan_diff:${session.dbUserId}`);
     if (!rateResult.allowed) {
       throw new Error('Rate limit exceeded. Maximum 20 scans per minute.');
     }

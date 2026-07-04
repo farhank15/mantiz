@@ -78,7 +78,7 @@ export const Route = createFileRoute('/api/share/$id')({
 
           // ── Rate limiting (anonymous, IP-based, 10 req/min) ────
           const clientIP = getClientIP(request)
-          const rateResult = await checkRateLimit('anonymous', `share:${clientIP}`)
+          const rateResult = checkRateLimit('anonymous', `share:${clientIP}`)
 
           if (!rateResult.allowed) {
             return Response.json(

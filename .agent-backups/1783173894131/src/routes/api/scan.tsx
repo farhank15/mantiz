@@ -109,7 +109,7 @@ export const Route = createFileRoute('/api/scan')({
           }
 
           // ── Rate limiting ────────────────────────────────────────
-          const rateResult = await checkRateLimit(
+          const rateResult = checkRateLimit(
             token ? 'token' : 'anonymous',
             token ? `api_token:${token}` : `anonymous:api`,
           )

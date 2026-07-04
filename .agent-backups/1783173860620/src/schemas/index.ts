@@ -157,12 +157,3 @@ export const webhookEvents = pgTable('webhook_events', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   deliveredAt: timestamp('delivered_at'),
 })
-
-export const rateLimitEvents = pgTable('rate_limit_events', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  key: text('key').notNull(),
-  timestamp: timestamp('timestamp').defaultNow().notNull(),
-}, (table) => [
-  index('rate_limit_events_key_timestamp_idx').on(table.key, table.timestamp),
-])
-

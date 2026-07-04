@@ -50,6 +50,13 @@
       "when": 1782983240540,
       "tag": "0006_furry_celestials",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1783173933649,
+      "tag": "0007_perpetual_monster_badoon",
+      "breakpoints": true
     }
   ]
 }

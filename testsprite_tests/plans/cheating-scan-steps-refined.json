@@ -1,0 +1,28 @@
+{
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the page: https://mantiz-wine.vercel.app/api/mock-login?secret=mantiz_e2e_bypass_2026"
+    },
+    {
+      "type": "action",
+      "description": "Navigate to the page: https://mantiz-wine.vercel.app/scan"
+    },
+    {
+      "type": "action",
+      "description": "Paste the following git diff into the text area: diff --git a/tests/math.test.ts b/tests/math.test.ts\n--- a/tests/math.test.ts\n+++ b/tests/math.test.ts\n@@ -1,5 +1,5 @@\n describe('add', () => {\n-  it('should return correct sum', () => {\n+  xit('should return correct sum', () => {\n     expect(add(1, 2)).toBe(3);\n   });\n });"
+    },
+    {
+      "type": "action",
+      "description": "Click the Scan or Analyze button to submit the diff"
+    },
+    {
+      "type": "assertion",
+      "description": "The Trust Score shown in the results is 70, indicating suspicious or cheating code"
+    },
+    {
+      "type": "assertion",
+      "description": "At least one finding is shown describing why the code is suspicious due to disabled_assertion"
+    }
+  ]
+}

@@ -1,18 +1,19 @@
 /**
- * Mantiz In-Memory Rate Limiter
+ * Mantiz Database-Backed Rate Limiter
  *
- * Sliding window implementation. Suitable for Vercel serverless
- * (resets on cold start — acceptable for hackathon).
+ * Sliding window implementation using Neon Postgres.
+ * Shared across all Vercel serverless function instances.
  *
  * Three tiers:
  *   anonymous  — 10 req/min per IP  (POST /api/scan)
  *   token      — 60 req/min per token  (authenticated API)
  *   session    — 20 req/min per user  (server functions)
+ *   strict     — 3 req/hour per user  (creation events)
  */
 
-interface RateLimitEntry {
-  timestamps: number[]  // ms timestamps, oldest first
-}
+import { db } from "../lib/db"
+import { rateLimitEvents } from "../schemas/index"
+import { and, gte, eq, lt } from "drizzle-orm"
 
 interface RateLimitConfig {
   maxRequests: number
@@ -26,25 +27,6 @@ const CONFIGS: Record<string, RateLimitConfig> = {
   strict:    { maxRequests: 3,  windowMs: 3_600_000 },  // 3 per hour
 }
 
-const stores = new Map<string, Map<string, RateLimitEntry>>()
-
-function getStore(name: string): Map<string, RateLimitEntry> {
-  let store = stores.get(name)
-  if (!store) {
-    store = new Map()
-    stores.set(name, store)
-  }
-  return store
-}
-
-function prune(store: Map<string, RateLimitEntry>, windowMs: number): void {
-  const cutoff = Date.now() - windowMs
-  for (const [key, entry] of store) {
-    entry.timestamps = entry.timestamps.filter(t => t > cutoff)
-    if (entry.timestamps.length === 0) store.delete(key)
-  }
-}
-
 export interface RateLimitResult {
   allowed: boolean
   remaining: number
@@ -54,48 +36,77 @@ export interface RateLimitResult {
 
 /**
  * Check if a request is allowed under the given rate limit tier.
- * If allowed, records the request timestamp.
+ * If allowed, records the request timestamp in DB.
  */
-export function checkRateLimit(
+export async function checkRateLimit(
   tier: keyof typeof CONFIGS,
   key: string,
-): RateLimitResult {
+): Promise<RateLimitResult> {
   const config = CONFIGS[tier]
   if (!config) throw new Error(`Unknown rate limit tier: ${tier}`)
 
-  const store = getStore(tier)
-  const now = Date.now()
-  const cutoff = now - config.windowMs
+  const now = new Date()
+  const cutoff = new Date(now.getTime() - config.windowMs)
 
-  // Prune old entries periodically (every ~100 requests)
-  if (Math.random() < 0.01) prune(store, config.windowMs)
+  try {
+    // 1. Delete expired logs for this key to prevent table bloat
+    await db
+      .delete(rateLimitEvents)
+      .where(
+        and(
+          eq(rateLimitEvents.key, key),
+          lt(rateLimitEvents.timestamp, cutoff)
+        )
+      )
 
-  let entry = store.get(key)
-  if (!entry) {
-    entry = { timestamps: [] }
-    store.set(key, entry)
-  }
+    // 2. Fetch active request logs in the window
+    const existing = await db
+      .select()
+      .from(rateLimitEvents)
+      .where(
+        and(
+          eq(rateLimitEvents.key, key),
+          gte(rateLimitEvents.timestamp, cutoff)
+        )
+      )
 
-  // Remove expired timestamps
-  entry.timestamps = entry.timestamps.filter(t => t > cutoff)
+    const requestCount = existing.length
+    const remaining = Math.max(0, config.maxRequests - requestCount)
+    const allowed = remaining > 0
 
-  const remaining = Math.max(0, config.maxRequests - entry.timestamps.length)
-  const allowed = remaining > 0
+    if (allowed) {
+      // 3. Record current request log
+      await db.insert(rateLimitEvents).values({
+        key,
+        timestamp: now,
+      })
+    }
 
-  if (allowed) {
-    entry.timestamps.push(now)
-  }
+    // 4. Calculate reset duration based on the oldest log in the window
+    let resetMs = 0
+    if (existing.length > 0) {
+      const sorted = [...existing].sort(
+        (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+      )
+      const oldestTimestamp = sorted[0].timestamp
+      resetMs = Math.max(0, oldestTimestamp.getTime() + config.windowMs - now.getTime())
+    }
 
-  // Calculate when the oldest request expires (for rate limit reset header)
-  const resetMs = entry.timestamps.length > 0
-    ? Math.max(0, entry.timestamps[0] + config.windowMs - now)
-    : 0
-
-  return {
-    allowed,
-    remaining,
-    resetMs,
-    limit: config.maxRequests,
+    return {
+      allowed,
+      remaining,
+      resetMs,
+      limit: config.maxRequests,
+    }
+  } catch (err) {
+    // Fail-open default if database is temporarily unavailable during ratecheck
+    console.error("Rate limiter db error:", err)
+    return {
+      allowed: true,
+      remaining: config.maxRequests,
+      resetMs: 0,
+      limit: config.maxRequests,
+    }
   }
 }
 
@@ -109,3 +120,4 @@ export function rateLimitHeaders(result: RateLimitResult): Record<string, string
     'X-RateLimit-Reset': String(Math.ceil(result.resetMs / 1000)),
   }
 }
+

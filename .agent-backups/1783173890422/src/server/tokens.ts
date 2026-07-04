@@ -35,7 +35,7 @@ export const createToken = createServerFn({ method: 'POST' })
     const session = requireAuth()
 
     // Rate limit: max 3 tokens per hour
-    const rateResult = await checkRateLimit('strict', `create_token:${session.dbUserId}`)
+    const rateResult = checkRateLimit('strict', `create_token:${session.dbUserId}`)
     if (!rateResult.allowed) {
       throw new Error('Rate limit exceeded. Maximum 3 tokens per hour.')
     }
