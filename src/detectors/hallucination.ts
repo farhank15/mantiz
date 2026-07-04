@@ -43,7 +43,6 @@ const KNOWN_HALLUCINATED_MATCHERS = new Set([
   'toExist', 'toNotExist', 'toNotBe', 'toNotEqual', 'toNotMatch',
   'toHave', 'toNotHave', 'toHas', 'toNotHas', 'toBePresent',
   'toNotBePresent', 'toIncludeAll', 'toExclude', 'toExcludeAll',
-  'toBeValid', 'toBeInvalid',
   // must* patterns — RSpec-inspired (must not should)
   'mustBe', 'mustNotBe', 'mustEqual', 'mustNotEqual',
   'mustHave', 'mustNotHave', 'mustReturn', 'mustNotReturn',
@@ -97,6 +96,8 @@ const JEST_MATCHERS = new Set([
   'toHaveValues', 'toHaveCSS', 'toHaveId',
   'toHaveJSProperty', 'toHaveScreenshot', 'toBeChecked',
   'toBeFocused', 'toBeHidden', 'toBeInViewport', 'toBeOK',
+  'toBePartiallyChecked',
+  'toHaveAccessibleName', 'toHaveAccessibleDescription', 'toHaveRole',
 ])
 
 /**

@@ -121,7 +121,8 @@ const VALID_MATCHERS = new Set([
   'toContainHTML', 'toHaveAttribute', 'toHaveClass',
   'toHaveDisplayValue', 'toHaveErrorMessage', 'toHaveFocus',
   'toHaveFormValues', 'toHaveStyle', 'toHaveTextContent',
-  'toHaveValue',
+  'toHaveValue', 'toBePartiallyChecked',
+  'toHaveAccessibleName', 'toHaveAccessibleDescription', 'toHaveRole',
 
   // ── Hardhat (Ethereum) ──
   'emit', 'withArgs', 'revertedWith', 'reverted',
@@ -151,7 +152,6 @@ const KNOWN_HALLUCINATED_MATCHERS = [
   'toExist', 'toNotExist', 'toNotBe', 'toNotEqual', 'toNotMatch',
   'toHave', 'toNotHave', 'toHas', 'toNotHas', 'toBePresent',
   'toNotBePresent', 'toIncludeAll', 'toExclude', 'toExcludeAll',
-  'toBeValid', 'toBeInvalid',
 ]
 
 /**
