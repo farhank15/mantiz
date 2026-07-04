@@ -1,10 +1,10 @@
 {
   "version": "v2",
-  "generated_at": "2026-07-04T05:34:46.747Z",
-  "total_candidates": 374,
-  "labeled_overlap": 350,
-  "deceptive_count": 18,
-  "legit_count": 332,
+  "generated_at": "2026-07-04T10:40:40.299Z",
+  "total_candidates": 433,
+  "labeled_overlap": 419,
+  "deceptive_count": 16,
+  "legit_count": 403,
   "detectors": [
     {
       "detector": "disabled_assertion",
@@ -12,14 +12,14 @@
       "confusion": {
         "tp": 3,
         "fp": 5,
-        "tn": 327,
-        "fn": 15
+        "tn": 398,
+        "fn": 13
       },
       "precision": 37.5,
-      "recall": 16.7,
-      "f1": 23.1,
-      "supportDeceptive": 18,
-      "supportLegit": 332,
+      "recall": 18.8,
+      "f1": 25,
+      "supportDeceptive": 16,
+      "supportLegit": 403,
       "suggestedWeight": {
         "high": 3,
         "medium": 2,
@@ -36,17 +36,17 @@
       "label": "D2_AssertionTampering",
       "confusion": {
         "tp": 3,
-        "fp": 6,
-        "tn": 326,
-        "fn": 15
+        "fp": 7,
+        "tn": 396,
+        "fn": 13
       },
-      "precision": 33.3,
-      "recall": 16.7,
-      "f1": 22.2,
-      "supportDeceptive": 18,
-      "supportLegit": 332,
+      "precision": 30,
+      "recall": 18.8,
+      "f1": 23.1,
+      "supportDeceptive": 16,
+      "supportLegit": 403,
       "suggestedWeight": {
-        "high": 2,
+        "high": 3,
         "medium": 1,
         "low": 1
       },
@@ -61,15 +61,15 @@
       "label": "D3_MockToAvoid",
       "confusion": {
         "tp": 7,
-        "fp": 11,
-        "tn": 321,
-        "fn": 11
+        "fp": 13,
+        "tn": 390,
+        "fn": 9
       },
-      "precision": 38.9,
-      "recall": 38.9,
+      "precision": 35,
+      "recall": 43.8,
       "f1": 38.9,
-      "supportDeceptive": 18,
-      "supportLegit": 332,
+      "supportDeceptive": 16,
+      "supportLegit": 403,
       "suggestedWeight": {
         "high": 5,
         "medium": 2,
@@ -87,14 +87,14 @@
       "confusion": {
         "tp": 0,
         "fp": 7,
-        "tn": 325,
-        "fn": 18
+        "tn": 396,
+        "fn": 16
       },
       "precision": 0,
       "recall": 0,
       "f1": 0,
-      "supportDeceptive": 18,
-      "supportLegit": 332,
+      "supportDeceptive": 16,
+      "supportLegit": 403,
       "suggestedWeight": {
         "high": 0,
         "medium": 0,
@@ -110,16 +110,16 @@
       "detector": "silent_catch_and_pass",
       "label": "D5_SilentCatch",
       "confusion": {
-        "tp": 3,
-        "fp": 31,
-        "tn": 301,
-        "fn": 15
+        "tp": 2,
+        "fp": 24,
+        "tn": 379,
+        "fn": 14
       },
-      "precision": 8.8,
-      "recall": 16.7,
-      "f1": 11.5,
-      "supportDeceptive": 18,
-      "supportLegit": 332,
+      "precision": 7.7,
+      "recall": 12.5,
+      "f1": 9.5,
+      "supportDeceptive": 16,
+      "supportLegit": 403,
       "suggestedWeight": {
         "high": 1,
         "medium": 1,
@@ -135,24 +135,24 @@
       "detector": "hallucinated_assertion",
       "label": "D6_HallucinatedAssertion",
       "confusion": {
-        "tp": 3,
-        "fp": 3,
-        "tn": 329,
-        "fn": 15
+        "tp": 5,
+        "fp": 5,
+        "tn": 398,
+        "fn": 11
       },
       "precision": 50,
-      "recall": 16.7,
-      "f1": 25,
-      "supportDeceptive": 18,
-      "supportLegit": 332,
+      "recall": 31.3,
+      "f1": 38.5,
+      "supportDeceptive": 16,
+      "supportLegit": 403,
       "suggestedWeight": {
-        "high": 3,
-        "medium": 2,
+        "high": 5,
+        "medium": 3,
         "low": 0
       },
       "currentWeight": {
-        "high": 6,
-        "medium": 3,
+        "high": 3,
+        "medium": 2,
         "low": 0
       }
     },
@@ -160,19 +160,19 @@
       "detector": "ai_assisted_detection",
       "label": "D8_AIAssisted",
       "confusion": {
-        "tp": 1,
-        "fp": 2,
-        "tn": 330,
-        "fn": 17
+        "tp": 0,
+        "fp": 0,
+        "tn": 403,
+        "fn": 16
       },
-      "precision": 33.3,
-      "recall": 5.6,
-      "f1": 9.5,
-      "supportDeceptive": 18,
-      "supportLegit": 332,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "supportDeceptive": 16,
+      "supportLegit": 403,
       "suggestedWeight": {
-        "high": 1,
-        "medium": 1,
+        "high": 0,
+        "medium": 0,
         "low": 0
       },
       "currentWeight": {
@@ -187,23 +187,23 @@
       "confusion": {
         "tp": 0,
         "fp": 0,
-        "tn": 332,
-        "fn": 18
+        "tn": 403,
+        "fn": 16
       },
       "precision": 0,
       "recall": 0,
       "f1": 0,
-      "supportDeceptive": 18,
-      "supportLegit": 332,
+      "supportDeceptive": 16,
+      "supportLegit": 403,
       "suggestedWeight": {
         "high": 0,
         "medium": 0,
         "low": 0
       },
       "currentWeight": {
-        "high": 5,
-        "medium": 3,
-        "low": 1
+        "high": 0,
+        "medium": 0,
+        "low": 0
       }
     },
     {
@@ -211,15 +211,15 @@
       "label": "D10_MutationSusceptibility",
       "confusion": {
         "tp": 13,
-        "fp": 16,
-        "tn": 316,
-        "fn": 5
+        "fp": 17,
+        "tn": 386,
+        "fn": 3
       },
-      "precision": 44.8,
-      "recall": 72.2,
-      "f1": 55.3,
-      "supportDeceptive": 18,
-      "supportLegit": 332,
+      "precision": 43.3,
+      "recall": 81.3,
+      "f1": 56.5,
+      "supportDeceptive": 16,
+      "supportLegit": 403,
       "suggestedWeight": {
         "high": 8,
         "medium": 3,
@@ -237,14 +237,14 @@
       "confusion": {
         "tp": 0,
         "fp": 0,
-        "tn": 332,
-        "fn": 18
+        "tn": 403,
+        "fn": 16
       },
       "precision": 0,
       "recall": 0,
       "f1": 0,
-      "supportDeceptive": 18,
-      "supportLegit": 332,
+      "supportDeceptive": 16,
+      "supportLegit": 403,
       "suggestedWeight": {
         "high": 0,
         "medium": 0,
@@ -258,9 +258,9 @@
     }
   ],
   "score_distribution": {
-    "avg": 97.6,
-    "clean": 363,
-    "suspicious": 5,
-    "deceptive": 6
+    "avg": 98.5,
+    "clean": 424,
+    "suspicious": 7,
+    "deceptive": 2
   }
 }
