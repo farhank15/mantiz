@@ -5,6 +5,11 @@ All notable changes to Mantiz will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.1] - 2026-07-05
+
+### Fixed
+- **publish.yml** — removed mantiz-cli step from publish-gpr job (no @farhank15 scope, caused 404)
+
 ## [0.4.0] - 2026-07-05
 
 ### Fixed

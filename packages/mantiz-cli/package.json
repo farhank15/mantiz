@@ -1,6 +1,6 @@
 {
   "name": "mantiz-cli",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Mantiz CLI — AI lie detector for coding agents. Scan git diffs for cheating patterns. No server or API key needed.",
   "type": "module",
   "main": "./src/index.ts",
