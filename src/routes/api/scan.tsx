@@ -152,9 +152,10 @@ export const Route = createFileRoute('/api/scan')({
           // ── Load user settings ───────────────────────────────────
           const settings = userId ? await loadUserSettings(userId) : null
           const threshold = settings?.threshold ?? 70
+          const minScore = settings?.minScore ?? 0
 
           // ── Run scan (AI auto-detects from env vars) ─────────────
-          const result = await scanDiffAsync(diff)
+          const result = await scanDiffAsync(diff, undefined, undefined, { minScore })
 
           // ── Determine source context from X-Mantiz-Source header ─
           const sourceLabel = request.headers.get('x-mantiz-source') || 'API / CLI'

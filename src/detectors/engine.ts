@@ -169,7 +169,7 @@ function calculatePenalty(findings: Finding[]): number {
   return Math.max(0, Math.round(total))
 }
 
-export function scanDiff(rawDiff: string, prContext?: { title?: string; author?: string }): ScanResult {
+export function scanDiff(rawDiff: string, prContext?: { title?: string; author?: string }, options?: { minScore?: number }): ScanResult {
   const files = parseRawDiff(rawDiff)
 
   if (files.length === 0) {
@@ -262,7 +262,9 @@ export function scanDiff(rawDiff: string, prContext?: { title?: string; author?:
 
   // ─── Deterministic Scoring ─────────────────────────────────
   const penalty = calculatePenalty(dedupedFindings)
-  const minScore = dedupedFindings.length > 0 ? 30 : 0
+  const engineFloor = dedupedFindings.length > 0 ? 30 : 0
+  const customFloor = options?.minScore ?? 0
+  const minScore = Math.max(engineFloor, customFloor)
   const trustScore = Math.max(minScore, 100 - Math.min(penalty, 85)) // cap at 85 so score >= 15
 
   const elapsed = Date.now() - startTime
@@ -307,13 +309,14 @@ export async function scanDiffAsync(
   rawDiff: string,
   prContext?: { title?: string; author?: string },
   ragContext?: string,
+  options?: { minScore?: number },
 ): Promise<ScanResult> {
   // Allow ragContext to flow through to AI detectors via prContext
   // (extends prContext with ragContext for the detectWithAI call)
   const extendedContext = ragContext
     ? { ...prContext, ragContext }
     : prContext
-  const baseResult = scanDiff(rawDiff, prContext)
+  const baseResult = scanDiff(rawDiff, prContext, options)
 
   console.log('[Mantiz] AI_DETECTION_ENABLED:', typeof process !== 'undefined' ? process.env.AI_DETECTION_ENABLED : 'N/A', '| AI_JUDGE_ENABLED:', typeof process !== 'undefined' ? process.env.AI_JUDGE_ENABLED : 'N/A', '| GROQ:', typeof process !== 'undefined' && process.env.GROQ_API_KEY ? 'SET' : 'NOT SET')
 
@@ -367,7 +370,9 @@ export async function scanDiffAsync(
 
         if (changed) {
           const penalty = calculatePenalty(judgeFindings)
-          const minScore = judgeFindings.length > 0 ? 30 : 0
+          const judgeFloor = judgeFindings.length > 0 ? 30 : 0
+          const customFloor = options?.minScore ?? 0
+          const minScore = Math.max(judgeFloor, customFloor)
           currentScore = Math.max(minScore, 100 - Math.min(penalty, 85))
           currentSummary = {
             totalFindings: judgeFindings.length,
@@ -423,7 +428,9 @@ export async function scanDiffAsync(
           allFindings = [...allFindings, ...aiFindings]
 
           const penalty = calculatePenalty(allFindings)
-          const minScore = allFindings.length > 0 ? 30 : 0
+          const aiFloor = allFindings.length > 0 ? 30 : 0
+          const customFloor = options?.minScore ?? 0
+          const minScore = Math.max(aiFloor, customFloor)
           currentScore = Math.max(minScore, 100 - Math.min(penalty, 85))
           currentSummary = {
             totalFindings: allFindings.length,

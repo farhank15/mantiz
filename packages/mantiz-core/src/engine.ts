@@ -86,7 +86,7 @@ function dedupFindings(findings: Finding[]): Finding[] {
 /**
  * Run all detection engines on a raw diff string and produce a ScanResult.
  */
-export function scanDiff(rawDiff: string): ScanResult {
+export function scanDiff(rawDiff: string, options?: { minScore?: number }): ScanResult {
   const files = parseRawDiff(rawDiff)
 
   if (files.length === 0) {
@@ -135,7 +135,9 @@ export function scanDiff(rawDiff: string): ScanResult {
     deductions += base * mult
   }
   // minScore floor: even with findings, score stays >= 30
-  const minScore = staticFindings.length > 0 ? 30 : 0
+  const engineFloor = staticFindings.length > 0 ? 30 : 0
+  const customFloor = options?.minScore ?? 0
+  const minScore = Math.max(engineFloor, customFloor)
   const trustScore = Math.max(minScore, Math.round(100 - deductions))
 
   const summary = {
@@ -172,8 +174,8 @@ export function scanDiff(rawDiff: string): ScanResult {
  * @param rawDiff  Raw git diff text
  * @param prContext  Optional PR context (title, description) for AI cross-referencing
  */
-export async function scanDiffAsync(rawDiff: string, prContext?: { title?: string; description?: string }): Promise<ScanResult> {
-  const result = scanDiff(rawDiff)
+export async function scanDiffAsync(rawDiff: string, prContext?: { title?: string; description?: string }, options?: { minScore?: number }): Promise<ScanResult> {
+  const result = scanDiff(rawDiff, options)
 
   // ── AI Judge: Review Static Findings ────────────────────────────
   // Runs AFTER static detectors, BEFORE AI-assisted discovery.
@@ -196,7 +198,9 @@ export async function scanDiffAsync(rawDiff: string, prContext?: { title?: strin
           const mult = IMPORTANCE_MULTIPLIER[finding.fileImportance ?? 'source'] ?? 1
           deductions += base * mult
         }
-        const minScore = judgeFindings.length > 0 ? 30 : 0
+        const judgeFloor = judgeFindings.length > 0 ? 30 : 0
+        const customFloor = options?.minScore ?? 0
+        const minScore = Math.max(judgeFloor, customFloor)
         const newTrustScore = Math.max(minScore, Math.round(100 - deductions))
 
         result.findings = judgeFindings
@@ -230,7 +234,9 @@ export async function scanDiffAsync(rawDiff: string, prContext?: { title?: strin
         const mult = IMPORTANCE_MULTIPLIER[finding.fileImportance ?? 'source'] ?? 1
         deductions += base * mult
       }
-      const minScore = allFindings.length > 0 ? 30 : 0
+      const aiFloor = allFindings.length > 0 ? 30 : 0
+      const customFloor = options?.minScore ?? 0
+      const minScore = Math.max(aiFloor, customFloor)
       const newTrustScore = Math.max(minScore, Math.round(100 - deductions))
 
       return {
