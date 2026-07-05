@@ -20,7 +20,7 @@ export const scans = pgTable('scans', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').references(() => users.id),
   repoId: uuid('repo_id').references(() => repos.id),
-  sourceType: text('source_type', { enum: ['manual', 'github_pr', 'api'] }).notNull(),
+  sourceType: text('source_type', { enum: ['manual', 'github_pr', 'api', 'github_app_bot'] }).notNull(),
   sourceRef: text('source_ref'),
   rawDiff: text('raw_diff').notNull(),
   trustScore: integer('trust_score'),
