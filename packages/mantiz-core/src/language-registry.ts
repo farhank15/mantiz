@@ -59,7 +59,7 @@ export const LANGUAGE_CONFIG: Record<string, LanguageConfig> = {
     commentSyntax: { singleLine: ['//'], multiLine: ['/*', '*/'] },
     detectionRules: {
       disabledAssertion: {
-        skipPatterns: [/\.skip\s*\(/, /\bxit\b/, /\bxtest\b/, /\bxdescribe\b/],
+        skipPatterns: [/\.skip\s*\(/, /\.todo\s*\(/, /\bxit\b/, /\bxtest\b/, /\bxdescribe\b/],
         focusPatterns: [/\bfit\b/, /\bfdescribe\b/, /\.only\s*\(/],
         conditionalDisable: [
           /if\s*\(\s*(?:false|0)\s*\)\s*\{/,

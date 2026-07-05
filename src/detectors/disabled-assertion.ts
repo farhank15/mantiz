@@ -58,6 +58,19 @@ function scanHunk(hunkContent: string, baseLine: number, lang: string | null): M
     if (!matched) {
       for (const pattern of rules.disabledAssertion.skipPatterns) {
         if (pattern.test(line) || pattern.test(content)) {
+          // Check if it's a .todo() pattern (it.todo, test.todo)
+          const isTodo = /\.todo\s*\(/.test(line) || /\.todo\s*\(/.test(content)
+          if (isTodo) {
+            matches.push({
+              lineIndex: lineIdx,
+              lineContent: content,
+              pattern: 'todo',
+              lang: lang || 'javascript',
+            })
+            matched = true
+            break
+          }
+
           // Check if the skip has a reason/description string
           // e.g. `.skip("reason")` vs `.skip()` or `xit`
           const hasReason = /\.skip\s*\(\s*['"`]/.test(line)

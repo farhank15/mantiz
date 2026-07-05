@@ -2,7 +2,7 @@ import type { Finding, ParsedDiff, Confidence } from '../types'
 import { detectLanguage, isTestFile, LANGUAGE_CONFIG } from '../language-registry'
 import type { LanguageDetectionRules } from '../language-registry'
 
-type MatchPattern = 'skip' | 'skip_with_reason' | 'focus' | 'if_false' | 'comment' | 'empty_test'
+type MatchPattern = 'skip' | 'skip_with_reason' | 'focus' | 'if_false' | 'comment' | 'todo' | 'empty_test'
 
 interface MatchResult {
   lineIndex: number
@@ -33,6 +33,19 @@ function scanHunk(hunkContent: string, baseLine: number, lang: string | null): M
     if (!matched) {
       for (const pattern of rules.disabledAssertion.skipPatterns) {
         if (pattern.test(line) || pattern.test(content)) {
+          // Check if it's a .todo() pattern (it.todo, test.todo)
+          const isTodo = /\.todo\s*\(/.test(line) || /\.todo\s*\(/.test(content)
+          if (isTodo) {
+            matches.push({
+              lineIndex: lineIdx,
+              lineContent: content,
+              pattern: 'todo',
+              lang: lang || 'javascript',
+            })
+            matched = true
+            break
+          }
+
           const hasReason = /\.skip\s*\(\s*['"`]/.test(line) ||
             /@pytest\.mark\.skip\s*\(/.test(line) ||
             /@pytest\.mark\.skipif\s*\(/.test(line) ||
@@ -136,6 +149,7 @@ function patternToConfidence(pattern: MatchPattern): Confidence {
     case 'if_false': return 'high'
     case 'empty_test': return 'medium'
     case 'comment': return 'medium'
+    case 'todo': return 'low'
   }
 }
 
@@ -148,6 +162,7 @@ function patternToExplanation(pattern: MatchPattern, lang: string): string {
     case 'if_false': return `Assertion wrapped in conditional that always evaluates to false (${langName}) — the assertion will never execute.`
     case 'comment': return `Assertion commented out (${langName}) — the test no longer verifies the expected behavior.`
     case 'empty_test': return `Empty test body (${langName}) — the test is defined but contains no assertions, so it passes without verifying anything.`
+    case 'todo': return `TODO test placeholder (${langName}) — marks a test as pending/not yet implemented.`
   }
 }
 

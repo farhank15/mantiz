@@ -77,6 +77,7 @@ export const LANGUAGE_CONFIG: Record<string, LanguageConfig> = {
       disabledAssertion: {
         skipPatterns: [
           /\.skip\s*\(/,
+          /\.todo\s*\(/,
           /\bxit\b/,
           /\bxtest\b/,
           /\bxdescribe\b/,
