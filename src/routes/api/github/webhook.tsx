@@ -350,6 +350,68 @@ export const Route = createFileRoute("/api/github/webhook")({
                   totalFindings: result.summary.totalFindings,
                 });
 
+                // ── Save scan to dashboard history ───────────────
+                // For User-type installs, look up the Mantiz dashboard user
+                // by matching github_installs.accountId → users.githubId.
+                // Organization installs are skipped (no single user owner).
+                try {
+                  const { githubInstalls, users, scans: scansTable, findings: findingsTable, repos: reposTable } = await import("../../../schemas/index");
+
+                  const installRecord = await db.query.githubInstalls.findFirst({
+                    where: eq(githubInstalls.installationId, instId),
+                  });
+
+                  if (installRecord && installRecord.accountType === "User" && installRecord.accountId) {
+                    const mantizUser = await db.query.users.findFirst({
+                      where: eq(users.githubId, String(installRecord.accountId)),
+                    });
+
+                    if (mantizUser) {
+                      // Find or create repo record
+                      let repoRecord = await db.query.repos.findFirst({
+                        where: eq(reposTable.fullName, repoFullName),
+                      });
+                      if (!repoRecord) {
+                        const [inserted] = await db.insert(reposTable).values({
+                          fullName: repoFullName,
+                          githubRepoId: repo.id,
+                        }).returning();
+                        repoRecord = inserted;
+                      }
+
+                      // Insert scan
+                      const [scanRecord] = await db.insert(scansTable).values({
+                        userId: mantizUser.id,
+                        repoId: repoRecord.id,
+                        sourceType: "github_app_bot",
+                        sourceRef: pr.html_url,
+                        rawDiff: diffText,
+                        trustScore: result.trustScore,
+                        status: "complete",
+                        completedAt: new Date(),
+                      }).returning();
+
+                      // Insert findings
+                      if (result.findings.length > 0) {
+                        await db.insert(findingsTable).values(
+                          result.findings.map((f: any) => ({
+                            scanId: scanRecord.id,
+                            patternType: f.patternType,
+                            filePath: f.filePath,
+                            lineStart: f.lineStart,
+                            lineEnd: f.lineEnd,
+                            confidence: f.confidence,
+                            explanation: f.explanation,
+                            evidenceExcerpt: f.evidenceExcerpt,
+                          })),
+                        );
+                      }
+                    }
+                  }
+                } catch (saveErr) {
+                  console.error("[webhook] Failed to save scan to dashboard:", saveErr);
+                }
+
                 // ── Update delivery status ────────────────────────
                 if (delivery?.id) {
                   await db

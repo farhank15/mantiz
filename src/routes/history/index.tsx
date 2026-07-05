@@ -11,6 +11,7 @@ import {
   GitPullRequest,
   Terminal,
   Laptop,
+  Bot,
   Calendar,
   CheckCircle2,
   AlertTriangle,
@@ -32,7 +33,7 @@ export const Route = createFileRoute("/history/")({ component: HistoryPage });
 
 interface ScanHistoryItem {
   id: string;
-  sourceType: "manual" | "github_pr" | "api";
+  sourceType: "manual" | "github_pr" | "api" | "github_app_bot";
   sourceRef: string | null;
   trustScore: number | null;
   status: "pending" | "complete" | "failed";
@@ -279,6 +280,11 @@ function HistoryPage() {
                               <Terminal className="h-4 w-4" />
                               {item.sourceRef || "API / CLI"}
                             </span>
+                          ) : item.sourceType === "github_app_bot" ? (
+                            <span className="inline-flex items-center gap-1.5 text-[#2ea44f]">
+                              <Bot className="h-4 w-4" />
+                              GitHub App Bot
+                            </span>
                           ) : (
                             <span className="inline-flex items-center gap-1.5 text-ink-muted">
                               <Laptop className="h-4 w-4" />
@@ -407,6 +413,11 @@ function HistoryPage() {
                       <span className="inline-flex items-center gap-1.5 text-interactive">
                         <GitPullRequest className="h-5 w-5" />
                         PR Scan Details
+                      </span>
+                    ) : selectedScanDetails?.scan.sourceType === "github_app_bot" ? (
+                      <span className="inline-flex items-center gap-1.5 text-[#2ea44f]">
+                        <Bot className="h-5 w-5" />
+                        GitHub App Bot Scan
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 text-ink-muted">
