@@ -19,6 +19,9 @@ on:
 
 jobs:
   check:
+    permissions:
+      contents: read
+      pull-requests: write
     runs-on: ubuntu-latest
     name: Detector Performance Gate
 
@@ -46,7 +49,7 @@ jobs:
         id: detector-check
         run: |
           set +e
-          REPORT=$(npx tsx scripts/eval/ci-check.ts 2>&1)
+          REPORT=$(pnpm exec tsx scripts/eval/ci-check.ts 2>&1)
           EXIT_CODE=$?
           echo "$REPORT"
           echo "ci_report<<EOF" >> $GITHUB_OUTPUT
