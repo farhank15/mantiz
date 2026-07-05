@@ -18,6 +18,23 @@ import type { ScanResult } from './cli-engine'
 
 const PASS_THRESHOLD = 70
 
+// ─── Threshold: env var > --flag > default 70 ─────────────────
+function resolveThreshold(args: string[]): number {
+  const idx = args.indexOf('--threshold')
+  if (idx !== -1 && idx + 1 < args.length) {
+    const val = parseInt(args[idx + 1], 10)
+    if (!isNaN(val) && val >= 0 && val <= 100) return val
+    console.warn(`\x1b[33m⚠️  Invalid --threshold "${args[idx + 1]}", using 70\x1b[0m`)
+  }
+  const env = process.env.MANTIZ_THRESHOLD
+  if (env !== undefined && env !== '') {
+    const val = parseInt(env, 10)
+    if (!isNaN(val) && val >= 0 && val <= 100) return val
+    console.warn(`\x1b[33m⚠️  Invalid MANTIZ_THRESHOLD "${env}", using 70\x1b[0m`)
+  }
+  return 70
+}
+
 function getGitDiff(): string {
   try {
     const diff = execSync('git diff', { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 })
@@ -31,7 +48,7 @@ function getGitDiff(): string {
   }
 }
 
-function printResults(result: ScanResult): void {
+function printResults(result: ScanResult, threshold: number): void {
   const scoreColor = result.trustScore >= 80 ? '\x1b[32m' : result.trustScore >= 50 ? '\x1b[33m' : '\x1b[31m'
   const scoreLabel = result.trustScore >= 80 ? 'CLEAN ✅' : result.trustScore >= 50 ? 'SUSPICIOUS 🟡' : 'CHEATING DETECTED 🔴'
   const reset = '\x1b[0m'
@@ -42,7 +59,7 @@ function printResults(result: ScanResult): void {
   console.log(`${bold}🔍  MANTIZ SCAN RESULTS${reset}`)
   console.log('='.repeat(50))
   console.log(`\n${bold}Trust Score:${reset} ${scoreColor}${result.trustScore}/100${reset} ${scoreLabel}`)
-  console.log(`${dim}Threshold:${reset} ${PASS_THRESHOLD}${dim} (scores below this will fail)${reset}`)
+  console.log(`${dim}Threshold:${reset} ${threshold}${dim} (scores below this will fail)${reset}`)
   console.log(`\n${bold}Summary:${reset}`)
   console.log(`  Findings:  ${result.summary.totalFindings}`)
   console.log(`  Files:     ${result.summary.filesScanned}`)
@@ -91,12 +108,13 @@ Mantiz CLI — AI Lie Detector for Coding Agents
 USAGE
   mantiz-scan                  Scan current git diff
   mantiz-scan --diff <text>    Scan provided diff text
-  mantiz-scan --json           Output results as JSON
-  mantiz-scan --help           Show this help
+  mantiz-scan --threshold <0-100>  Custom pass threshold (env: MANTIZ_THRESHOLD)
+  mantiz-scan --json              Output results as JSON
+  mantiz-scan --help              Show this help
 
 EXIT CODES
-  0  — All clean (Trust Score >= ${PASS_THRESHOLD})
-  1  — Cheating detected (Trust Score < ${PASS_THRESHOLD})
+  0  — All clean (Trust Score >= threshold)
+  1  — Cheating detected (Trust Score < threshold)
 
 FEATURES
   • 6 Static Detectors (D1-D6) — no API key or server needed
@@ -106,8 +124,9 @@ FEATURES
 
 EXAMPLES
   mantiz-scan
+  mantiz-scan --threshold 50
+  mantiz-scan --threshold 80 --json
   cat my-diff.txt | mantiz-scan --diff -
-  mantiz-scan --json | jq '.trustScore'
 `)
 }
 
@@ -141,6 +160,9 @@ async function main(): Promise<void> {
 
   const result = scanDiff(diffText)
 
+  // Resolve threshold after parsing args
+  const threshold = resolveThreshold(args)
+
   if (jsonOutput) {
     console.log(JSON.stringify({
       trustScore: result.trustScore,
@@ -155,13 +177,14 @@ async function main(): Promise<void> {
         explanation: f.explanation,
       })),
       fixInstructions: result.fixInstructions,
-      passed: result.trustScore >= PASS_THRESHOLD,
+      threshold,
+      passed: result.trustScore >= threshold,
     }, null, 2))
   } else {
-    printResults(result)
+    printResults(result, threshold)
   }
 
-  process.exit(result.trustScore < PASS_THRESHOLD ? 1 : 0)
+  process.exit(result.trustScore < threshold ? 1 : 0)
 }
 
 main().catch((err) => {

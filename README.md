@@ -80,7 +80,7 @@ AI agents often cheat subtly: skipping tests, disabling assertions, swallowing e
 
 | | Feature | |
 |---|---|---|
-| 🤖 | **GitHub App Bot** — Auto-scan every PR. Inline comments + check runs + dashboard history for every scan | [Install Bot &rarr;](https://github.com/apps/mantiz) |
+| 🤖 | **GitHub App Bot** — Auto-scan every PR. Inline comments + check runs + dashboard history for every scan | [Install Bot &rarr;](https://github.com/apps/mantiz-scan) |
 | 🧠 | **RAG Codebase Context** — Qdrant vector DB indexes your repo. AI knows your APIs, no false positives | [Configure Qdrant](docs/qdrant.md) |
 | 🌐 | **7 Languages** — JS/TS, Python, Go, Java, Ruby, Rust, PHP | [Multi-language docs](packages/mantiz-core/README.md) |
 | 🩹 | **Self-Heal** — Auto-fix detected issues with AI-generated patches. One-click apply via PR suggestions | `--fix` flag |
@@ -125,7 +125,7 @@ Install → Open PR → Mantiz posts results as PR comments + check runs + saves
 5. Saves the scan to your dashboard history (requires one-time login)
 
 <p align="center">
-  <a href="https://github.com/apps/mantiz"><img src="https://img.shields.io/badge/Install_Mantiz_Bot-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="Install Mantiz Bot"></a>
+  <a href="https://github.com/apps/mantiz-scan"><img src="https://img.shields.io/badge/Install_Mantiz_Bot-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="Install Mantiz Bot"></a>
 </p>
 
 <br />

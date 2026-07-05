@@ -20,7 +20,25 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const PROJECT_ROOT = resolve(__dirname, '../..')
 const LOOP_MD_PATH = resolve(PROJECT_ROOT, 'LOOP.md')
 
-const PASS_THRESHOLD = 70
+// ─── Threshold: env var > --flag > default 70 ─────────────────
+function resolveThreshold(args: string[]): number {
+  // 1. Check --threshold flag
+  const idx = args.indexOf('--threshold')
+  if (idx !== -1 && idx + 1 < args.length) {
+    const val = parseInt(args[idx + 1], 10)
+    if (!isNaN(val) && val >= 0 && val <= 100) return val
+    console.warn(`\x1b[33m⚠️  Invalid --threshold "${args[idx + 1]}", using 70\x1b[0m`)
+  }
+  // 2. Check MANTIZ_THRESHOLD env var
+  const env = process.env.MANTIZ_THRESHOLD
+  if (env !== undefined && env !== '') {
+    const val = parseInt(env, 10)
+    if (!isNaN(val) && val >= 0 && val <= 100) return val
+    console.warn(`\x1b[33m⚠️  Invalid MANTIZ_THRESHOLD "${env}", using 70\x1b[0m`)
+  }
+  // 3. Default
+  return 70
+}
 
 /**
  * Get the current git diff. Falls back to staged diff if no unstaged changes.
@@ -83,7 +101,7 @@ function appendToLOOPMD(
 /**
  * Print colored output to the terminal.
  */
-function printResults(score: number, totalFindings: number, findings: Array<{ confidence: string; filePath: string; lineStart: number; explanation: string; evidenceExcerpt: string }>): void {
+function printResults(score: number, totalFindings: number, threshold: number, findings: Array<{ confidence: string; filePath: string; lineStart: number; explanation: string; evidenceExcerpt: string }>): void {
   const scoreColor = score >= 80 ? '\x1b[32m' : score >= 50 ? '\x1b[33m' : '\x1b[31m'
   const scoreLabel = score >= 80 ? 'CLEAN ✅' : score >= 50 ? 'SUSPICIOUS 🟡' : 'CHEATING DETECTED 🔴'
   const reset = '\x1b[0m'
@@ -95,7 +113,7 @@ function printResults(score: number, totalFindings: number, findings: Array<{ co
   console.log('='.repeat(50))
 
   console.log(`\n${bold}Trust Score:${reset} ${scoreColor}${score}/100${reset} ${scoreLabel}`)
-  console.log(`${dim}Threshold:${reset} ${PASS_THRESHOLD} ${dim}(scores below this will fail the build)${reset}`)
+  console.log(`${dim}Threshold:${reset} ${threshold} ${dim}(scores below this will fail the build)${reset}`)
 
   console.log(`\n${bold}Summary:${reset}`)
   console.log(`  Findings:  ${totalFindings}`)
@@ -176,7 +194,10 @@ async function main(): Promise<void> {
   const startTime = Date.now()
   const args = process.argv.slice(2)
 
-  // 1. Get the diff
+  // 1. Resolve threshold
+  const threshold = resolveThreshold(args)
+
+  // 2. Get the diff
   const diff = getGitDiff()
   if (!diff || !diff.trim()) {
     console.log('\x1b[33m⚠️  No git diff found. Run `git add` first or make some changes.\x1b[0m')
@@ -192,7 +213,7 @@ async function main(): Promise<void> {
   const patches = generatePatches(result.findings, result.files)
 
   // 4. Print results
-  printResults(result.trustScore, result.findings.length, result.findings.map(f => ({
+  printResults(result.trustScore, result.findings.length, threshold, result.findings.map(f => ({
     confidence: f.confidence,
     filePath: f.filePath,
     lineStart: f.lineStart,
@@ -219,13 +240,13 @@ async function main(): Promise<void> {
 
   // 8. Log to LOOP.md
   const iteration = getCurrentIteration() + 1
-  const status = result.trustScore >= PASS_THRESHOLD ? 'PASSED' : 'BLOCKED'
+  const status = result.trustScore >= threshold ? 'PASSED' : 'BLOCKED'
   appendToLOOPMD(iteration, result.trustScore, result.findings.length, result.summary.highCount, status)
   console.log(`\x1b[2m📝 LOOP.md updated — iteration ${iteration} logged\x1b[0m`)
   console.log(`\x1b[2m⚡ Scan completed in ${elapsed}s\x1b[0m\n`)
 
   // 9. Show fix instructions if score is low
-  if (result.trustScore < PASS_THRESHOLD && result.fixInstructions.length > 0) {
+  if (result.trustScore < threshold && result.fixInstructions.length > 0) {
     console.log('\x1b[33m📋 Suggested fixes for AI agent:\x1b[0m')
     for (const fix of result.fixInstructions) {
       console.log(`  • ${fix.instruction}`)
@@ -234,10 +255,10 @@ async function main(): Promise<void> {
   }
 
   // 10. Exit with appropriate code
-  if (result.trustScore < PASS_THRESHOLD) {
-    console.log('\x1b[31m✗ BUILD FAILED — Trust score below 70 threshold\x1b[0m\n')
+  if (result.trustScore < threshold) {
+    console.log(`\x1b[31m✗ BUILD FAILED — Trust score below ${threshold} threshold\x1b[0m\n`)
     process.exit(1)
-  }
+  
 
   console.log('\x1b[32m✓ BUILD PASSED — All checks clean\x1b[0m\n')
   process.exit(0)
