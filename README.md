@@ -34,11 +34,37 @@ AI agents often cheat subtly: skipping tests, disabling assertions, swallowing e
 
 ---
 
+## Demo
+
+<p align="center">
+  <img src="public/pr-scan.png" alt="PR Scan — Analyze any GitHub PR" width="720" style="border-radius: 12px; border: 1px solid #30363d;" />
+  <br />
+  <em>PR Scan — Paste a GitHub PR URL and get instant detection results.</em>
+</p>
+
+<br />
+
+<p align="center">
+  <img src="public/mantiz-report.png" alt="Mantiz Report — Trust Score + Detected Patterns" width="720" style="border-radius: 12px; border: 1px solid #30363d;" />
+  <br />
+  <em>Scan Report — Trust Score (0-100) with per-finding explanations.</em>
+</p>
+
+<br />
+
+<p align="center">
+  <img src="public/history.png" alt="History Dashboard — All scans in one place" width="720" style="border-radius: 12px; border: 1px solid #30363d;" />
+  <br />
+  <em>History — Every scan, manual or automated, saved and searchable.</em>
+</p>
+
+---
+
 ## Features
 
 | | Feature | |
 |---|---|---|
-| 🤖 | **GitHub App** — Auto-scan every PR. Inline comments + check runs + suggested fixes | [Add to repos](https://github.com/apps/mantiz) |
+| 🤖 | **GitHub App Bot** — Auto-scan every PR. Inline comments + check runs + dashboard history for every scan | [Install Bot &rarr;](https://github.com/apps/mantiz) |
 | 🧠 | **RAG Codebase Context** — Qdrant vector DB indexes your repo. AI knows your APIs, no false positives | [Configure Qdrant](docs/qdrant.md) |
 | 🌐 | **7 Languages** — JS/TS, Python, Go, Java, Ruby, Rust, PHP | [Multi-language docs](packages/mantiz-core/README.md) |
 | 🩹 | **Self-Heal** — Auto-fix detected issues with AI-generated patches. One-click apply via PR suggestions | `--fix` flag |
@@ -63,15 +89,34 @@ cp .env.example .env   # Add DATABASE_URL + GitHub OAuth keys
 pnpm run dev
 ```
 
-### One-Click GitHub App
+---
 
-Install on your repositories → every PR gets scanned automatically:
+## How to Use
+
+### 🤖 GitHub App Bot (Recommended)
+
+The easiest way. Install the Mantiz GitHub App on your repos — every new PR gets scanned automatically with inline comments, check runs, and dashboard history.
 
 ```
-Install → Open PR → Mantiz posts comments + check run + dashboard history
+Install → Open PR → Mantiz posts results as PR comments + check runs + saves to your history
 ```
 
-### GitHub Actions
+**What happens when you open a PR:**
+1. Mantiz receives the webhook
+2. Scans the diff with all 11 detectors
+3. Posts a trust score comment on the PR with per-finding breakdown
+4. Sets a check run (pass if score ≥ threshold)
+5. Saves the scan to your dashboard history (requires one-time login)
+
+<p align="center">
+  <a href="https://github.com/apps/mantiz"><img src="https://img.shields.io/badge/Install_Mantiz_Bot-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="Install Mantiz Bot"></a>
+</p>
+
+<br />
+
+### 🔗 GitHub Actions
+
+For repos that can't use the App, or when you want CI gating:
 
 ```yaml
 - name: Mantiz Scan
@@ -81,9 +126,11 @@ Install → Open PR → Mantiz posts comments + check run + dashboard history
     threshold: 70
 ```
 
-Generate a token from [Settings](https://mantiz-wine.vercel.app/settings).
+Generate a token from [Settings &rarr;](https://mantiz-wine.vercel.app/settings)
 
-### CLI
+<br />
+
+### 💻 CLI
 
 ```bash
 # Local scan (no server needed)
@@ -93,13 +140,16 @@ npx mantiz-cli
 npx mantiz-cli --token mtz_abc123 --ai --save --fix
 ```
 
-### Manual / PR Scan
+<br />
 
-| | Manual | PR Scan |
+### 🌐 Dashboard
+
+| | Manual Scan | PR Scan |
 |---|---|---|
 | Where | [/scan](https://mantiz-wine.vercel.app/scan) | [/pr-scan](https://mantiz-wine.vercel.app/pr-scan) |
 | Input | Paste raw diff | GitHub PR URL |
 | Auth | None | GitHub OAuth |
+| History | ✅ Saved | ✅ Saved |
 
 ---
 
