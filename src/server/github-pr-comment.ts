@@ -15,6 +15,19 @@
 import type { Finding } from '../detectors/types'
 import { generatePatches, type CodePatch } from '../detectors/heal-engine'
 
+// ─── Default threshold from env var ─────────────────────────────
+
+const DEFAULT_THRESHOLD = (() => {
+  const env = process.env.GITHUB_APP_THRESHOLD
+  if (env === undefined || env === '') return 70
+  const parsed = parseInt(env, 10)
+  if (isNaN(parsed) || parsed < 0 || parsed > 100) {
+    console.warn(`[github-pr-comment] Invalid GITHUB_APP_THRESHOLD "${env}", using 70`)
+    return 70
+  }
+  return parsed
+})()
+
 // ─── Types ──────────────────────────────────────────────────────
 
 export type CheckConclusion = 'success' | 'failure' | 'neutral' | 'cancelled' | 'timed_out' | 'action_required'
@@ -82,7 +95,7 @@ export async function postPRReviewComments(
     threshold?: number
   },
 ): Promise<{ reviewId: number | null; commentsPosted: number }> {
-  const { owner, repo, pullNumber, findings, trustScore, totalFindings, threshold = 70 } = params
+  const { owner, repo, pullNumber, findings, trustScore, totalFindings, threshold = DEFAULT_THRESHOLD } = params
 
   if (findings.length === 0) return { reviewId: null, commentsPosted: 0 }
 
@@ -201,7 +214,7 @@ export async function completeCheckRun(
     threshold?: number
   },
 ): Promise<void> {
-  const { owner, repo, checkRunId, findings, trustScore, totalFindings, threshold = 70 } = params
+  const { owner, repo, checkRunId, findings, trustScore, totalFindings, threshold = DEFAULT_THRESHOLD } = params
 
   const passed = trustScore >= threshold
   const conclusion: CheckConclusion = passed ? 'success' : 'action_required'
