@@ -2,7 +2,7 @@
 
 **Detection engine for Mantiz — AI lie detector for coding agents.**
 
-Pure TypeScript library with zero framework dependencies. Scans git diffs for AI agent cheating patterns.
+Pure TypeScript library with zero framework dependencies. Scans git diffs for AI agent cheating patterns across **7 languages** (JS/TS, Python, Go, Java, Ruby, Rust, PHP).
 
 ## Installation
 
@@ -13,116 +13,59 @@ pnpm add @mantiz/core
 ## Usage
 
 ```typescript
-import { scanDiff } from '@mantiz/core'
-
-const diff = `
-diff --git a/test.js b/test.js
-index abc..def 100644
---- a/test.js
-+++ b/test.js
-@@ -1,5 +1,5 @@
- describe('math', () => {
--  it('adds numbers', () => {
-+  it.skip('adds numbers', () => {
-     expect(1 + 1).toBe(2)
-   })
- })
-`
+import { scanDiff, scanDiffAsync } from '@mantiz/core'
 
 const result = scanDiff(diff)
 console.log(`Trust Score: ${result.trustScore}/100`)
-console.log(`Findings: ${result.findings.length}`)
+
+// Async with AI + PR context
+const resultAI = await scanDiffAsync(diff, {
+  title: 'fix: handle edge case',
+  author: 'ai-agent-bot'
+})
 ```
 
 ## API
 
 ### `scanDiff(rawDiff: string): ScanResult`
 
-Synchronously run all 11 detectors and return results.
+Synchronously run all detectors and return results.
 
-### `scanDiffAsync(rawDiff: string): Promise<ScanResult>`
+### `scanDiffAsync(rawDiff: string, prContext?: { title?: string; description?: string }, ragContext?: string): Promise<ScanResult>`
 
-Async version that also runs AI-assisted detection (via Fireworks/Groq).
+Async version with:
+- **prContext** — PR title + author for claim-diff mismatch nuance (bot vs human)
+- **ragContext** — Code definitions from Qdrant search, injected into AI prompt to prevent false positives on custom APIs
 
-### ScanResult
+### Types
 
 ```typescript
-{
-  trustScore: number        // 0-100, per-detector calibrated weights
-  findings: Finding[]       // Detected cheating patterns (evidence only — no historical behavioral)
-  summary: {
-    totalFindings: number
-    highCount: number
-    mediumCount: number
-    lowCount: number
-    filesScanned: number
-  }
-  fixInstructions: FixInstruction[]  // Auto-generated remediation
-  scoringBreakdown?: {       // Transparent scoring pipeline
-    staticScore: number
-    rawFindings: number
-    dedupedFindings: number
-    aiJudgeFiltered: number
-    aiAssistedFindings: number
-    behavioralFlags?: Array<{ type: string; confidence: string; note: string }>
-  }
-  verdict?: {
-    label: 'CLEAN' | 'SUSPICIOUS' | 'LIKELY_DECEPTIVE'
-    confidence: 'low' | 'medium' | 'high'
-    reason: string
-  }
+type PatternType =
+  | 'disabled_assertion'
+  | 'assertion_tampering'
+  | 'mock_to_avoid_failure'
+  | 'claim_diff_mismatch'
+  | 'silent_catch_and_pass'
+  | 'hallucinated_assertion'
+  | 'ai_assisted_detection'
+
+type Confidence = 'low' | 'medium' | 'high'
+
+type FileImportance = 'core' | 'test' | 'source' | 'config' | 'artifact' | 'docs'
+
+interface Finding {
+  patternType: PatternType
+  filePath: string
+  lineStart: number
+  lineEnd: number
+  confidence: Confidence
+  explanation: string
+  evidenceExcerpt: string
+  fileImportance?: FileImportance
 }
 ```
 
-### Scoring
-
-Per-detector weights calibrated from 203 unique PRs (20 DECEPTIVE, 183 LEGIT).
-Detectors with higher precision get higher penalty weights:
-- D2/D3 (100% precision): high=8, med=4, low=1
-- D6 (77.8% precision): high=6, med=3, low=1
-- D1 (45.5% precision): high=4, med=2, low=1
-- D5 (33.3% precision): high=3, med=1, low=0
-- D10 (30.0% precision): high=2, med=1, low=0
-- D4 (0% precision): high=2, med=1, low=0 (floor=2 defense-in-depth)
-
-Score = max(30, 100 - min(penalty, 85)). File importance multiplier applies (core/test=1.0, config=0.5, docs=0.3, artifact=0.05).
-
-## Detectors (11 patterns)
-
-| # | Detector | What It Catches |
-|---|----------|----------------|
-| 1 | Disabled Assertion | `.skip()`, `if(false)`, commented-out assertions |
-| 2 | Assertion Tampering | Changed expected values without source fix |
-| 3 | Mock-to-Avoid | Excessive mocking to bypass real errors |
-| 4 | Claim-Diff Mismatch | Commit msg doesn't match actual changes |
-| 5 | Silent Catch | Empty catch blocks that swallow errors |
-| 6 | Hallucinated Assertion | Unknown/non-existent assertion matchers |
-| 7 | AST Analyzer (Babel) | Parses JS/TS — detects trivial function bodies, async gutting, conditional wrapping |
-| 8 | Tree-sitter AST | Multi-language AST via WASM — Python, Go, Java, Ruby, Rust, PHP |
-| 9 | Historical Behavioral | Tracks author patterns — style changes, odd hours, score volatility |
-| 10 | Mutation Susceptibility | Detects fragile tests with low assertion density |
-| 11 | AI-Assisted | LLM-powered semantic analysis (Fireworks + Groq) |
-
-### File Importance Scoring
-
-Findings are weighted by file type:
-
-| File Type | Multiplier | Examples |
-|-----------|:----------:|---------|
-| `core` / `test` / `source` | 1.0x | `*.ts`, `*.test.ts`, engine code |
-| `config` | 0.5x | `package.json`, `tsconfig.json` |
-| `docs` | 0.3x | `README.md`, `CHANGELOG.md` |
-| `artifact` | 0.05x | Agent tool dirs (`.kuma/`, `.claude/`), gitignored paths |
-
-### Claim-Diff Mismatch Nuance
-
-When scanning via PR URL (with title + author context), Mantiz **downgrades** findings for:
-- Bot authors (`renovate[bot]`, `dependabot[bot]`, etc.) — LOW confidence
-- Honest docs-only PRs — LOW confidence
-
-Manual diffs (without context) always get full severity.
-
-## ScanResult
+### ScanResult
 
 ```typescript
 {
@@ -135,6 +78,89 @@ Manual diffs (without context) always get full severity.
     lowCount: number
     filesScanned: number
   }
-  fixInstructions: FixInstruction[]  // Auto-generated remediation
+  fixInstructions: FixInstruction[]
 }
+```
+
+## Detectors (Multi-Language)
+
+All detectors use `language-registry.ts` for per-language test framework patterns:
+
+### Disabled Assertion
+| Language | Patterns |
+|:---------|:---------|
+| JS/TS | `test.skip()`, `describe.skip()`, `xit()`, `xdescribe()`, `if (false)` |
+| Python | `@pytest.mark.skip`, `@unittest.skip`, `self.skipTest()`, `if False:` |
+| Go | `t.Skip()`, `t.Skipf()`, `t.SkipNow()` |
+| Java | `@Disabled`, `@Ignore`, `assumeTrue(false)` |
+| Ruby | `xit`, `xdescribe`, `pending`, `skip` |
+| Rust | `#[ignore]` |
+| PHP | `markTestSkipped()`, `markTestIncomplete()` |
+
+### Assertion Tampering
+| Language | Patterns |
+|:---------|:---------|
+| JS/TS | `expect(x).toBe(y)` — value changed without source fix |
+| Python | `assert x == y` — condition manipulation |
+| Go | `assert.Equal(t, expected, actual)` — tampered expected |
+| Java | `assertEquals(expected, actual)` — swapped/tampered |
+
+### Mock-to-Avoid
+| Language | Patterns |
+|:---------|:---------|
+| JS/TS | `vi.mock()`, `jest.mock()`, `vi.spyOn()` |
+| Python | `@patch`, `unittest.mock.patch` |
+| Go | `testify .On().Return()` |
+| Java | `Mockito.mock()`, `@Mock` |
+| Ruby | `allow().to receive` |
+| PHP | `createMock()`, `getMockBuilder()` |
+
+### Silent Catch
+| Language | Patterns |
+|:---------|:---------|
+| JS/TS | `catch (e) {}` — empty body |
+| Python | `except: pass` |
+| Go | `if err != nil { return nil }` — no error handling |
+| Java | `catch (E e) {}` — empty |
+| Ruby | `rescue; end` — no handling |
+| PHP | `catch (Exception $e) {}` — empty |
+
+### File Importance Scoring
+
+| File Type | Multiplier | Examples |
+|-----------|:----------:|---------|
+| `core` / `test` / `source` | 1.0x | `*.ts`, `*.test.ts`, engine code |
+| `config` | 0.5x | `package.json`, `tsconfig.json` |
+| `docs` | 0.3x | `README.md`, `CHANGELOG.md` |
+| `artifact` | 0.05x | Agent tool dirs (`.kuma/`, `.claude/`) |
+
+### Claim-Diff Mismatch Nuance
+
+When scanning with PR context (title + author), findings are **downgraded** for:
+- Bot authors (`renovate[bot]`, `dependabot[bot]`) → LOW confidence
+- Honest docs-only PRs → LOW confidence
+- Rebranding commits (package name change) → auto-cleared
+
+Manual diffs (no context) always get full severity.
+
+## Scoring
+
+Per-detector weights calibrated from 423 labeled PRs.
+Score = `max(30, 100 - min(penalty, 85))`. File importance multiplier applies.
+
+## Exports
+
+```typescript
+export { scanDiff, scanDiffAsync } from './engine'
+export type { ScanResult, FixInstruction } from './engine'
+export type { Finding, ParsedDiff, DiffHunk, PatternType, Confidence, FileImportance } from './types'
+export { parseRawDiff } from './diff-parser'
+export { detectDisabledAssertions } from './detectors/disabled-assertion'
+export { detectAssertionTampering } from './detectors/assertion-tampering'
+export { detectMockToAvoid } from './detectors/mock-to-avoid'
+export { detectClaimDiffMismatch, isNonFunctional, classifyImportance } from './detectors/claim-mismatch'
+export { detectSilentCatch } from './detectors/silent-catch'
+export { detectHallucinatedAssertions } from './detectors/hallucination'
+export { detectWithAI } from './detectors/ai-assisted'
+export { evaluateFindings, isAIJudgeEnabled } from './detectors/ai-judge'
 ```

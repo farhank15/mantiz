@@ -1,432 +1,283 @@
 <p align="center">
-  <img src="public/mantiz.png" alt="Mantiz Logo" width="160" height="160" style="border-radius: 24px;" />
+  <img src="public/mantiz.png" alt="Mantiz Logo" width="140" height="140" style="border-radius: 24px;" />
 </p>
 
-<h3 align="center">AI Coding Agent Lie Detector</h3>
+<h3 align="center">Mantiz — AI Coding Agent Lie Detector</h3>
 
 <p align="center">
-  <em>Your agent cheats. Mantiz doesn't.</em>
-  <br />
-  Scans diffs and PRs for the patterns agents use to fake a passing test suite.
+  <em>Your agent cheats. Mantiz doesn't.</em><br />
+  Scans diffs and PRs for patterns AI agents use to fake a passing test suite.
 </p>
 
 <p align="center">
-  <a href="https://mantiz-wine.vercel.app" target="_blank"><img src="https://img.shields.io/badge/Live%20App-mantiz--wine.vercel.app-58A6FF?style=flat-square&logo=vercel&logoColor=white" alt="Live App"></a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-3FB950?style=flat-square" alt="License">
-  </a>
-  <a href="https://github.com/farhank15/mantiz/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/farhank15/mantiz/mantiz.yml?style=flat-square&logo=github&label=Mantiz%20CI" alt="Mantiz CI">
-  </a>
+  <a href="https://mantiz-wine.vercel.app"><img src="https://img.shields.io/badge/Live%20App-mantiz--wine.vercel.app-58A6FF?style=flat-square&logo=vercel" alt="Live App"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3FB950?style=flat-square" alt="License"></a>
+  <a href="https://github.com/farhank15/mantiz/actions/workflows/ci-detectors.yml"><img src="https://img.shields.io/badge/CI-Detector%20Gate-FF6B35?style=flat-square&logo=github" alt="Detector Gate"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/changelog-2ea44f?style=flat-square" alt="Changelog"></a>
   <br />
-  <img src="https://img.shields.io/badge/Stack-TanStack_Start-FF4154?style=flat-square&logo=react&logoColor=white" alt="TanStack">
-  <img src="https://img.shields.io/badge/Database-Neon--Postgres-00E59B?style=flat-square&logo=postgresql&logoColor=white" alt="Neon">
-  <img src="https://img.shields.io/badge/AI-Powered-FF6B35?style=flat-square" alt="AI">
-  <img src="https://img.shields.io/badge/OAuth-GitHub-333?style=flat-square&logo=github" alt="GitHub OAuth">
+  <img src="https://img.shields.io/badge/TanStack_Start-FF4154?style=flat-square&logo=react" alt="TanStack">
+  <img src="https://img.shields.io/badge/Neon_Postgres-00E59B?style=flat-square&logo=postgresql" alt="Neon">
+  <img src="https://img.shields.io/badge/Qdrant_RAG-00B4D8?style=flat-square" alt="Qdrant">
+  <img src="https://img.shields.io/badge/GitHub_App-6e40ff?style=flat-square&logo=github" alt="GitHub App">
+  <img src="https://img.shields.io/badge/Multi--Language-7_%F0%9F%8C%90-FFD700?style=flat-square" alt="7 Languages">
 </p>
 
 ---
 
-## 🔍 What is Mantiz?
+## What is Mantiz?
 
-**Mantiz** is an AI-powered lie detector for code — specifically designed to catch AI coding agents when they try to cheat their test suites.
+Mantiz is an **AI-powered honesty detector for code** — built specifically to catch AI coding agents when they cheat on test suites. It scans every line of a diff through **11 detection patterns** and produces a **Trust Score (0–100)**.
 
-When an AI agent writes code, it can subtly **disable assertions, mock failing APIs, skip test suites, hallucinate matchers, or tamper with expected values** to make tests pass. Mantiz scans every line of a diff through **11 detection patterns** (10 static + AI-assisted) and produces a **Trust Score (0–100)** with ranked findings.
+AI agents often cheat subtly: skipping tests, disabling assertions, swallowing errors, or hallucinating matchers. Mantiz catches all of it — across **7 programming languages** — and posts results as GitHub PR comments, check runs, or dashboard reports.
 
-> **Mantiz is the honesty gate for AI-generated code.** It ensures that "passing" tests actually pass because the code works, not because the agent manipulated them.
-
-> ⚠️ **Honest Accuracy:** Benchmark scores are computed dynamically by running all 11 detectors against each fixture. Dataset A uses real PRs from vitest-dev/vitest — honest code from a respected open-source project. The benchmark is a transparent regression test, not a claim of production readiness.
+> **Built for the [TestSprite S3 Hackathon](https://www.testsprite.com/hackathon-s3).** The loop: write → verify → fix. Mantiz is the verifier.
 
 ---
 
-## ✨ Features
+## Demo
 
-### 🔬 11 Detection Patterns (10 Static + AI-Assisted)
+<p align="center">
+  <img src="public/pr-scan.png" alt="PR Scan — Analyze any GitHub PR" width="720" style="border-radius: 12px; border: 1px solid #30363d;" />
+  <br />
+  <em>PR Scan — Paste a GitHub PR URL and get instant detection results.</em>
+</p>
 
-| Pattern | Severity | What It Catches |
-|---------|----------|----------------|
-| **Disabled Assertion** | 🔴 High | Tests commented out, wrapped in `if(false)`, or marked `.skip()` / `test.skip()` |
-| **Assertion Tampering** | 🔴 High | Expected values changed to match broken output instead of fixing the bug |
-| **Mock-to-Avoid-Failure** | 🟠 Medium | New mocks introduced without real-path coverage to bypass real errors |
-| **Claim-Diff Mismatch** | 🟡 Medium | Commit message says "fix tests" but diff only touches source — no test updated |
-| **Silent Catch-and-Pass** | 🟠 Medium | Empty catch blocks that swallow real errors and let the agent declare success |
-| **Hallucinated Assertion** | 🔴 High | Non-existent Jest/Vitest matchers hallucinated by AI agents (e.g. `.toExist()`) |
-| **AST Analyzer (Babel)** 🆕 | 🔴 High | Parses JS/TS code with `@babel/parser` — detects trivial function bodies (`return true/false`), async gutting, conditional wrapping, empty test shells |
-| **Tree-sitter AST** 🆕 | 🔴 High | Multi-language AST analysis via WASM parsers — Python, Go, Java, Ruby, Rust, PHP |
-| **Historical Behavioral** 🆕 | 🟡 Medium | Tracks author patterns over time — style changes, odd hours, score volatility |
-| **Mutation Susceptibility** 🆕 | 🟡 Medium | Detects fragile tests with low assertion density that can be easily mutated |
-| **AI-Assisted Detection** | 🟡 Varies | LLM-powered analysis — detects test weakening, assertion removal, semantic bypass, coverage reduction |
+<br />
 
-### 🧠 Detection Nuances
+<p align="center">
+  <img src="public/example-scan-mantiz-bot-in-pr-github.png" alt="Mantiz Bot — Automated PR Scan Comments on GitHub" width="720" style="border-radius: 12px; border: 1px solid #30363d;" />
+  <br />
+  <em>GitHub App Bot — Auto-scans every PR and posts findings as inline comments + check run.</em>
+</p>
 
-**Claim-Diff Mismatch** is Mantiz's most nuanced detector. It flags PRs where all changed files are non-functional (config, docs, deps) — but these findings aren't all equal:
+<br />
 
-| Scenario | Example | Verdict |
-|----------|---------|---------|
-| **🤖 Bot dependency update** — Author is `renovate[bot]`, `dependabot[bot]`, `angular-robot`, etc., title says `"build: update dependencies"`, only `package.json`/lockfiles changed | [Angular #69416](https://github.com/angular/angular/pull/69416) | ✅ **Legitimate** — auto-downgraded to LOW confidence (−5pts). Finding still visible but doesn't tank the score. |
-| **🧑‍💻 Agent with empty claim** — Title says `"fix: implement feature"` but only `README.md` and `.npmrc` changed | Agent claims "fix login bug" but only adds a VS Code config file | 🚨 **Suspicious** — stays HIGH confidence (−30pts). Strong signal that the agent is faking work. |
-| **🤝 Honest human PR** — Title says `"docs: update contributing guide"` and only `CONTRIBUTING.md` changed | Legitimate docs-only PR from a maintainer | ✅ **Benign** — detection is technically correct but the context (bot metadata available vs manual scan) distinguishes it. |
+<p align="center">
+  <img src="public/report-result-scan-bot.png" alt="Mantiz Report — Detailed Scan Results from Bot" width="720" style="border-radius: 12px; border: 1px solid #30363d;" />
+  <br />
+  <em>Bot Report — Full scan breakdown with per-detector findings and trust score.</em>
+</p>
 
-> **How it works:** When scanning via PR URL (requires GitHub auth), Mantiz passes the PR title and author to the detector. If the author is a known bot OR the title honestly describes non-functional changes, Mantiz **downgrades the confidence from HIGH → LOW**. Manual diffs (pasted without PR context) always get the full severity.
+<br />
 
-This means the same diff gets scored differently depending on context:
+<p align="center">
+  <img src="public/mantiz-report.png" alt="Mantiz Report — Trust Score + Detected Patterns" width="720" style="border-radius: 12px; border: 1px solid #30363d;" />
+  <br />
+  <em>Scan Report — Trust Score (0-100) with per-finding explanations.</em>
+</p>
 
-```
-Same diff (package.json + lockfile changes only):
+<br />
 
-  📋 Manual paste → HIGH confidence (−30pts) — "You should verify this"
-  🔗 PR scan (bot) → LOW confidence (−5pts)   — "Probably fine, renovate doing renovate things"
-```
-
-### 🎯 Trust Score
-
-Per-detector calibrated scoring — each detector has empirically-determined weights based on precision from 423 labeled PRs (16 DECEPTIVE, 407 LEGIT):
-
-| Detector | High | Medium | Low | Precision |
-|:---------|:----:|:------:|:---:|:---------:|
-| D10 MutationSusceptibility | 8 | 3 | 0 | 43.3% |
-| D3 MockToAvoid | 5 | 2 | 1 | 35.0% |
-| D1 DisabledAssertion | 3 | 2 | 0 | 37.5% |
-| D6 HallucinatedAssertion | 3 | 2 | 0 | 50.0% |
-| D2 AssertionTampering | 2 | 1 | 1 | 30.0% |
-| D5 SilentCatch | 1 | 1 | 0 | 7.7% |
-| D4 ClaimDiffMismatch | 0 | 0 | 0 | 0% |
-| D8 AIAssisted | 0 | 0 | 0 | 0% |
-| D9 Historical | 0 | 0 | 0 | 0% |
-| D11 AgentInstruction | 0 | 0 | 0 | 0% |
-
-File importance multiplier: `core/test/source = 1.0`, `config = 0.5`, `docs = 0.3`, `artifact = 0.05`. Minimum score is 30 when findings exist (prevents false floor). Score = max(30, 100 - min(penalty, 85)). Threshold: **default 70**, configurable per-user in Settings.
-
-### ⚙️ Per-User Settings
-
-Configure scan behavior from the [Settings](https://mantiz-wine.vercel.app/settings) page:
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| **Threshold** | 70 | Trust score threshold (0-100). Scores below this fail the check. |
-| **AI Detection** | Off | Enable LLM-powered semantic analysis |
-| **Min Score** | 0 | Hard floor — result never goes below this score |
-| **Webhook URL** | — | Receive scan results as POST requests (HMAC signed, 3x retry) |
-
-Settings apply to all scans made with your API tokens (CLI, GitHub Actions).
-
-### 🔗 Webhook System v2
-
-Receive scan results in real-time via webhook. Payload includes full findings, signed with HMAC-SHA256 for verification.
-
-**Features:**
-- 3 retry attempts with exponential backoff (1s → 4s → 15s)
-- `X-Mantiz-Signature` header for payload verification
-- Event types: `scan.completed` (pass) / `scan.failed` (fail)
-- Delivery history visible in Settings page
-- Works with Slack, Discord, Telegram, or custom endpoints
-
-**Example webhook payload:**
-```json
-{
-  "event": "scan.completed",
-  "scanId": "uuid",
-  "trustScore": 85,
-  "passed": true,
-  "threshold": 70,
-  "findings": [
-    {
-      "patternType": "disabled_assertion",
-      "filePath": "src/test.js",
-      "confidence": "high",
-      "explanation": "..."
-    }
-  ]
-}
-```
-
-### 🏷️ User Verdict
-
-Tag findings in your scan history:
-- **Confirmed** — This is a valid cheating detection ✓
-- **False Positive** — This finding was incorrect ✗
-- **Unreviewed** — Default state
-
-Helps track detection accuracy over time.
-
-### 🔐 GitHub OAuth + Session Management
-
-- Sign in with GitHub to scan pull requests
-- Signed HTTP-only cookies with HMAC-SHA256
-- Rate limiting (3 tiers: anonymous, session, token)
-- Scan history persisted per user in Neon Postgres
-
-### 🤖 AI Detection
-
-- **Toggle:** Easily enable/disable via Settings page or `--ai` CLI flag
-- **Smart Analysis:** Detects 5 AI-level patterns: test weakening, assertion removal, semantic bypass, hallucinated APIs, and coverage reduction.
-- **AI Judge** (separate from AI detection): Reviews static findings and filters false positives. Enabled via `AI_JUDGE_ENABLED=true` env var. Uses Groq (`GROQ_API_KEY`) or Fireworks (`FIREWORKS_API_KEY`).
-
-### 📊 Routes
-
-| Route | Description |
-|-------|-------------|
-| `/` | Landing page — hero, features, detector patterns |
-| `/scan` | Paste & scan a raw git diff |
-| `/pr-scan` | Scan a GitHub PR by URL (requires auth) |
-| `/login` | GitHub OAuth sign-in |
-| `/history` | Scan history with detailed findings modal + user verdict tagging |
-| `/settings` | Scan settings (threshold, AI toggle, minScore) + API token management + webhook config |
-| `/benchmark` | Interactive benchmark — 39 fixtures across 4 datasets |
-
-### 🧩 Interactive Scan Animation
-
-When scanning, an animated terminal log shows real-time detector progress. After completion, a per-detector breakdown displays finding counts with high/med/low severity colors.
-
-### 📄 Diff Viewer
-
-GitHub-style diff rendering with green/red line highlighting, line number gutter, +/- markers, copy-to-clipboard, and add/del count stats.
-
-### 🔗 Share Results
-
-Every scan generates a public shareable link (`/share/:id`) — no authentication required. Share findings with your team, post them in code reviews, or include them in CI dashboards.
+<p align="center">
+  <img src="public/history.png" alt="History Dashboard — All scans in one place" width="720" style="border-radius: 12px; border: 1px solid #30363d;" />
+  <br />
+  <em>History — Every scan, manual or automated, saved and searchable.</em>
+</p>
 
 ---
 
-## 🚀 Quick Start
+## Features
 
-### 1. Visit the Live App
+| | Feature | |
+|---|---|---|
+| 🤖 | **GitHub App Bot** — Auto-scan every PR. Inline comments + check runs + dashboard history for every scan | [Install Bot &rarr;](https://github.com/apps/mantiz) |
+| 🧠 | **RAG Codebase Context** — Qdrant vector DB indexes your repo. AI knows your APIs, no false positives | [Configure Qdrant](docs/qdrant.md) |
+| 🌐 | **7 Languages** — JS/TS, Python, Go, Java, Ruby, Rust, PHP | [Multi-language docs](packages/mantiz-core/README.md) |
+| 🩹 | **Self-Heal** — Auto-fix detected issues with AI-generated patches. One-click apply via PR suggestions | `--fix` flag |
+| 🔬 | **11 Detection Patterns** — Static analysis + AI-assisted + historical behavioral | [Detector details](docs/BENCHMARK.md) |
+| 🔗 | **CI/CD** — GitHub Action, CLI, API. Block builds on low trust scores | `uses: farhank15/mantiz@main` |
+| 📊 | **Dashboard** — Scan history, per-user settings, API tokens, webhooks, share links | [mantiz-wine.vercel.app](https://mantiz-wine.vercel.app) |
+| 🔐 | **GitHub OAuth** — Signed cookies, rate limiting, history persistence | |
 
-**[🔗 mantiz-wine.vercel.app](https://mantiz-wine.vercel.app)**
+---
 
-Paste any GitHub-style diff and get instant results. No signup needed for manual scans.
-
-### 2. Run Locally
+## Quick Start
 
 ```bash
-# Clone the repo
+# Visit the live app
+open https://mantiz-wine.vercel.app
+
+# Or run locally
 git clone https://github.com/farhank15/mantiz.git
 cd mantiz
-
-# Install dependencies
 pnpm install
-
-# Set up environment
-cp .env.example .env
-```
-
-Fill `.env` with:
-
-```env
-# Database (Neon Postgres — required for auth & history)
-DATABASE_URL='postgresql://...'
-
-# GitHub OAuth (required for PR scanning & login)
-GITHUB_CLIENT_ID=your_github_oauth_client_id
-GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
-
-# Session secret (required — at least 32 characters)
-SESSION_SECRET=your_random_secret_at_least_32_chars
-
-# AI Detection (optional — D8: find new cheating patterns)
-AI_DETECTION_ENABLED=true
-GROQ_API_KEY=gsk_your_groq_api_key
-# or FIREWORKS_API_KEY=fw_your_fireworks_key
-
-# AI Judge (optional — reviews static findings, filters false positives)
-AI_JUDGE_ENABLED=true
-
-# (AI Judge shares the same API key as AI Detection above)
-
-# Webhook secret (optional — for HMAC signing webhook payloads)
-WEBHOOK_SECRET=your_random_secret_at_least_32_chars
-
-# Debug logging (optional — enables per-detector console logs)
-MANTIZ_DEBUG=true
-
-# App URL (optional — defaults to http://localhost:3030)
-APP_URL=http://localhost:3030
-```
-
-```bash
-# Push database schema
-npx drizzle-kit push
-
-# Start dev server
+cp .env.example .env   # Add DATABASE_URL + GitHub OAuth keys
 pnpm run dev
 ```
 
-### 3. Build for Production
-
-```bash
-pnpm run build
-pnpm run preview
-```
-
-### 4. Apply Database Migrations
-
-```bash
-# After adding new tables (e.g., user_settings, webhook_events)
-npx drizzle-kit push
-```
-
 ---
 
-## 🧪 How to Use
+## How to Use
 
-### 🧑‍💻 Manual Scan (No Auth Needed)
+### 🤖 GitHub App Bot (Recommended)
 
-1. Go to [/scan](https://mantiz-wine.vercel.app/scan)
-2. Paste a GitHub-style diff
-3. Click **Scan Diff**
-4. Review findings + Trust Score
+The easiest way. Install the Mantiz GitHub App on your repos — every new PR gets scanned automatically with inline comments, check runs, and dashboard history.
 
-### 🏭 PR Scan (Requires GitHub Auth)
+```
+Install → Open PR → Mantiz posts results as PR comments + check runs + saves to your history
+```
 
-1. Go to [/pr-scan](https://mantiz-wine.vercel.app/pr-scan)
-2. Sign in with GitHub
-3. Paste a PR URL: `https://github.com/owner/repo/pull/123`
-4. Mantiz fetches the diff, runs 11 detectors, and returns findings
+**What happens when you open a PR:**
+1. Mantiz receives the webhook
+2. Scans the diff with all 11 detectors
+3. Posts a trust score comment on the PR with per-finding breakdown
+4. Sets a check run (pass if score ≥ threshold)
+5. Saves the scan to your dashboard history (requires one-time login)
 
-### 🔗 GitHub Actions (Reusable Action)
+<p align="center">
+  <a href="https://github.com/apps/mantiz"><img src="https://img.shields.io/badge/Install_Mantiz_Bot-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="Install Mantiz Bot"></a>
+</p>
 
-Add to your workflow to scan every PR:
+<br />
+
+### 🔗 GitHub Actions
+
+For repos that can't use the App, or when you want CI gating:
 
 ```yaml
-- name: Run Mantiz Scan
+- name: Mantiz Scan
   uses: farhank15/mantiz@main
   with:
     api-token: ${{ secrets.MANTIZ_API_TOKEN }}
-    threshold: 70          # Override default (configurable in Settings)
-    use-ai: true           # Enable AI-assisted detection
-    json-output: true      # JSON output for parsing
+    threshold: 70
 ```
 
-### 🔗 CLI Integration
+Generate a token from [Settings &rarr;](https://mantiz-wine.vercel.app/settings)
 
-Install the CLI and scan with options:
+<br />
+
+### 💻 CLI
 
 ```bash
-pnpm add -g @mantiz/cli
+# Local scan (no server needed)
+npx mantiz-cli
 
-# Local scan (no cloud)
-mantiz-scan
-
-# Cloud scan with history persistence
-mantiz-scan --token mtz_abc123 --save --ai
-
-# JSON output for CI
-mantiz-scan --json
+# With AI + cloud persistence
+npx mantiz-cli --token mtz_abc123 --ai --save --fix
 ```
 
-### 🔔 Webhook Integration
+<br />
 
-Set up a webhook URL in [Settings](https://mantiz-wine.vercel.app/settings) to receive scan results in real-time:
+### 🌐 Dashboard
 
-```bash
-# Example: Receive webhook payload
-POST /mantiz-webhook
-Content-Type: application/json
-X-Mantiz-Signature: sha256=...
-X-Mantiz-Event: scan.failed
-
-{
-  "event": "scan.failed",
-  "trustScore": 45,
-  "threshold": 70,
-  "findings": [...]
-}
-```
-
-Verify signature:
-```javascript
-const crypto = require('crypto')
-const hmac = crypto.createHmac('sha256', WEBHOOK_SECRET)
-hmac.update(JSON.stringify(req.body))
-const expected = 'sha256=' + hmac.digest('hex')
-if (req.headers['x-mantiz-signature'] !== expected) return res.status(401)
-```
-
-### 🩹 Auto-Heal Mode (`--fix`)
-
-Mantiz doesn't just report cheating — it can **auto-fix it**. Run with the `--fix` flag to automatically apply code patches for detected issues:
-
-```bash
-npx mantiz scan diff.diff --fix
-```
-
-**What gets fixed:**
-
-| Pattern | Auto-Fix Behavior |
-|---------|-------------------|
-| **Disabled Assertion** | Re-enables `.skip()` tests, removes `if(false)` wrappers |
-| **Assertion Tampering** | Flags the tampered value with a fix comment |
-| **Silent Catch-and-Pass** | Wraps the empty catch body with `console.error` logging |
-| **Mock-to-Avoid-Failure** | Adds a comment suggesting real integration test |
-
+| | Manual Scan | PR Scan |
+|---|---|---|
+| Where | [/scan](https://mantiz-wine.vercel.app/scan) | [/pr-scan](https://mantiz-wine.vercel.app/pr-scan) |
+| Input | Paste raw diff | GitHub PR URL |
+| Auth | None | GitHub OAuth |
+| History | ✅ Saved | ✅ Saved |
 
 ---
 
-## 📊 Benchmark Results
+## Multi-Language Detection
 
-> **⚠️ REALITY CHECK:** Benchmark scores reflect actual detector output, not target scores. A score of 10 does NOT mean "10% accurate" — it means the diff triggered enough detector findings to floor the score. Each detector has calibrated weights based on precision from a deduped validation set (203 unique PRs: 20 DECEPTIVE, 183 LEGIT).
+All 6 static detectors support **7 languages** via a shared language registry:
 
-Mantiz includes a built-in benchmark suite with **42 fixtures across 4 datasets**:
+| Language | Disabled Assertion | Silent Catch | Mock Detection |
+|:---------|:------------------:|:------------:|:--------------:|
+| JS/TS | `.skip()`, `xit()` | `catch {}` | `vi.mock()` |
+| Python | `@pytest.mark.skip` | `except: pass` | `@patch` |
+| Go | `t.Skip()` | `if err != nil { return nil }` | `.On().Return()` |
+| Java | `@Disabled` | `catch (E e) {}` | `Mockito.mock` |
+| Ruby | `xit`, `pending` | `rescue; end` | `allow().to receive` |
+| Rust | `#[ignore]` | — | — |
+| PHP | `markTestSkipped()` | `catch (Exception $e) {}` | `createMock()` |
 
-| Dataset | Description | Fixtures | Source |
-|:---:|---|:---:|:------:|
-| **A** — "The Honest Code" | Proper diff + valid test updates | 4 | 🔴 **Real PRs** (vitest-dev/vitest) |
-| **B** — "The Lazy/Cheating AI" | `.skip()`, `if(false)`, commented assertions | 11 | 📜 **Research-based** (DebugML/UC Berkeley) |
-| **C** — "The Smart Evasion AI" | Assertion tampering, mock + empty catch | 4 | 📜 **Research-based** (DebugML) |
-| **FP** — "False Positive" | Legitimate code patterns | 23 | 🟡 **Mixed** (2 real vitest PRs + 21 documented) |
-
-**How scores work:** Per-detector calibrated weights (see Trust Score table above). Penalty = sum of weighted findings × file importance multiplier. Score = max(30, 100 - min(penalty, 85)). Every score is computed dynamically by `scanDiff()` running all 11 detectors in real time. **No scores are hardcoded or fabricated.**
-
-> **Validation status:** 423 labeled PRs in calibration (16 DECEPTIVE, 407 LEGIT). Per-detector F1 measured against ground truth. Score distribution: avg 98.5/100 — 424 CLEAN, 7 SUSPICIOUS, 2 DECEPTIVE across raw candidates.
-
-Visit the [**/benchmark**](https://mantiz-wine.vercel.app/benchmark) dashboard to see live accuracy results with per-fixture breakdowns.
+The heal engine can also auto-fix all of these patterns across every language.
 
 ---
 
-## 🛠 Tech Stack
+## Configuration
 
-| Layer | Technology |
-|-------|-----------|
+### Environment Variables
+
+| Variable | Required | Description |
+|:---------|:--------:|:------------|
+| `DATABASE_URL` | ✅ | Neon Postgres connection string |
+| `GITHUB_CLIENT_ID` | ✅ | GitHub OAuth App client ID |
+| `GITHUB_CLIENT_SECRET` | ✅ | GitHub OAuth App secret |
+| `SESSION_SECRET` | ✅ | ≥32 chars, HMAC session signing |
+| `FIREWORKS_API_KEY` | Optional | AI detection + embeddings (primary) |
+| `GROQ_API_KEY` | Optional | AI detection fallback |
+| `QDRANT_URL` | Optional | Qdrant Cloud cluster URL |
+| `QDRANT_API_KEY` | Optional | Qdrant API key |
+| `GITHUB_APP_ID` | Optional | GitHub App ID (auto-scan bot) |
+| `GITHUB_APP_PRIVATE_KEY` | Optional | GitHub App private key PEM |
+| `GITHUB_WEBHOOK_SECRET` | Optional | Webhook HMAC secret |
+
+### Per-User Settings
+
+Configured at [Settings](https://mantiz-wine.vercel.app/settings):
+
+- **Threshold** (default 70) — minimum trust score
+- **AI Detection** — enable LLM-powered analysis
+- **Min Score** — hard floor for results
+- **Webhook URL** — receive scan results as POST requests
+
+---
+
+## Benchmark
+
+42 fixtures across 4 datasets. Live dashboard at [/benchmark](https://mantiz-wine.vercel.app/benchmark).
+
+| Dataset | Fixtures | Type |
+|:--------|:--------:|:-----|
+| A — Honest Code | 4 | Real PRs (vitest-dev/vitest) |
+| B — Lazy Cheating AI | 11 | Research-based (DebugML) |
+| C — Smart Evasion AI | 4 | Research-based (DebugML) |
+| FP — False Positives | 23 | 2 real + 21 documented |
+
+See [BENCHMARK.md](docs/BENCHMARK.md) for full calibration data and per-detector precision/recall.
+
+---
+
+## Tech Stack
+
+| Layer | |
+|:------|---|
 | **Framework** | [TanStack Start](https://tanstack.com/start) (React 19) |
-| **Routing** | [TanStack Router](https://tanstack.com/router) (file-based, auto code-split) |
-| **Styling** | [Tailwind CSS v4](https://tailwindcss.com) + Magic UI |
-| **Animation** | [Framer Motion](https://framermotion.framer.website) |
-| **Icons** | [Lucide](https://lucide.dev) |
-| **Database** | [Neon Postgres](https://neon.tech) (serverless) |
-| **ORM** | [Drizzle ORM](https://orm.drizzle.team) |
-| **Auth** | GitHub OAuth + HMAC-signed session cookies |
-| **AI** | LLM-powered detection engine |
-| **AST Parsing** | [@babel/parser](https://babeljs.io/docs/babel-parser) |
-| **Behavioral Tracking** | Neon Postgres (author profiles + events) |
-| **Diff Parsing** | [diff](https://npm.im/diff) |
-| **Rate Limiting** | In-memory sliding window (3 tiers) |
-| **GitHub API** | [Octokit](https://github.com/octokit) |
-| **Bundler** | [Vite 8](https://vite.dev) + TanStack Router Plugin |
+| **Database** | [Neon Postgres](https://neon.tech) + [Drizzle ORM](https://orm.drizzle.team) |
+| **Vector DB** | [Qdrant Cloud](https://qdrant.io) — HNSW + scalar quantization |
+| **AI / LLM** | Fireworks AI (primary) + Groq (fallback) |
+| **Embeddings** | `nomic-embed-text-v1.5` via Fireworks ($0.008/1M tokens) |
+| **GitHub** | Octokit (App + OAuth) |
+| **AST** | Tree-sitter WASM (8 languages) + Babel parser |
+| **Styling** | Tailwind CSS v4 + Magic UI + Framer Motion |
 | **Deploy** | [Vercel](https://vercel.com) |
 
 ---
 
-## 🤝 Contributing
+## Project Structure
 
-1. Fork the repo
-2. Create a feature branch (`git checkout -b feat/amazing-detector`)
-3. Commit your changes (`git commit -m 'feat: add new detection pattern'`)
-4. Push to the branch (`git push origin feat/amazing-detector`)
-5. Open a Pull Request
+```
+src/
+├── detectors/       — 11 detection engines + heal engine + language registry
+├── server/          — GitHub App, Qdrant indexing, auth, settings, webhooks
+├── routes/          — TanStack file-based routes (7 pages + 3 API)
+├── components/      — UI components + Magic UI animations
+├── schemas/         — Drizzle ORM (11 tables)
+└── lib/             — DB init, auth context, query client
+
+packages/
+├── mantiz-core/     — Standalone detection engine (npm)
+└── mantiz-cli/      — CLI tool (npm)
+```
 
 ---
 
-## 📜 License
+## Community & Support
 
-MIT — see [LICENSE](LICENSE).
+| | |
+|---|---|
+| 🐛 **Report bugs** | [GitHub Issues](https://github.com/farhank15/mantiz/issues) |
+| 📖 **Changelog** | [CHANGELOG.md](CHANGELOG.md) |
+| 🔒 **Security** | [SECURITY.md](SECURITY.md) |
+| 📝 **Contributing** | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| 💬 **Discord** | [TestSprite Community](https://discord.gg/testsprite) |
 
 ---
 
 <p align="center">
-  <a href="https://mantiz-wine.vercel.app">
-    <img src="https://img.shields.io/badge/Try_Mantiz_Now-58A6FF?style=for-the-badge" alt="Try Mantiz">
-  </a>
-  <a href="https://github.com/farhank15/mantiz">
-    <img src="https://img.shields.io/badge/GitHub-333?style=for-the-badge&logo=github" alt="GitHub">
-  </a>
+  <a href="https://mantiz-wine.vercel.app"><img src="https://img.shields.io/badge/Try_Mantiz_Now-58A6FF?style=for-the-badge" alt="Try Mantiz"></a>
+  <a href="https://github.com/farhank15/mantiz"><img src="https://img.shields.io/badge/GitHub-333?style=for-the-badge&logo=github" alt="GitHub"></a>
 </p>
