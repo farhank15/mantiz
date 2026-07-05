@@ -263,5 +263,7 @@ async function main(): Promise<void> {
   console.log('\x1b[32m✓ BUILD PASSED — All checks clean\x1b[0m\n')
   process.exit(0)
 }
+  process.exit(0)
+}
 
 main()

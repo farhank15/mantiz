@@ -106,7 +106,6 @@ export const saveUserSettings = createServerFn({ method: 'POST' })
         minScore: data.minScore ?? DEFAULT_SETTINGS.minScore,
         webhookUrl: data.webhookUrl ?? DEFAULT_SETTINGS.webhookUrl,
         webhookEnabled: data.webhookEnabled ?? DEFAULT_SETTINGS.webhookEnabled,
-        aiEnabled: data.aiEnabled ?? DEFAULT_SETTINGS.aiEnabled,
       })
     }
 
@@ -127,7 +126,6 @@ export async function loadUserSettings(userId: string): Promise<UserSettingsData
       minScore: settings.minScore,
       webhookUrl: settings.webhookUrl,
       webhookEnabled: settings.webhookEnabled,
-      aiEnabled: settings.aiEnabled,
     }
   } catch {
     return DEFAULT_SETTINGS

@@ -75,6 +75,38 @@
         "modifiedAt": 1783180745344,
         "status": "modified"
       }
+    ],
+    [
+      "/home/mawa/My_File/Development/mantiz/src/server/settings.ts",
+      {
+        "filePath": "/home/mawa/My_File/Development/mantiz/src/server/settings.ts",
+        "modifiedAt": 1783258025160,
+        "status": "modified"
+      }
+    ],
+    [
+      "/home/mawa/My_File/Development/mantiz/src/routes/settings/index.tsx",
+      {
+        "filePath": "/home/mawa/My_File/Development/mantiz/src/routes/settings/index.tsx",
+        "modifiedAt": 1783258085063,
+        "status": "modified"
+      }
+    ],
+    [
+      "/home/mawa/My_File/Development/mantiz/packages/mantiz-core/src/detectors/silent-catch.ts",
+      {
+        "filePath": "/home/mawa/My_File/Development/mantiz/packages/mantiz-core/src/detectors/silent-catch.ts",
+        "modifiedAt": 1783258053477,
+        "status": "modified"
+      }
+    ],
+    [
+      "/home/mawa/My_File/Development/mantiz/src/cli/scan.ts",
+      {
+        "filePath": "/home/mawa/My_File/Development/mantiz/src/cli/scan.ts",
+        "modifiedAt": 1783258070270,
+        "status": "modified"
+      }
     ]
   ],
   "failedFiles": [
@@ -163,7 +195,7 @@
     [
       "mock-login",
       [
-        "LOOP.md",
+        "CONTRIBUTING.md",
         "LOOP.md",
         "LOOP.md",
         "LOOP.md",
@@ -189,10 +221,10 @@
         "testsprite_tests/plans/12-settings-revoke-token.json",
         "testsprite_tests/plans/14-history-user-verdict.json",
         "testsprite_tests/plans/15-settings-webhook-config.json",
+        "testsprite_tests/plans/15-steps.json",
         "testsprite_tests/plans/16-settings-threshold-ai-toggle.json",
-        "testsprite_tests/plans/17-history-source-tracking-label.json",
-        "testsprite_tests/plans/authenticated-pr-scan-mock.json",
-        "testsprite_tests/plans/authenticated-pr-scan-mock.json"
+        "testsprite_tests/plans/16-steps.json",
+        "testsprite_tests/plans/17-history-source-tracking-label.json"
       ]
     ],
     [
@@ -385,6 +417,24 @@
         "src/routeTree.gen.ts",
         "src/routeTree.gen.ts",
         "src/routeTree.gen.ts"
+      ]
+    ],
+    [
+      "mock-sign",
+      []
+    ],
+    [
+      "pVOugpmLLuszzGI6IcYADUvrTMCPpf06HsH+f0lzgTU=",
+      []
+    ],
+    [
+      "aiEnabled",
+      [
+        "src/detectors/engine.ts",
+        "src/detectors/engine.ts",
+        "src/schemas/index.ts",
+        "scripts/eval/shared-scan.ts",
+        "scripts/eval/shared-scan.ts"
       ]
     ]
   ],
@@ -781,6 +831,162 @@
         "matched": 1
       },
       "timestamp": 1783180745339
+    },
+    {
+      "toolName": "smart_grep",
+      "params": {
+        "query": "mock-login",
+        "matchCount": 30,
+        "filesScanned": 174
+      },
+      "timestamp": 1783257444587
+    },
+    {
+      "toolName": "smart_grep",
+      "params": {
+        "query": "mock-sign",
+        "matchCount": 0,
+        "filesScanned": 312
+      },
+      "timestamp": 1783257452862
+    },
+    {
+      "toolName": "smart_grep",
+      "params": {
+        "query": "pVOugpmLLuszzGI6IcYADUvrTMCPpf06HsH+f0lzgTU=",
+        "matchCount": 0,
+        "filesScanned": 312
+      },
+      "timestamp": 1783257455850
+    },
+    {
+      "toolName": "smart_grep",
+      "params": {
+        "query": "aiEnabled",
+        "matchCount": 5,
+        "filesScanned": 313
+      },
+      "timestamp": 1783258018959
+    },
+    {
+      "toolName": "precise_diff_editor",
+      "params": {
+        "filePath": "/home/mawa/My_File/Development/mantiz/src/server/settings.ts",
+        "editIndex": 0,
+        "success": true,
+        "matched": 1
+      },
+      "timestamp": 1783258025141
+    },
+    {
+      "toolName": "precise_diff_editor",
+      "params": {
+        "filePath": "/home/mawa/My_File/Development/mantiz/src/server/settings.ts",
+        "editIndex": 1,
+        "success": true,
+        "matched": 1
+      },
+      "timestamp": 1783258025143
+    },
+    {
+      "toolName": "precise_diff_editor",
+      "params": {
+        "filePath": "/home/mawa/My_File/Development/mantiz/src/server/settings.ts",
+        "editIndex": 2,
+        "success": true,
+        "matched": 1
+      },
+      "timestamp": 1783258025144
+    },
+    {
+      "toolName": "precise_diff_editor",
+      "params": {
+        "filePath": "/home/mawa/My_File/Development/mantiz/src/server/settings.ts",
+        "editIndex": 3,
+        "success": true,
+        "matched": 1
+      },
+      "timestamp": 1783258025158
+    },
+    {
+      "toolName": "precise_diff_editor",
+      "params": {
+        "filePath": "/home/mawa/My_File/Development/mantiz/src/server/settings.ts",
+        "editIndex": 4,
+        "success": true,
+        "matched": 1
+      },
+      "timestamp": 1783258025159
+    },
+    {
+      "toolName": "precise_diff_editor",
+      "params": {
+        "filePath": "/home/mawa/My_File/Development/mantiz/src/routes/settings/index.tsx",
+        "editIndex": 0,
+        "success": true,
+        "matched": 1
+      },
+      "timestamp": 1783258033535
+    },
+    {
+      "toolName": "precise_diff_editor",
+      "params": {
+        "filePath": "/home/mawa/My_File/Development/mantiz/src/routes/settings/index.tsx",
+        "editIndex": 1,
+        "success": true,
+        "matched": 1
+      },
+      "timestamp": 1783258033537
+    },
+    {
+      "toolName": "precise_diff_editor",
+      "params": {
+        "filePath": "/home/mawa/My_File/Development/mantiz/src/routes/settings/index.tsx",
+        "editIndex": 2,
+        "success": true,
+        "matched": 1
+      },
+      "timestamp": 1783258033539
+    },
+    {
+      "toolName": "precise_diff_editor",
+      "params": {
+        "filePath": "/home/mawa/My_File/Development/mantiz/packages/mantiz-core/src/detectors/silent-catch.ts",
+        "editIndex": 0,
+        "success": true,
+        "matched": 1
+      },
+      "timestamp": 1783258053477
+    },
+    {
+      "toolName": "precise_diff_editor",
+      "params": {
+        "filePath": "/home/mawa/My_File/Development/mantiz/src/cli/scan.ts",
+        "editIndex": 0,
+        "success": true,
+        "matched": 1
+      },
+      "timestamp": 1783258057398
+    },
+    {
+      "toolName": "precise_diff_editor",
+      "params": {
+        "filePath": "/home/mawa/My_File/Development/mantiz/src/cli/scan.ts",
+        "editIndex": 0,
+        "success": true,
+        "matched": 1
+      },
+      "timestamp": 1783258070269
+    },
+    {
+      "toolName": "precise_diff_editor",
+      "params": {
+        "filePath": "/home/mawa/My_File/Development/mantiz/src/routes/settings/index.tsx",
+        "editIndex": 0,
+        "success": true,
+        "matched": 1
+      },
+      "timestamp": 1783258085062
     }
   ],
   "conventions": {

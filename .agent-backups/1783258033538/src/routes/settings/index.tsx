@@ -21,7 +21,6 @@ import {
   Settings,
   CheckCircle2,
   History,
-  Brain,
 } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import { createToken, listTokens, revokeToken } from "../../server/tokens";
@@ -484,46 +483,6 @@ function SettingsPage() {
                   <span>0 (No floor)</span>
                   <span>25</span>
                   <span>50 (Max floor)</span>
-                </div>
-              </div>
-
-              {/* AI Detection */}
-              <div className="px-5 py-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Brain className="h-4 w-4 text-interactive" />
-                    <div>
-                      <label className="text-sm font-medium text-ink">
-                        AI-Assisted Detection
-                      </label>
-                      <p className="text-xs text-ink-muted">
-                        Enable LLM semantic analysis and AI Judge reviews
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    id="ai-detection-toggle"
-                    aria-label="Toggle AI-assisted detection"
-                    onClick={() =>
-                      setSettings({
-                        ...settings,
-                        aiEnabled: !settings.aiEnabled,
-                      })
-                    }
-                    className={`relative h-7 w-12 rounded-full transition-colors ${
-                      settings.aiEnabled
-                        ? "bg-interactive"
-                        : "bg-surface-2"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
-                        settings.aiEnabled
-                          ? "translate-x-5"
-                          : "translate-x-0"
-                      }`}
-                    />
-                  </button>
                 </div>
               </div>
 

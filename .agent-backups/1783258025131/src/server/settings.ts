@@ -16,7 +16,6 @@ export interface UserSettingsData {
   minScore: number
   webhookUrl: string | null
   webhookEnabled: boolean
-  aiEnabled: boolean
 }
 
 const DEFAULT_SETTINGS: UserSettingsData = {
@@ -24,7 +23,6 @@ const DEFAULT_SETTINGS: UserSettingsData = {
   minScore: 0,
   webhookUrl: null,
   webhookEnabled: false,
-  aiEnabled: false,
 }
 
 /**
@@ -47,7 +45,6 @@ export const getUserSettings = createServerFn({ method: 'POST' }).handler(async 
     minScore: settings.minScore,
     webhookUrl: settings.webhookUrl,
     webhookEnabled: settings.webhookEnabled,
-    aiEnabled: settings.aiEnabled,
   } satisfies UserSettingsData
 })
 
@@ -67,11 +64,6 @@ export const saveUserSettings = createServerFn({ method: 'POST' })
     if (v.minScore !== undefined) {
       if (typeof v.minScore !== 'number' || v.minScore < 0 || v.minScore > 100) {
         throw new Error('Min score must be between 0 and 100')
-      }
-    }
-    if (v.aiEnabled !== undefined) {
-      if (typeof v.aiEnabled !== 'boolean') {
-        throw new Error('AI enabled must be a boolean')
       }
     }
     if (v.webhookUrl !== undefined && v.webhookUrl !== null) {
@@ -106,7 +98,6 @@ export const saveUserSettings = createServerFn({ method: 'POST' })
         minScore: data.minScore ?? DEFAULT_SETTINGS.minScore,
         webhookUrl: data.webhookUrl ?? DEFAULT_SETTINGS.webhookUrl,
         webhookEnabled: data.webhookEnabled ?? DEFAULT_SETTINGS.webhookEnabled,
-        aiEnabled: data.aiEnabled ?? DEFAULT_SETTINGS.aiEnabled,
       })
     }
 
@@ -127,7 +118,6 @@ export async function loadUserSettings(userId: string): Promise<UserSettingsData
       minScore: settings.minScore,
       webhookUrl: settings.webhookUrl,
       webhookEnabled: settings.webhookEnabled,
-      aiEnabled: settings.aiEnabled,
     }
   } catch {
     return DEFAULT_SETTINGS

@@ -258,7 +258,7 @@ async function main(): Promise<void> {
   if (result.trustScore < threshold) {
     console.log(`\x1b[31m✗ BUILD FAILED — Trust score below ${threshold} threshold\x1b[0m\n`)
     process.exit(1)
-  }
+  
 
   console.log('\x1b[32m✓ BUILD PASSED — All checks clean\x1b[0m\n')
   process.exit(0)

@@ -21,7 +21,6 @@ import {
   Settings,
   CheckCircle2,
   History,
-  Brain,
 } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import { createToken, listTokens, revokeToken } from "../../server/tokens";

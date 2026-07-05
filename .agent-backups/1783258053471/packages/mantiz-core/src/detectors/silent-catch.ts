@@ -105,7 +105,7 @@ function scanForSilentCatches(hunkContent: string, baseLine: number, lang: strin
     }
   }
 
-  const catchOpenPattern = getCatchOpenPattern(lang); const blockClose = getBlockCloseChar(lang)
+  const catchOpenPattern = getCatchOpenPattern(lang)      const blockClose = getBlockCloseChar(lang)
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i]

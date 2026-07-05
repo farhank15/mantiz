@@ -127,7 +127,6 @@ export async function loadUserSettings(userId: string): Promise<UserSettingsData
       minScore: settings.minScore,
       webhookUrl: settings.webhookUrl,
       webhookEnabled: settings.webhookEnabled,
-      aiEnabled: settings.aiEnabled,
     }
   } catch {
     return DEFAULT_SETTINGS

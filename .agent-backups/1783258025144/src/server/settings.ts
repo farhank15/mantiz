@@ -69,11 +69,6 @@ export const saveUserSettings = createServerFn({ method: 'POST' })
         throw new Error('Min score must be between 0 and 100')
       }
     }
-    if (v.aiEnabled !== undefined) {
-      if (typeof v.aiEnabled !== 'boolean') {
-        throw new Error('AI enabled must be a boolean')
-      }
-    }
     if (v.webhookUrl !== undefined && v.webhookUrl !== null) {
       try {
         new URL(v.webhookUrl)
@@ -106,7 +101,6 @@ export const saveUserSettings = createServerFn({ method: 'POST' })
         minScore: data.minScore ?? DEFAULT_SETTINGS.minScore,
         webhookUrl: data.webhookUrl ?? DEFAULT_SETTINGS.webhookUrl,
         webhookEnabled: data.webhookEnabled ?? DEFAULT_SETTINGS.webhookEnabled,
-        aiEnabled: data.aiEnabled ?? DEFAULT_SETTINGS.aiEnabled,
       })
     }
 
@@ -127,7 +121,6 @@ export async function loadUserSettings(userId: string): Promise<UserSettingsData
       minScore: settings.minScore,
       webhookUrl: settings.webhookUrl,
       webhookEnabled: settings.webhookEnabled,
-      aiEnabled: settings.aiEnabled,
     }
   } catch {
     return DEFAULT_SETTINGS
