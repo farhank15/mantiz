@@ -39,10 +39,6 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish @farhank15/mantiz-cli
-        run: cd packages/mantiz-cli && pnpm publish --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-cli-npm:
     name: Publish mantiz-cli to NPM Registry
