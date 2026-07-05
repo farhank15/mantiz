@@ -3,8 +3,10 @@ import { getVectorSize } from "./embedding-provider";
 
 // ─── Configuration ──────────────────────────────────────────────
 
-const QDRANT_URL =
-  typeof process !== "undefined" ? process.env.QDRANT_URL : undefined;
+// Qdrant Cloud provides CLUSTER_ENDPOINT; our code uses QDRANT_URL.
+// Support both names so users don't have to rename the env var.
+const RAW_QDRANT_URL =
+  typeof process !== "undefined" ? (process.env.QDRANT_URL || process.env.CLUSTER_ENDPOINT) : undefined;
 const QDRANT_API_KEY =
   typeof process !== "undefined" ? process.env.QDRANT_API_KEY : undefined;
 
@@ -17,13 +19,13 @@ let _client: QdrantClient | null = null;
  */
 export function getQdrantClient(): QdrantClient {
   if (!_client) {
-    if (!QDRANT_URL || !QDRANT_API_KEY) {
+    if (!RAW_QDRANT_URL || !QDRANT_API_KEY) {
       throw new Error(
-        "Qdrant not configured. Set QDRANT_URL and QDRANT_API_KEY environment variables.",
+        "Qdrant not configured. Set QDRANT_URL (or CLUSTER_ENDPOINT) and QDRANT_API_KEY environment variables.",
       );
     }
     _client = new QdrantClient({
-      url: QDRANT_URL,
+      url: RAW_QDRANT_URL,
       apiKey: QDRANT_API_KEY,
       // REST API is used (default) — works best with Vercel serverless
     });
@@ -44,7 +46,7 @@ export function getCollectionName(repo: string): string {
  * Check if Qdrant is configured.
  */
 export function isQdrantConfigured(): boolean {
-  return !!(QDRANT_URL && QDRANT_API_KEY);
+  return !!(RAW_QDRANT_URL && QDRANT_API_KEY);
 }
 
 // ─── Collection Management ──────────────────────────────────────

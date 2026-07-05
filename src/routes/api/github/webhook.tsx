@@ -136,7 +136,7 @@ export const Route = createFileRoute("/api/github/webhook")({
                 });
 
                 // ── Index repo for RAG (blocking with timeout) ────
-                // Index first 50 source files (best-effort within 30s timeout).
+                // Index first 50 source files (best-effort within 120s timeout).
                 // Full indexing of large repos needs a background worker.
                 for (const repo of repos) {
                   if (repo.full_name) {
@@ -147,7 +147,7 @@ export const Route = createFileRoute("/api/github/webhook")({
                         await Promise.race([
                           indexRepository(inst.id, ownerName, repoSlug, 50),
                           new Promise((_, reject) =>
-                            setTimeout(() => reject(new Error("Indexing timeout (30s)")), 30_000)
+                            setTimeout(() => reject(new Error("Indexing timeout (120s)")), 120_000)
                           ),
                         ])
                       } catch (indexErr) {
@@ -199,7 +199,7 @@ export const Route = createFileRoute("/api/github/webhook")({
                       await Promise.race([
                         indexRepository(instId, ownerName, repoSlug, 50),
                         new Promise((_, reject) =>
-                          setTimeout(() => reject(new Error("Indexing timeout (30s)")), 30_000)
+                          setTimeout(() => reject(new Error("Indexing timeout (120s)")), 120_000)
                         ),
                       ])
                     } catch (indexErr) {

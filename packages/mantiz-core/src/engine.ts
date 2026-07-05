@@ -138,7 +138,20 @@ export function scanDiff(rawDiff: string, options?: { minScore?: number }): Scan
   const engineFloor = staticFindings.length > 0 ? 30 : 0
   const customFloor = options?.minScore ?? 0
   const minScore = Math.max(engineFloor, customFloor)
-  const trustScore = Math.max(minScore, Math.round(100 - deductions))
+  let trustScore = Math.max(minScore, Math.round(100 - deductions))
+
+  // ─── Ceiling Rule ──────────────────────────────────────────
+  // High-severity findings cap the maximum possible score.
+  // This prevents "2 High findings but Clean 97" paradox.
+  const highCount = staticFindings.filter(f => f.confidence === 'high').length
+  const mediumCount = staticFindings.filter(f => f.confidence === 'medium').length
+  if (highCount >= 2) {
+    trustScore = Math.min(trustScore, 40)
+  } else if (highCount >= 1) {
+    trustScore = Math.min(trustScore, 60)
+  } else if (mediumCount >= 3) {
+    trustScore = Math.min(trustScore, 70)
+  }
 
   const summary = {
     totalFindings: staticFindings.length,
@@ -163,7 +176,7 @@ export function scanDiff(rawDiff: string, options?: { minScore?: number }): Scan
       aiJudgeFiltered: 0,
       aiAssistedFindings: 0,
     },
-    verdict: deriveVerdict(trustScore),
+    verdict: deriveVerdict(trustScore, staticFindings.filter(f => f.confidence === 'high').length),
   }
 }
 
@@ -205,6 +218,18 @@ export async function scanDiffAsync(rawDiff: string, prContext?: { title?: strin
 
         result.findings = judgeFindings
         result.trustScore = newTrustScore
+
+        // Apply ceiling rule for AI Judge score
+        const judgeHighCount = judgeFindings.filter(f => f.confidence === 'high').length
+        const judgeMediumCount = judgeFindings.filter(f => f.confidence === 'medium').length
+        if (judgeHighCount >= 2) {
+          result.trustScore = Math.min(result.trustScore, 40)
+        } else if (judgeHighCount >= 1) {
+          result.trustScore = Math.min(result.trustScore, 60)
+        } else if (judgeMediumCount >= 3) {
+          result.trustScore = Math.min(result.trustScore, 70)
+        }
+
         result.summary = {
           totalFindings: judgeFindings.length,
           highCount: judgeFindings.filter(f => f.confidence === 'high').length,
@@ -237,7 +262,18 @@ export async function scanDiffAsync(rawDiff: string, prContext?: { title?: strin
       const aiFloor = allFindings.length > 0 ? 30 : 0
       const customFloor = options?.minScore ?? 0
       const minScore = Math.max(aiFloor, customFloor)
-      const newTrustScore = Math.max(minScore, Math.round(100 - deductions))
+      let newTrustScore = Math.max(minScore, Math.round(100 - deductions))
+
+      // Apply ceiling rule for recalculated score
+      const aiHighCount = allFindings.filter(f => f.confidence === 'high').length
+      const aiMediumCount = allFindings.filter(f => f.confidence === 'medium').length
+      if (aiHighCount >= 2) {
+        newTrustScore = Math.min(newTrustScore, 40)
+      } else if (aiHighCount >= 1) {
+        newTrustScore = Math.min(newTrustScore, 60)
+      } else if (aiMediumCount >= 3) {
+        newTrustScore = Math.min(newTrustScore, 70)
+      }
 
       return {
         ...result,
@@ -251,6 +287,7 @@ export async function scanDiffAsync(rawDiff: string, prContext?: { title?: strin
           filesScanned: result.summary.filesScanned,
         },
         fixInstructions: newTrustScore < 80 ? generateFixInstructions(allFindings) : [],
+        verdict: deriveVerdict(newTrustScore, allFindings.filter(f => f.confidence === 'high').length),
       }
     }
   } catch {
@@ -260,12 +297,21 @@ export async function scanDiffAsync(rawDiff: string, prContext?: { title?: strin
   return result
 }
 
-function deriveVerdict(score: number): VerdictResult {
-  if (score >= 80) {
+function deriveVerdict(score: number, highCount?: number): VerdictResult {
+  // CLEAN only if score ≥ 80 AND zero high-severity findings
+  if (score >= 80 && (!highCount || highCount === 0)) {
     return {
       label: 'CLEAN' as Verdict,
       confidence: score >= 95 ? 'high' as const : score >= 88 ? 'medium' as const : 'low' as const,
       reason: `Evidence score ${score}/100 — no significant cheating patterns detected`,
+    }
+  }
+  // If high findings exist but score is high due to dilution, force SUSPICIOUS
+  if (score >= 80 && highCount && highCount > 0) {
+    return {
+      label: 'SUSPICIOUS' as Verdict,
+      confidence: 'high' as const,
+      reason: `Evidence score ${score}/100 but ${highCount} high-severity finding(s) detected — manual review recommended`,
     }
   }
   if (score >= 50) {

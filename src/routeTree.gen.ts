@@ -19,6 +19,7 @@ import { Route as BenchmarkIndexRouteImport } from './routes/benchmark/index'
 import { Route as ShareIdRouteImport } from './routes/share/$id'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as ApiMockLoginRouteImport } from './routes/api/mock-login'
+import { Route as ApiIndexRepoRouteImport } from './routes/api/index-repo'
 import { Route as AuthGithubCallbackRouteImport } from './routes/auth/github/callback'
 import { Route as ApiShareIdRouteImport } from './routes/api/share/$id'
 import { Route as ApiGithubWebhookRouteImport } from './routes/api/github/webhook'
@@ -73,6 +74,11 @@ const ApiMockLoginRoute = ApiMockLoginRouteImport.update({
   path: '/api/mock-login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiIndexRepoRoute = ApiIndexRepoRouteImport.update({
+  id: '/api/index-repo',
+  path: '/api/index-repo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthGithubCallbackRoute = AuthGithubCallbackRouteImport.update({
   id: '/auth/github/callback',
   path: '/auth/github/callback',
@@ -91,6 +97,7 @@ const ApiGithubWebhookRoute = ApiGithubWebhookRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/index-repo': typeof ApiIndexRepoRoute
   '/api/mock-login': typeof ApiMockLoginRoute
   '/api/scan': typeof ApiScanRoute
   '/share/$id': typeof ShareIdRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/index-repo': typeof ApiIndexRepoRoute
   '/api/mock-login': typeof ApiMockLoginRoute
   '/api/scan': typeof ApiScanRoute
   '/share/$id': typeof ShareIdRoute
@@ -122,6 +130,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/index-repo': typeof ApiIndexRepoRoute
   '/api/mock-login': typeof ApiMockLoginRoute
   '/api/scan': typeof ApiScanRoute
   '/share/$id': typeof ShareIdRoute
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/api/index-repo'
     | '/api/mock-login'
     | '/api/scan'
     | '/share/$id'
@@ -154,6 +164,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/api/index-repo'
     | '/api/mock-login'
     | '/api/scan'
     | '/share/$id'
@@ -169,6 +180,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/api/index-repo'
     | '/api/mock-login'
     | '/api/scan'
     | '/share/$id'
@@ -185,6 +197,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiIndexRepoRoute: typeof ApiIndexRepoRoute
   ApiMockLoginRoute: typeof ApiMockLoginRoute
   ApiScanRoute: typeof ApiScanRoute
   ShareIdRoute: typeof ShareIdRoute
@@ -271,6 +284,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMockLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/index-repo': {
+      id: '/api/index-repo'
+      path: '/api/index-repo'
+      fullPath: '/api/index-repo'
+      preLoaderRoute: typeof ApiIndexRepoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/github/callback': {
       id: '/auth/github/callback'
       path: '/auth/github/callback'
@@ -297,6 +317,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiIndexRepoRoute: ApiIndexRepoRoute,
   ApiMockLoginRoute: ApiMockLoginRoute,
   ApiScanRoute: ApiScanRoute,
   ShareIdRoute: ShareIdRoute,
