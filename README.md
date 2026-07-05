@@ -16,13 +16,17 @@
     <img src="https://img.shields.io/badge/license-MIT-3FB950?style=flat-square" alt="License">
   </a>
   <a href="https://github.com/farhank15/mantiz/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/farhank15/mantiz/mantiz.yml?style=flat-square&logo=github&label=Mantiz%20CI" alt="Mantiz CI">
+    <img src="https://img.shields.io/badge/CI-Mantiz%20Scan-2ea44f?style=flat-square&logo=github&label=Mantiz%20CI" alt="Mantiz CI">
+  </a>
+  <a href="https://github.com/farhank15/mantiz/actions">
+    <img src="https://img.shields.io/badge/CI-Detector%20Gate-FF6B35?style=flat-square&logo=github&label=Detector%20Gate" alt="Detector Gate">
   </a>
   <br />
   <img src="https://img.shields.io/badge/Stack-TanStack_Start-FF4154?style=flat-square&logo=react&logoColor=white" alt="TanStack">
   <img src="https://img.shields.io/badge/Database-Neon--Postgres-00E59B?style=flat-square&logo=postgresql&logoColor=white" alt="Neon">
   <img src="https://img.shields.io/badge/AI-Powered-FF6B35?style=flat-square" alt="AI">
-  <img src="https://img.shields.io/badge/OAuth-GitHub-333?style=flat-square&logo=github" alt="GitHub OAuth">
+  <img src="https://img.shields.io/badge/GitHub%20App-Auto%20Scan-6e40ff?style=flat-square&logo=github" alt="GitHub App">
+  <img src="https://img.shields.io/badge/RAG-Qdrant-00B4D8?style=flat-square" alt="Qdrant RAG">
 </p>
 
 ---
@@ -34,8 +38,6 @@
 When an AI agent writes code, it can subtly **disable assertions, mock failing APIs, skip test suites, hallucinate matchers, or tamper with expected values** to make tests pass. Mantiz scans every line of a diff through **11 detection patterns** (10 static + AI-assisted) and produces a **Trust Score (0–100)** with ranked findings.
 
 > **Mantiz is the honesty gate for AI-generated code.** It ensures that "passing" tests actually pass because the code works, not because the agent manipulated them.
-
-> ⚠️ **Honest Accuracy:** Benchmark scores are computed dynamically by running all 11 detectors against each fixture. Dataset A uses real PRs from vitest-dev/vitest — honest code from a respected open-source project. The benchmark is a transparent regression test, not a claim of production readiness.
 
 ---
 
@@ -51,31 +53,61 @@ When an AI agent writes code, it can subtly **disable assertions, mock failing A
 | **Claim-Diff Mismatch** | 🟡 Medium | Commit message says "fix tests" but diff only touches source — no test updated |
 | **Silent Catch-and-Pass** | 🟠 Medium | Empty catch blocks that swallow real errors and let the agent declare success |
 | **Hallucinated Assertion** | 🔴 High | Non-existent Jest/Vitest matchers hallucinated by AI agents (e.g. `.toExist()`) |
-| **AST Analyzer (Babel)** 🆕 | 🔴 High | Parses JS/TS code with `@babel/parser` — detects trivial function bodies (`return true/false`), async gutting, conditional wrapping, empty test shells |
-| **Tree-sitter AST** 🆕 | 🔴 High | Multi-language AST analysis via WASM parsers — Python, Go, Java, Ruby, Rust, PHP |
-| **Historical Behavioral** 🆕 | 🟡 Medium | Tracks author patterns over time — style changes, odd hours, score volatility |
-| **Mutation Susceptibility** 🆕 | 🟡 Medium | Detects fragile tests with low assertion density that can be easily mutated |
+| **AST Analyzer (Babel)** | 🔴 High | Parses JS/TS code with `@babel/parser` — detects trivial function bodies, async gutting, conditional wrapping |
+| **Tree-sitter AST** | 🔴 High | Multi-language AST analysis via WASM parsers — Python, Go, Java, Ruby, Rust, PHP |
+| **Historical Behavioral** | 🟡 Medium | Tracks author patterns over time — style changes, odd hours, score volatility |
+| **Mutation Susceptibility** | 🟡 Medium | Detects fragile tests with low assertion density that can be easily mutated |
 | **AI-Assisted Detection** | 🟡 Varies | LLM-powered analysis — detects test weakening, assertion removal, semantic bypass, coverage reduction |
 
-### 🧠 Detection Nuances
+### 🌐 Multi-Language Detection
 
-**Claim-Diff Mismatch** is Mantiz's most nuanced detector. It flags PRs where all changed files are non-functional (config, docs, deps) — but these findings aren't all equal:
+All detectors support **7 languages** via `language-registry.ts`:
 
-| Scenario | Example | Verdict |
-|----------|---------|---------|
-| **🤖 Bot dependency update** — Author is `renovate[bot]`, `dependabot[bot]`, `angular-robot`, etc., title says `"build: update dependencies"`, only `package.json`/lockfiles changed | [Angular #69416](https://github.com/angular/angular/pull/69416) | ✅ **Legitimate** — auto-downgraded to LOW confidence (−5pts). Finding still visible but doesn't tank the score. |
-| **🧑‍💻 Agent with empty claim** — Title says `"fix: implement feature"` but only `README.md` and `.npmrc` changed | Agent claims "fix login bug" but only adds a VS Code config file | 🚨 **Suspicious** — stays HIGH confidence (−30pts). Strong signal that the agent is faking work. |
-| **🤝 Honest human PR** — Title says `"docs: update contributing guide"` and only `CONTRIBUTING.md` changed | Legitimate docs-only PR from a maintainer | ✅ **Benign** — detection is technically correct but the context (bot metadata available vs manual scan) distinguishes it. |
+| Detector | JS/TS | Python | Go | Java | Ruby | Rust | PHP |
+|:---------|:-----:|:------:|:--:|:----:|:----:|:----:|:---:|
+| **Disabled Assertion** | `.skip()` | `@pytest.mark.skip` | `t.Skip()` | `@Disabled` | `xit`/`pending` | `#[ignore]` | `markTestSkipped` |
+| **Assertion Tampering** | ✅ | `assert` | `assert.Equal` | `assertEquals` | — | — | — |
+| **Mock-to-Avoid** | ✅ | `@patch` | `.On().Return()` | `Mockito.mock` | `allow().to receive` | — | `createMock` |
+| **Silent Catch** | `catch{}` | `except: pass` | `if err != nil` | `catch(E e){}` | `rescue; end` | — | `catch` |
+| **Heal Engine** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-> **How it works:** When scanning via PR URL (requires GitHub auth), Mantiz passes the PR title and author to the detector. If the author is a known bot OR the title honestly describes non-functional changes, Mantiz **downgrades the confidence from HIGH → LOW**. Manual diffs (pasted without PR context) always get the full severity.
+### 🤖 GitHub App — Automatic PR Scanning
 
-This means the same diff gets scored differently depending on context:
+Install the **Mantiz GitHub App** on your repositories and every new PR gets automatically scanned:
 
-```
-Same diff (package.json + lockfile changes only):
+- **Webhook events:** `pull_request.opened`, `pull_request.synchronize`
+- **Check runs:** Creates GitHub Check Run with in-progress → completed status
+- **Inline comments:** Posts findings as PR review comments with line-level accuracy
+- **Suggested changes:** Auto-fix patches rendered as GitHub ` ```suggestion ` — one click to apply
+- **Dashboard sync:** Results saved to your Mantiz dashboard (requires login with same GitHub account)
 
-  📋 Manual paste → HIGH confidence (−30pts) — "You should verify this"
-  🔗 PR scan (bot) → LOW confidence (−5pts)   — "Probably fine, renovate doing renovate things"
+**Setup:**
+1. Install the Mantiz GitHub App from [GitHub Apps](https://github.com/apps/mantiz)
+2. Grant permissions: Pull requests (Read & Write), Checks (Read & Write), Contents (Read)
+3. Open a PR — Mantiz scans automatically and posts results inline
+
+### 🧠 RAG Codebase Context (Qdrant)
+
+Mantiz indexes your repository into **Qdrant vector database** for smarter AI detection:
+
+- **On install:** Fetches repo file tree via GitHub API, chunks source files via Tree-sitter, generates embeddings via Fireworks AI, stores in Qdrant
+- **On PR scan:** Extracts method names from diff, queries Qdrant for definitions, injects as context into AI prompt
+- **No false positives on custom matchers:** AI knows which APIs exist in your codebase
+
+**Stack:** `Qdrant Cloud` (vector DB) + `Fireworks AI nomic-embed-text-v1.5` (embeddings, $0.008/1M tokens) + `Tree-sitter WASM` (AST chunking, 8 languages)
+
+### 🩹 Self-Healing Engine
+
+Mantiz doesn't just detect cheating — it can **auto-fix it**:
+
+- **Template-based fixes:** Disabled assertions → re-enable, silent catches → add logging, hallucinated matchers → replace with valid assertions
+- **AI-driven fixes:** When template matching fails, `generatePatchesAsync()` calls Fireworks/Groq to generate smarter fixes
+- **Multi-language healing:** Supports all 7 languages — Python `@pytest.mark.skip` → `@pytest.mark`, Go `t.Skip()` → remove, Java `@Disabled` → remove, etc.
+- **GitHub ` ```suggestion `:** Patches posted as click-to-apply suggestions in PR comments
+
+```bash
+npx mantiz scan diff.diff --fix           # Auto-apply safe fixes
+npx mantiz scan diff.diff --fix=interactive # Review each fix before applying
 ```
 
 ### 🎯 Trust Score
@@ -95,7 +127,8 @@ Per-detector calibrated scoring — each detector has empirically-determined wei
 | D9 Historical | 0 | 0 | 0 | 0% |
 | D11 AgentInstruction | 0 | 0 | 0 | 0% |
 
-File importance multiplier: `core/test/source = 1.0`, `config = 0.5`, `docs = 0.3`, `artifact = 0.05`. Minimum score is 30 when findings exist (prevents false floor). Score = max(30, 100 - min(penalty, 85)). Threshold: **default 70**, configurable per-user in Settings.
+**File importance multiplier:** `core/test/source = 1.0`, `config = 0.5`, `docs = 0.3`, `artifact = 0.05`.  
+Score = `max(30, 100 - min(penalty, 85))`. Threshold: **default 70**, configurable per-user.
 
 ### ⚙️ Per-User Settings
 
@@ -110,9 +143,9 @@ Configure scan behavior from the [Settings](https://mantiz-wine.vercel.app/setti
 
 Settings apply to all scans made with your API tokens (CLI, GitHub Actions).
 
-### 🔗 Webhook System v2
+### 🔗 Webhook System
 
-Receive scan results in real-time via webhook. Payload includes full findings, signed with HMAC-SHA256 for verification.
+Receive scan results in real-time via webhook. Payload includes full findings, signed with HMAC-SHA256.
 
 **Features:**
 - 3 retry attempts with exponential backoff (1s → 4s → 15s)
@@ -121,46 +154,12 @@ Receive scan results in real-time via webhook. Payload includes full findings, s
 - Delivery history visible in Settings page
 - Works with Slack, Discord, Telegram, or custom endpoints
 
-**Example webhook payload:**
-```json
-{
-  "event": "scan.completed",
-  "scanId": "uuid",
-  "trustScore": 85,
-  "passed": true,
-  "threshold": 70,
-  "findings": [
-    {
-      "patternType": "disabled_assertion",
-      "filePath": "src/test.js",
-      "confidence": "high",
-      "explanation": "..."
-    }
-  ]
-}
-```
-
-### 🏷️ User Verdict
-
-Tag findings in your scan history:
-- **Confirmed** — This is a valid cheating detection ✓
-- **False Positive** — This finding was incorrect ✗
-- **Unreviewed** — Default state
-
-Helps track detection accuracy over time.
-
 ### 🔐 GitHub OAuth + Session Management
 
 - Sign in with GitHub to scan pull requests
 - Signed HTTP-only cookies with HMAC-SHA256
 - Rate limiting (3 tiers: anonymous, session, token)
 - Scan history persisted per user in Neon Postgres
-
-### 🤖 AI Detection
-
-- **Toggle:** Easily enable/disable via Settings page or `--ai` CLI flag
-- **Smart Analysis:** Detects 5 AI-level patterns: test weakening, assertion removal, semantic bypass, hallucinated APIs, and coverage reduction.
-- **AI Judge** (separate from AI detection): Reviews static findings and filters false positives. Enabled via `AI_JUDGE_ENABLED=true` env var. Uses Groq (`GROQ_API_KEY`) or Fireworks (`FIREWORKS_API_KEY`).
 
 ### 📊 Routes
 
@@ -171,20 +170,12 @@ Helps track detection accuracy over time.
 | `/pr-scan` | Scan a GitHub PR by URL (requires auth) |
 | `/login` | GitHub OAuth sign-in |
 | `/history` | Scan history with detailed findings modal + user verdict tagging |
-| `/settings` | Scan settings (threshold, AI toggle, minScore) + API token management + webhook config |
-| `/benchmark` | Interactive benchmark — 39 fixtures across 4 datasets |
-
-### 🧩 Interactive Scan Animation
-
-When scanning, an animated terminal log shows real-time detector progress. After completion, a per-detector breakdown displays finding counts with high/med/low severity colors.
-
-### 📄 Diff Viewer
-
-GitHub-style diff rendering with green/red line highlighting, line number gutter, +/- markers, copy-to-clipboard, and add/del count stats.
+| `/settings` | Scan settings + API token management + webhook config |
+| `/benchmark` | Interactive benchmark — 42 fixtures across 4 datasets |
 
 ### 🔗 Share Results
 
-Every scan generates a public shareable link (`/share/:id`) — no authentication required. Share findings with your team, post them in code reviews, or include them in CI dashboards.
+Every scan generates a public shareable link (`/share/:id`) — no authentication required.
 
 ---
 
@@ -231,13 +222,21 @@ GROQ_API_KEY=gsk_your_groq_api_key
 # AI Judge (optional — reviews static findings, filters false positives)
 AI_JUDGE_ENABLED=true
 
-# (AI Judge shares the same API key as AI Detection above)
+# Qdrant Vector DB (optional — RAG codebase context for AI detection)
+QDRANT_URL=https://xxx.cloud.qdrant.io
+QDRANT_API_KEY=yzx_...
+
+# Embedding Provider (optional — for Qdrant indexing)
+FIREWORKS_API_KEY=fw_...  # Priority: Fireworks > OpenAI
+# or OPENAI_API_KEY=sk-...
+
+# GitHub App (optional — automatic PR scanning bot)
+GITHUB_APP_ID=123456
+GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n..."
+GITHUB_WEBHOOK_SECRET=your_webhook_secret
 
 # Webhook secret (optional — for HMAC signing webhook payloads)
 WEBHOOK_SECRET=your_random_secret_at_least_32_chars
-
-# Debug logging (optional — enables per-detector console logs)
-MANTIZ_DEBUG=true
 
 # App URL (optional — defaults to http://localhost:3030)
 APP_URL=http://localhost:3030
@@ -258,13 +257,6 @@ pnpm run build
 pnpm run preview
 ```
 
-### 4. Apply Database Migrations
-
-```bash
-# After adding new tables (e.g., user_settings, webhook_events)
-npx drizzle-kit push
-```
-
 ---
 
 ## 🧪 How to Use
@@ -283,103 +275,61 @@ npx drizzle-kit push
 3. Paste a PR URL: `https://github.com/owner/repo/pull/123`
 4. Mantiz fetches the diff, runs 11 detectors, and returns findings
 
-### 🔗 GitHub Actions (Reusable Action)
+### 🤖 GitHub App (Automatic PR Scanning)
 
-Add to your workflow to scan every PR:
+Install the Mantiz GitHub App on your repository. Every new PR gets automatically scanned with:
+- Check run status (pass/fail)
+- Inline review comments with findings
+- One-click suggested changes for auto-fix
+- Results saved to your dashboard history
+
+### 🔗 GitHub Actions (Reusable Action)
 
 ```yaml
 - name: Run Mantiz Scan
   uses: farhank15/mantiz@main
   with:
     api-token: ${{ secrets.MANTIZ_API_TOKEN }}
-    threshold: 70          # Override default (configurable in Settings)
-    use-ai: true           # Enable AI-assisted detection
-    json-output: true      # JSON output for parsing
+    threshold: 70
+    use-ai: true
+    json-output: true
 ```
+
+Generate your API token from [Settings](https://mantiz-wine.vercel.app/settings).
 
 ### 🔗 CLI Integration
 
-Install the CLI and scan with options:
-
 ```bash
-pnpm add -g @mantiz/cli
+# Local scan (no cloud, no API key)
+npx mantiz-cli
 
-# Local scan (no cloud)
-mantiz-scan
-
-# Cloud scan with history persistence
-mantiz-scan --token mtz_abc123 --save --ai
+# With AI detection
+npx mantiz-cli --ai
 
 # JSON output for CI
-mantiz-scan --json
+npx mantiz-cli --json
+
+# Auto-fix detected issues
+npx mantiz-cli --fix
+
+# Cloud scan with history persistence
+npx mantiz-cli --token mtz_abc123 --save
 ```
-
-### 🔔 Webhook Integration
-
-Set up a webhook URL in [Settings](https://mantiz-wine.vercel.app/settings) to receive scan results in real-time:
-
-```bash
-# Example: Receive webhook payload
-POST /mantiz-webhook
-Content-Type: application/json
-X-Mantiz-Signature: sha256=...
-X-Mantiz-Event: scan.failed
-
-{
-  "event": "scan.failed",
-  "trustScore": 45,
-  "threshold": 70,
-  "findings": [...]
-}
-```
-
-Verify signature:
-```javascript
-const crypto = require('crypto')
-const hmac = crypto.createHmac('sha256', WEBHOOK_SECRET)
-hmac.update(JSON.stringify(req.body))
-const expected = 'sha256=' + hmac.digest('hex')
-if (req.headers['x-mantiz-signature'] !== expected) return res.status(401)
-```
-
-### 🩹 Auto-Heal Mode (`--fix`)
-
-Mantiz doesn't just report cheating — it can **auto-fix it**. Run with the `--fix` flag to automatically apply code patches for detected issues:
-
-```bash
-npx mantiz scan diff.diff --fix
-```
-
-**What gets fixed:**
-
-| Pattern | Auto-Fix Behavior |
-|---------|-------------------|
-| **Disabled Assertion** | Re-enables `.skip()` tests, removes `if(false)` wrappers |
-| **Assertion Tampering** | Flags the tampered value with a fix comment |
-| **Silent Catch-and-Pass** | Wraps the empty catch body with `console.error` logging |
-| **Mock-to-Avoid-Failure** | Adds a comment suggesting real integration test |
-
 
 ---
 
 ## 📊 Benchmark Results
 
-> **⚠️ REALITY CHECK:** Benchmark scores reflect actual detector output, not target scores. A score of 10 does NOT mean "10% accurate" — it means the diff triggered enough detector findings to floor the score. Each detector has calibrated weights based on precision from a deduped validation set (203 unique PRs: 20 DECEPTIVE, 183 LEGIT).
-
 Mantiz includes a built-in benchmark suite with **42 fixtures across 4 datasets**:
 
 | Dataset | Description | Fixtures | Source |
-|:---:|---|:---:|:------:|
+|:---:|---|:---:|:------|
 | **A** — "The Honest Code" | Proper diff + valid test updates | 4 | 🔴 **Real PRs** (vitest-dev/vitest) |
 | **B** — "The Lazy/Cheating AI" | `.skip()`, `if(false)`, commented assertions | 11 | 📜 **Research-based** (DebugML/UC Berkeley) |
 | **C** — "The Smart Evasion AI" | Assertion tampering, mock + empty catch | 4 | 📜 **Research-based** (DebugML) |
 | **FP** — "False Positive" | Legitimate code patterns | 23 | 🟡 **Mixed** (2 real vitest PRs + 21 documented) |
 
-**How scores work:** Per-detector calibrated weights (see Trust Score table above). Penalty = sum of weighted findings × file importance multiplier. Score = max(30, 100 - min(penalty, 85)). Every score is computed dynamically by `scanDiff()` running all 11 detectors in real time. **No scores are hardcoded or fabricated.**
-
-> **Validation status:** 423 labeled PRs in calibration (16 DECEPTIVE, 407 LEGIT). Per-detector F1 measured against ground truth. Score distribution: avg 98.5/100 — 424 CLEAN, 7 SUSPICIOUS, 2 DECEPTIVE across raw candidates.
-
-Visit the [**/benchmark**](https://mantiz-wine.vercel.app/benchmark) dashboard to see live accuracy results with per-fixture breakdowns.
+Visit the [**/benchmark**](https://mantiz-wine.vercel.app/benchmark) dashboard to see live accuracy results.
 
 ---
 
@@ -391,16 +341,15 @@ Visit the [**/benchmark**](https://mantiz-wine.vercel.app/benchmark) dashboard t
 | **Routing** | [TanStack Router](https://tanstack.com/router) (file-based, auto code-split) |
 | **Styling** | [Tailwind CSS v4](https://tailwindcss.com) + Magic UI |
 | **Animation** | [Framer Motion](https://framermotion.framer.website) |
-| **Icons** | [Lucide](https://lucide.dev) |
 | **Database** | [Neon Postgres](https://neon.tech) (serverless) |
 | **ORM** | [Drizzle ORM](https://orm.drizzle.team) |
 | **Auth** | GitHub OAuth + HMAC-signed session cookies |
-| **AI** | LLM-powered detection engine |
-| **AST Parsing** | [@babel/parser](https://babeljs.io/docs/babel-parser) |
-| **Behavioral Tracking** | Neon Postgres (author profiles + events) |
-| **Diff Parsing** | [diff](https://npm.im/diff) |
+| **Vector DB** | [Qdrant Cloud](https://qdrant.io) (HNSW + scalar quantization) |
+| **Embeddings** | Fireworks AI `nomic-embed-text-v1.5` |
+| **LLM** | Fireworks AI + Groq (fallback) |
+| **GitHub App** | [Octokit](https://github.com/octokit) (`App` class + installation tokens) |
+| **AST Parsing** | Tree-sitter WASM (8 languages) + `@babel/parser` |
 | **Rate Limiting** | In-memory sliding window (3 tiers) |
-| **GitHub API** | [Octokit](https://github.com/octokit) |
 | **Bundler** | [Vite 8](https://vite.dev) + TanStack Router Plugin |
 | **Deploy** | [Vercel](https://vercel.com) |
 
@@ -408,11 +357,7 @@ Visit the [**/benchmark**](https://mantiz-wine.vercel.app/benchmark) dashboard t
 
 ## 🤝 Contributing
 
-1. Fork the repo
-2. Create a feature branch (`git checkout -b feat/amazing-detector`)
-3. Commit your changes (`git commit -m 'feat: add new detection pattern'`)
-4. Push to the branch (`git push origin feat/amazing-detector`)
-5. Open a Pull Request
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, project structure, and coding standards.
 
 ---
 
