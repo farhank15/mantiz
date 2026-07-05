@@ -74,6 +74,16 @@ AI agents often cheat subtly: skipping tests, disabling assertions, swallowing e
   <em>History — Every scan, manual or automated, saved and searchable.</em>
 </p>
 
+<br />
+
+<p align="center">
+  <video src="public/demo-mantiz.mp4" width="720" controls style="border-radius: 12px; border: 1px solid #30363d;">
+    Your browser does not support the video tag.
+  </video>
+  <br />
+  <em>Full Demo — See Mantiz in action: PR scan, dashboard, bot comments, and more.</em>
+</p>
+
 ---
 
 ## Features

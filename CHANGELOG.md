@@ -5,7 +5,17 @@ All notable changes to Mantiz will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.4.0] - 2026-07-05
+
+### Fixed
+- **Scoring ceiling rule** — High findings now cap max score (≥2 High → 40, ≥1 High → 60, ≥3 Medium → 70). Prevents "2 High findings but Clean 97" paradox.
+- **ai_assisted_detection penalty** — changed from 0/0/0 to 8/4/1 so AI findings actually affect the trust score.
+- **deriveVerdict** — "CLEAN" label now requires score ≥ 80 AND zero High findings. Forces SUSPICIOUS if High findings exist.
+- **action.yml diff fetch** — uses `${{ github.token }}` instead of Mantiz API token for GitHub API auth. Adds `Accept: application/vnd.github.v3.diff` header.
+- **saveAPIScan error logging** — `.catch(() => null)` now logs DB errors to console instead of silent failure.
+- **GitHub App threshold** — configurable via `GITHUB_APP_THRESHOLD` env var (was hardcoded 70).
+- **CLI `--threshold` flag** — both `src/cli/scan.ts` and `mantiz-cli` now accept `--threshold` flag + `MANTIZ_THRESHOLD` env var.
+- **minScore wiring** — dashboard `minScore` setting now actually passed to scan engine.
 
 ### Added
 - **user_settings** table — per-user threshold, AI toggle, minScore, webhook URL
