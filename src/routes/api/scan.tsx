@@ -176,7 +176,10 @@ export const Route = createFileRoute('/api/scan')({
                 explanation: f.explanation,
                 evidenceExcerpt: f.evidenceExcerpt,
               })),
-            }).catch(() => null)
+            }).catch((dbErr) => {
+              console.error('[api/scan] Failed to save scan to DB:', dbErr)
+              return null
+            })
 
             if (scanId && settings?.webhookEnabled && settings?.webhookUrl) {
               const passed = result.trustScore >= threshold

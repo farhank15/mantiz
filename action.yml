@@ -65,7 +65,7 @@ runs:
         # Get the PR diff or commit diff
         if [ "${{ github.event_name }}" = "pull_request" ]; then
           DIFF_URL="${{ github.event.pull_request.diff_url }}"
-          DIFF=$(curl -s -H "Authorization: Bearer $MANTIZ_API_TOKEN" "$DIFF_URL")
+          DIFF=$(curl -s -H "Accept: application/vnd.github.v3.diff" -H "Authorization: Bearer ${{ github.token }}" "$DIFF_URL")
         else
           DIFF=$(git diff HEAD~1 2>/dev/null || git diff 2>/dev/null || echo "")
         fi
