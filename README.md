@@ -45,6 +45,22 @@ AI agents often cheat subtly: skipping tests, disabling assertions, swallowing e
 <br />
 
 <p align="center">
+  <img src="public/example-scan-mantiz-bot-in-pr-github.png" alt="Mantiz Bot — Automated PR Scan Comments on GitHub" width="720" style="border-radius: 12px; border: 1px solid #30363d;" />
+  <br />
+  <em>GitHub App Bot — Auto-scans every PR and posts findings as inline comments + check run.</em>
+</p>
+
+<br />
+
+<p align="center">
+  <img src="public/report-result-scan-bot.png" alt="Mantiz Report — Detailed Scan Results from Bot" width="720" style="border-radius: 12px; border: 1px solid #30363d;" />
+  <br />
+  <em>Bot Report — Full scan breakdown with per-detector findings and trust score.</em>
+</p>
+
+<br />
+
+<p align="center">
   <img src="public/mantiz-report.png" alt="Mantiz Report — Trust Score + Detected Patterns" width="720" style="border-radius: 12px; border: 1px solid #30363d;" />
   <br />
   <em>Scan Report — Trust Score (0-100) with per-finding explanations.</em>
