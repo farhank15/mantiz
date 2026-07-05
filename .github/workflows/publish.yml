@@ -32,15 +32,15 @@ jobs:
         run: pnpm install
 
       - name: Build packages
-        run: pnpm run build --if-present
+        run: pnpm build
 
       - name: Publish @farhank15/mantiz-core
-        run: cd packages/mantiz-core && pnpm publish
+        run: cd packages/mantiz-core && pnpm publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish @farhank15/mantiz-cli
-        run: cd packages/mantiz-cli && pnpm publish
+        run: cd packages/mantiz-cli && pnpm publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -67,6 +67,6 @@ jobs:
         run: pnpm install
 
       - name: Publish mantiz-cli to NPM
-        run: cd packages/mantiz-cli && pnpm publish --access public
+        run: cd packages/mantiz-cli && pnpm publish --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
