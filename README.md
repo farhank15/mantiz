@@ -76,6 +76,12 @@ AI agents often cheat subtly: skipping tests, disabling assertions, swallowing e
 
 <br />
 
+
+
+https://github.com/user-attachments/assets/268ae175-52c4-48a4-a10c-ee8c871c644d
+
+
+
 ---
 
 ## Features
