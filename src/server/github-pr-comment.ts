@@ -108,9 +108,10 @@ export async function postPRReviewComments(
 
   // Build inline comments for each finding
   const comments: CommentInput[] = findings.map((f) => {
+    const cleanPath = f.filePath.replace(/^(a|b)\//, '')
     const patch = patchMap.get(`${f.filePath}:${f.lineStart}:${f.patternType}`)
     return {
-      path: f.filePath,
+      path: cleanPath,
       line: f.lineStart,
       body: formatFindingComment(f, patch),
     }
@@ -221,7 +222,7 @@ export async function completeCheckRun(
 
   // Build annotations from findings (max 50 per request)
   const annotations = findings.slice(0, 50).map((f) => ({
-    path: f.filePath,
+    path: f.filePath.replace(/^(a|b)\//, ''),
     start_line: f.lineStart,
     end_line: f.lineEnd || f.lineStart,
     annotation_level: f.confidence === 'high' ? 'failure' as const : f.confidence === 'medium' ? 'warning' as const : 'notice' as const,
@@ -262,7 +263,7 @@ export async function completeCheckRun(
   if (findings.length > 50) {
     for (let i = 50; i < findings.length; i += 50) {
       const batch = findings.slice(i, i + 50).map((f) => ({
-        path: f.filePath,
+        path: f.filePath.replace(/^(a|b)\//, ''),
         start_line: f.lineStart,
         end_line: f.lineEnd || f.lineStart,
         annotation_level: f.confidence === 'high' ? 'failure' as const : f.confidence === 'medium' ? 'warning' as const : 'notice' as const,
