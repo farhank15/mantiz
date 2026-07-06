@@ -88,5 +88,3 @@ Every row below is one iteration of the **Write → Verify → Fix → Verify** 
 - **TestSprite tests in project:** 24 total (22 PASSED, 2 blocked by E2E runner environment/quirks)
 - **Commit history matches this log:** every iteration has a corresponding git commit on `main`
 - **Loop type:** Fully autonomous — agent (Maker) writes/fixes, TestSprite CLI (Checker) verifies live app
-
-
