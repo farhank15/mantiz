@@ -1,0 +1,18 @@
+{
+  "testId": "37917aa6-d82c-4d53-a7f9-73df2c83f31e",
+  "status": "blocked",
+  "startedAt": "2026-07-04T13:48:32.364Z",
+  "finishedAt": "2026-07-04T13:51:40.711Z",
+  "videoUrl": "https://testsprite-videos.s3.us-east-1.amazonaws.com/245844c8-60c1-706a-3b4b-cc8536dcf06a/1783173100414518//tmp/f028ac6c-3708-4e5d-9c54-a2fe68edee1a/result.webm",
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_1c5ef0b6a285dcb0",
+  "runIdIfAvailable": "f8013c4d-4351-4376-bd8c-4783cb961181",
+  "codeVersion": "v1",
+  "targetUrl": "https://mantiz-wine.vercel.app",
+  "targetUrlSource": "run",
+  "failedStepIndex": 8,
+  "failureKind": null,
+  "verdict": "blocked",
+  "executionStatus": "completed",
+  "summary": "Blocked before a verdict could be produced: TEST BLOCKED\n\nThe test cannot be run because the GitHub sign-in flow requires an email device verification code that is not accessible in this environment.\n\nObservations:\n- The GitHub device verification page is displayed requesting a code sent to t*************@gmail.com and shows an input and 'Verify' button.\n- The login flow requires an out-of-band email code (or GitHub Mobile) which cannot be retrieved from within the test environment.\n- The Manti…"
+}

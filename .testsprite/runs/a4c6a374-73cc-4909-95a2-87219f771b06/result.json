@@ -1,0 +1,18 @@
+{
+  "testId": "326032c3-ec3f-4e1a-acb6-f4930df86563",
+  "status": "blocked",
+  "startedAt": "2026-07-02T05:13:21.072Z",
+  "finishedAt": "2026-07-02T05:26:17.803Z",
+  "videoUrl": "https://testsprite-videos.s3.us-east-1.amazonaws.com/245844c8-60c1-706a-3b4b-cc8536dcf06a/1782969977519256//tmp/ae11775a-3bda-4c78-b1b4-4a7ba3d1b92f/result.webm",
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_fa170f4e35b9c142",
+  "runIdIfAvailable": "a4c6a374-73cc-4909-95a2-87219f771b06",
+  "codeVersion": "v1",
+  "targetUrl": "https://mantiz-wine.vercel.app",
+  "targetUrlSource": "run",
+  "failedStepIndex": 21,
+  "failureKind": null,
+  "verdict": "blocked",
+  "executionStatus": "completed",
+  "summary": "Blocked before a verdict could be produced: TEST BLOCKED: Waited for 1 seconds"
+}

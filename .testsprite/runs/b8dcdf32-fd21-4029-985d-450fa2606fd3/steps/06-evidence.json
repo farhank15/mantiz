@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 6,
+    "summary": "Step 6 'Expected the findings list to be empty and no finding entries to be visible.' failed. Error: TEST FAILURE\n\nThe app shows a high Trust Score and labels the diff as 'Clean', but findings are still reported — the requirement that a clean diff produce zero findings was not met.\n\nObservations:\n- The page shows Trust Score: 85 and the label 'Clean'.\n- The Findings section lists at least one finding: 'Source code changed (b/src/math.ts) but no tests were updated.'",
+    "path": "steps/06-snapshot.html"
+  }
+]

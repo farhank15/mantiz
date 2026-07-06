@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 13,
+    "summary": "Step 13 'Expected Save Settings button to show text 'Saved!' confirming settings were persisted.' failed. Error: TEST FAILURE\n\nThe 'AI Detection' toggle is not present on the Settings page — the required control appears to be missing.\n\nObservations:\n- The Trust Score Threshold slider (input id='threshold-slider') is visible in Settings and shows value 51; it accepted keyboard adjustments.\n- The 'Save Settings' button is visible on the page, but no 'Saved!' confirmation was observed after clicking in prior steps.\n- No element with id='ai-detection-toggle' or any interactive element/aria-label containing 'AI' was found in the page DOM or via searches.",
+    "path": "steps/13-snapshot.html"
+  }
+]

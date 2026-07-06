@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 6,
+    "summary": "Step 6 'Expected the Trust Score on the results panel to be a number between 0 and 100.' failed. Error: TEST FAILURE\n\nA trust score was displayed but the scan did not provide any finding that explains the disabled assertion (e.g., xit/test.skip) in the submitted diff.\n\nObservations:\n- The results panel shows a Trust Score of \"100\" and a green \"Clean\" message.\n- The findings area reads \"No Cheating Detected\" / \"This diff looks clean. Your AI agent passed the honesty check.\" — no suspicious finding is listed.\n- The submitted diff contains a disabled test (the change from it(...) to xit(...)), but the app did not flag or explain this pattern.",
+    "path": "steps/06-snapshot.html"
+  }
+]

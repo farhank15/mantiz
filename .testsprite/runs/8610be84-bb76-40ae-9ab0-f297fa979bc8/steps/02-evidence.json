@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 2,
+    "summary": "Step 2 'Open the Sign In (login) page so the login options and any 'Continue with GitHub' button are visible' passed.",
+    "path": "steps/02-snapshot.html"
+  }
+]

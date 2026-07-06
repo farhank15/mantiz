@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 5,
+    "summary": "Step 5 'Trust Score is 100, which meets the requirement of 80 or higher.' failed. Error: TEST BLOCKED: Result summary (observed on https://mantiz-wine.vercel.app/scan):\n\n- The Scan feature is present and works without signing in.\n- The provided diff was pasted exactly and submitted.\n- Trust Score observed: 100 (on a 0-100 scale).\n- Result label observed: 'Clean'.\n- Findings message observed: 'No Cheating Detected' and 'This diff looks clean. Your AI agent passed the honesty check.' (indicating zero findings / explicitly clean).\n\nVerification: All user assertions were satisfied — Trust Score >= 80 and the UI explicitly indicates no cheating patterns were detected. No blockers encountered.\n\nTest outcome: PASS — the application returned a high Trust Score and reported the diff as clean.",
+    "path": "steps/05-snapshot.html"
+  }
+]

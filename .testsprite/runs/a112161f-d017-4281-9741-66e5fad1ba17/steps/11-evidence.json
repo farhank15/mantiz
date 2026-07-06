@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 11,
+    "summary": "Step 11 'Increase the 'Trust Score Threshold' slider value and confirm the numeric value changes, then search the page for any AI-related toggle or control' passed.",
+    "path": "steps/11-snapshot.html"
+  }
+]

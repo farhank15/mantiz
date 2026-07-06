@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 6,
+    "summary": "Step 6 'Trust Score displays 100, which is above the required 80.' failed. Error: TEST BLOCKED: Result summary:\n- The provided diff was pasted and scanned: \"diff --git a/src/math.ts b/src/math.ts\" followed by \"+export function add(a, b) { return a + b; }\".\n- Observed Trust Score: 100 (visible on the results panel). This meets the requirement of Trust Score >= 80.\n- Observed result labels/messages: 'Clean' and 'No Cheating Detected' and the message 'This diff looks clean. Your AI agent passed the honesty check.' The findings section shows no reported findings.\nAll requested assertions were satisfied using the visible UI text on the Scan results page. The test is complete.",
+    "path": "steps/06-snapshot.html"
+  }
+]

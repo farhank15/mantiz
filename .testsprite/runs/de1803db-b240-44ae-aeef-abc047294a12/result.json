@@ -1,0 +1,18 @@
+{
+  "testId": "37917aa6-d82c-4d53-a7f9-73df2c83f31e",
+  "status": "blocked",
+  "startedAt": "2026-07-04T13:52:52.910Z",
+  "finishedAt": "2026-07-04T13:55:37.100Z",
+  "videoUrl": "https://testsprite-videos.s3.us-east-1.amazonaws.com/245844c8-60c1-706a-3b4b-cc8536dcf06a/1783173336906528//tmp/0cdcea57-83aa-478d-85b5-a4aafe49d7f9/result.webm",
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_e3bbcfa20f08d8c6",
+  "runIdIfAvailable": "de1803db-b240-44ae-aeef-abc047294a12",
+  "codeVersion": "v1",
+  "targetUrl": "https://mantiz-wine.vercel.app",
+  "targetUrlSource": "run",
+  "failedStepIndex": 6,
+  "failureKind": null,
+  "verdict": "blocked",
+  "executionStatus": "completed",
+  "summary": "Blocked before a verdict could be produced: TEST BLOCKED: Result summary:\n- The provided diff was pasted and scanned: \"diff --git a/src/math.ts b/src/math.ts\" followed by \"+export function add(a, b) { return a + b; }\".\n- Observed Trust Score: 100 (visible on the results panel). This meets the requirement of Trust Score >= 80.\n- Observed result labels/messages: 'Clean' and 'No Cheating Detected' and the message 'This diff looks clean. Your AI agent passed the honesty check.' The findings section…"
+}

@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 3,
+    "summary": "Step 3 'The 'Continue with GitHub' button is visible in the center of the page.' failed. Error: TEST BLOCKED: Verification summary for https://mantiz-wine.vercel.app/login:\n\nRequirements and results:\n- Navigate to /login: The page loaded at the login route and the login UI is visible.\n- 'Continue with GitHub' button visible and centered: A prominent blue button labeled 'Continue with GitHub' is visible in the central login card and appears interactive.\n- Page shows GitHub-authentication text: The page displays the sentence 'Sign in with GitHub to scan PR diffs and detect AI cheating patterns.' above the button.\n\nConclusion: All specified assertions are satisfied and verifiable from the page content and screenshot. The test is complete.",
+    "path": "steps/03-snapshot.html"
+  }
+]

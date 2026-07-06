@@ -1,0 +1,18 @@
+{
+  "testId": "326032c3-ec3f-4e1a-acb6-f4930df86563",
+  "status": "blocked",
+  "startedAt": "2026-07-05T13:44:38.570Z",
+  "finishedAt": "2026-07-05T13:57:35.348Z",
+  "videoUrl": "https://testsprite-videos.s3.us-east-1.amazonaws.com/245844c8-60c1-706a-3b4b-cc8536dcf06a/1783259855055874//tmp/2193a44f-7205-49c3-b4c7-81e6fa9bbf9c/result.webm",
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_3e4a97467fd49057",
+  "runIdIfAvailable": "c38ebb34-86c7-4d75-b186-3db77d8e3dcc",
+  "codeVersion": "v1",
+  "targetUrl": "https://mantiz-wine.vercel.app",
+  "targetUrlSource": "run",
+  "failedStepIndex": 21,
+  "failureKind": null,
+  "verdict": "blocked",
+  "executionStatus": "completed",
+  "summary": "Blocked before a verdict could be produced: TEST BLOCKED: No matches found for \"Saved!\" on page."
+}

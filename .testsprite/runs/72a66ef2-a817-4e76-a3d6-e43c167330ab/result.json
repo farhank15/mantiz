@@ -1,0 +1,18 @@
+{
+  "testId": "8ea2fac9-1427-4cde-ba7d-414c63c34c1e",
+  "status": "failed",
+  "startedAt": null,
+  "finishedAt": "2026-07-04T14:09:28.589Z",
+  "videoUrl": null,
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_c2b06d7e6adc3169",
+  "runIdIfAvailable": "72a66ef2-a817-4e76-a3d6-e43c167330ab",
+  "codeVersion": "v1",
+  "targetUrl": null,
+  "targetUrlSource": "project-default",
+  "failedStepIndex": 1,
+  "failureKind": "unknown",
+  "verdict": "failed",
+  "executionStatus": "completed",
+  "summary": "Failed: Rate limiter did not block requests after 15 attempts!"
+}

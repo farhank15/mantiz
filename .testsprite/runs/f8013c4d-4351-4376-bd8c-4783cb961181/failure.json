@@ -1,0 +1,5 @@
+{
+  "rootCauseHypothesis": "TEST BLOCKED\n\nThe test cannot be run because the GitHub sign-in flow requires an email device verification code that is not accessible in this environment.\n\nObservations:\n- The GitHub device verification page is displayed requesting a code sent to t*************@gmail.com and shows an input and 'Verify' button.\n- The login flow requires an out-of-band email code (or GitHub Mobile) which cannot be retrieved from within the test environment.\n- The Mantiz Scan page remains unreachable until GitHub authentication completes, so the scan and assertions cannot be performed.",
+  "recommendedFixTarget": null,
+  "evidence": []
+}

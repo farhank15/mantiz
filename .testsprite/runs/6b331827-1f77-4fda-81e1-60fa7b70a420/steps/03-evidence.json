@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 3,
+    "summary": "Step 3 'Expected Dataset A result card to contain a numeric Trust Score between 0 and 100.' failed. Error: TEST FAILURE\n\nDataset A (Honest) did not show the expected high Trust Score (>=80). The benchmark page displays dataset scores, but the asserted threshold for Dataset A is not met.\n\nObservations:\n- The benchmark page shows three dataset cards with numeric Trust Scores: Dataset A (Honest) = 78, Dataset B (Cheating) = 54, Dataset C (Evasion) = 36.\n- Dataset A's score (78) is below the expected threshold of 80, so the assertion that Dataset A shows >=80 failed.",
+    "path": "steps/03-snapshot.html"
+  }
+]

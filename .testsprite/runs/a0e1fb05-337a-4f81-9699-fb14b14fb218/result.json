@@ -1,0 +1,18 @@
+{
+  "testId": "37917aa6-d82c-4d53-a7f9-73df2c83f31e",
+  "status": "blocked",
+  "startedAt": "2026-07-01T09:55:11.049Z",
+  "finishedAt": "2026-07-01T09:57:29.972Z",
+  "videoUrl": "https://testsprite-videos.s3.us-east-1.amazonaws.com/245844c8-60c1-706a-3b4b-cc8536dcf06a/1782899849704075//tmp/e0663b68-47b1-4bd1-8a29-22ea690e278c/result.webm",
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_de97f9984f638940",
+  "runIdIfAvailable": "a0e1fb05-337a-4f81-9699-fb14b14fb218",
+  "codeVersion": "v1",
+  "targetUrl": "https://mantiz-wine.vercel.app",
+  "targetUrlSource": "run",
+  "failedStepIndex": 5,
+  "failureKind": null,
+  "verdict": "blocked",
+  "executionStatus": "completed",
+  "summary": "Blocked before a verdict could be produced: TEST BLOCKED: RESULT: PASS — All user requirements satisfied.\n\nVerified items (observed in the page/screenshot during this session):\n- The exact diff was pasted: \"diff --git a/src/math.ts b/src/math.ts\" followed by \"+export function add(a, b) { return a + b; }\".\n- The Trust Score shown is \"100\" (greater than the required 80).\n- The verdict label shown is \"Clean\" and the page displays the message \"No Cheating Detected\" plus \"This diff looks clean. Your…"
+}

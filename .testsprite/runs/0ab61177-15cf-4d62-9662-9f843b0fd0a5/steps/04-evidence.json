@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 4,
+    "summary": "Step 4 'Click 'Scan Diff button'' passed.",
+    "path": "steps/04-snapshot.html"
+  }
+]

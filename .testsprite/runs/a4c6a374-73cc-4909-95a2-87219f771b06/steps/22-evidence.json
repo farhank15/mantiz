@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 22,
+    "summary": "Step 22 'AI Detection toggle shows aria-checked=\"false\", indicating the toggle is off in the Settings panel.' failed. Error: TEST BLOCKED: Waited for 1 seconds",
+    "path": "steps/22-snapshot.html"
+  }
+]

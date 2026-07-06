@@ -11,7 +11,8 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
-.testsprite/
+.testsprite/*
+!.testsprite/runs/
 .kuma/
 .kuma/**
 

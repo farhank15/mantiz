@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 21,
+    "summary": "Step 21 'The Trust Score threshold slider (range input) is visible on the Settings page.' failed. Error: TEST BLOCKED: No matches found for \"Saved!\" on page.",
+    "path": "steps/21-snapshot.html"
+  }
+]

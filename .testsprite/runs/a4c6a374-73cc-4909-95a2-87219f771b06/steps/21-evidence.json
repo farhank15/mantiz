@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 21,
+    "summary": "Step 21 'Trust Score slider input control is visible on the Settings page.' failed. Error: TEST BLOCKED: Waited for 1 seconds",
+    "path": "steps/21-snapshot.html"
+  }
+]

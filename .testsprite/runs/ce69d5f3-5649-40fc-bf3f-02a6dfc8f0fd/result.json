@@ -1,0 +1,18 @@
+{
+  "testId": "85f99ee9-7119-4df3-a026-ed6339a47e4c",
+  "status": "failed",
+  "startedAt": "2026-07-04T13:52:57.031Z",
+  "finishedAt": "2026-07-04T13:55:51.179Z",
+  "videoUrl": "https://testsprite-videos.s3.us-east-1.amazonaws.com/245844c8-60c1-706a-3b4b-cc8536dcf06a/1783173348646554//tmp/33610e27-555f-483c-a1b5-eff9b63e74b1/result.webm",
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_c8ee58e7dd078400",
+  "runIdIfAvailable": "ce69d5f3-5649-40fc-bf3f-02a6dfc8f0fd",
+  "codeVersion": "v1",
+  "targetUrl": "https://mantiz-wine.vercel.app",
+  "targetUrlSource": "run",
+  "failedStepIndex": 6,
+  "failureKind": "assertion",
+  "verdict": "failed",
+  "executionStatus": "completed",
+  "summary": "Failed (assertion): TEST FAILURE\n\nA trust score was displayed but the scan did not provide any finding that explains the disabled assertion (e.g., xit/test.skip) in the submitted diff.\n\nObservations:\n- The results panel shows a Trust Score of \"100\" and a green \"Clean\" message.\n- The findings area reads \"No Cheating Detected\" / \"This diff looks clean. Your AI agent passed the honesty check.\" — no suspicious finding is listed.\n- The submitted diff contains a disabled test (the change from it(...)…"
+}

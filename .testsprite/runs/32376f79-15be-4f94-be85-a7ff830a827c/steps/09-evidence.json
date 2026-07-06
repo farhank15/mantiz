@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 9,
+    "summary": "Step 9 'Click the icon inside the 'AI-Powered Detection' control to change its state, then click the 'Save Settings' button to persist the change' passed.",
+    "path": "steps/09-snapshot.html"
+  }
+]

@@ -1,0 +1,18 @@
+{
+  "testId": "37917aa6-d82c-4d53-a7f9-73df2c83f31e",
+  "status": "failed",
+  "startedAt": "2026-07-01T09:07:16.617Z",
+  "finishedAt": "2026-07-01T09:10:52.066Z",
+  "videoUrl": "https://testsprite-videos.s3.us-east-1.amazonaws.com/245844c8-60c1-706a-3b4b-cc8536dcf06a/1782897049360904//tmp/81e3a1cd-20bb-42cb-a239-bc603dda5fd9/result.webm",
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_4e19a1fb668487d9",
+  "runIdIfAvailable": "b8dcdf32-fd21-4029-985d-450fa2606fd3",
+  "codeVersion": "v1",
+  "targetUrl": "https://mantiz-wine.vercel.app",
+  "targetUrlSource": "run",
+  "failedStepIndex": 5,
+  "failureKind": "unknown",
+  "verdict": "failed",
+  "executionStatus": "completed",
+  "summary": "Failed: TEST FAILURE\n\nThe app shows a high Trust Score and labels the diff as 'Clean', but findings are still reported — the requirement that a clean diff produce zero findings was not met.\n\nObservations:\n- The page shows Trust Score: 85 and the label 'Clean'.\n- The Findings section lists at least one finding: 'Source code changed (b/src/math.ts) but no tests were updated.'"
+}

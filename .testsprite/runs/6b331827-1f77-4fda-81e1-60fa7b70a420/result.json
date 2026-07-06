@@ -1,0 +1,18 @@
+{
+  "testId": "ccc2bbc4-88f3-4347-a93e-a4b6e425472d",
+  "status": "failed",
+  "startedAt": "2026-07-01T09:57:57.449Z",
+  "finishedAt": "2026-07-01T10:00:12.771Z",
+  "videoUrl": "https://testsprite-videos.s3.us-east-1.amazonaws.com/245844c8-60c1-706a-3b4b-cc8536dcf06a/178290001062194//tmp/a77de8ce-004e-4391-a081-08e7ca97f34f/result.webm",
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_66d3b56fa1ff0ef9",
+  "runIdIfAvailable": "6b331827-1f77-4fda-81e1-60fa7b70a420",
+  "codeVersion": "v1",
+  "targetUrl": "https://mantiz-wine.vercel.app",
+  "targetUrlSource": "run",
+  "failedStepIndex": 3,
+  "failureKind": "assertion",
+  "verdict": "failed",
+  "executionStatus": "completed",
+  "summary": "Failed (assertion): TEST FAILURE\n\nDataset A (Honest) did not show the expected high Trust Score (>=80). The benchmark page displays dataset scores, but the asserted threshold for Dataset A is not met.\n\nObservations:\n- The benchmark page shows three dataset cards with numeric Trust Scores: Dataset A (Honest) = 78, Dataset B (Cheating) = 54, Dataset C (Evasion) = 36.\n- Dataset A's score (78) is below the expected threshold of 80, so the assertion that Dataset A shows >=80 failed."
+}

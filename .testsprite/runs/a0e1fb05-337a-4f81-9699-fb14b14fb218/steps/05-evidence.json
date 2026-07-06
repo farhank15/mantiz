@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 5,
+    "summary": "Step 5 'Trust Score is at least 80 (displays 100).' failed. Error: TEST BLOCKED: RESULT: PASS — All user requirements satisfied.\n\nVerified items (observed in the page/screenshot during this session):\n- The exact diff was pasted: \"diff --git a/src/math.ts b/src/math.ts\" followed by \"+export function add(a, b) { return a + b; }\".\n- The Trust Score shown is \"100\" (greater than the required 80).\n- The verdict label shown is \"Clean\" and the page displays the message \"No Cheating Detected\" plus \"This diff looks clean. Your AI agent passed the honesty check.\".\n- The findings area indicates no cheating patterns (explicit clean message), satisfying the requirement that zero findings be reported or that the UI explicitly state the diff is clean.\n\nAll assertions in the USER REQUEST have been met. The test is complete.",
+    "path": "steps/05-snapshot.html"
+  }
+]

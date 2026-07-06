@@ -1,0 +1,18 @@
+{
+  "rootCauseHypothesis": "TEST BLOCKED: No matches found for \"Saved!\" on page.",
+  "recommendedFixTarget": null,
+  "evidence": [
+    {
+      "kind": "snapshot",
+      "stepIndex": 20,
+      "url": "https://frontend-test-recordings-production.s3.us-east-1.amazonaws.com/raw_html/326032c3-ec3f-4e1a-acb6-f4930df86563/035.html?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=ASIAZQ3DRZAIEUP5ERQF%2F20260705%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260705T135740Z&X-Amz-Expires=900&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEHMaCXVzLWVhc3QtMSJGMEQCICrpi%2FYVHDECTHJ5KfhIf2d4gomny3m1BVI%2FlU8Zc9fVAiAu8o703tX64ivlg1gvFk0BDeujVpzJrYOBbSxhGvjbDSr7Awg8EAAaDDY1NDY1NDQyNTEwNCIM%2Bfs7ikKhGU%2FmNd2pKtgDO0DTxB702b2Px5guFAWqiNWa6ggO09JhWDM%2BmOvWivWeunKW4uCbSy3Mbh9x2JZBhL6mKlz8QlId2i%2FPenoPk51MpEDo%2F9ESyjHaxu8frreauCYPu3QYzM5dEFcg7YXfLTdp%2B84XkOhluXsQXXVcIZxUtog9evq8h0cwpwF3fO8sVtgVqttL%2Fc8K6%2FG9rbvAFzX%2FDT0Zn3IbruFzyvZxLyPCjJ9XEnbTv2T%2BVdyAZ49sidRgL78CAhZr%2F8CTjJ5JnmaPilKzq%2FbpSnPWT%2BKeqHbBT51VvYqosiBXRQFv9rVub%2BxmTp0%2BaiJZOPTfMJSELCZetM4RC1p22dfx%2BEwTWie0GuO2jHhG08Juyy%2FwRJd1OIsdIbHB8PzE%2BXDi4agX5rTWFkyhOHDT%2BAjcqdkJVKWwwTtADfL8BfWA66WL%2BQAWxoPjAYBt%2Fe2u8zmTexGBMdqdPZMgIDPqI9yy8ctWgD8sCHozGn9WfgkQGHJJCWL2Avfed37FUcelpFMjoRKE52nXNn5%2BKRgLmjBRIGnP8Kmbx2TEkZFm62C0cotGE8PrJvZyV3sjNgXlL4KIMaaZNumogMavEGxC5gpouEEicmVh5K2IHfmEMhGUWwky%2FXoU01cJyTNGbjDB8qjSBjqmAYJMt0GqKIIR5sV9%2BMQHKfu3iLhS6Nb7crtxMYLSLPTRmUpwBsiywD7cwmdm1Gw7%2By73uVLFwIEKwSx54QQFePEPkcU5ERh1rAnMZZi3JL6gTcfMga1zlZe35K6L72kxTVpBvCn%2BAzQ54qftt2qisr9U1SBLr%2BnXy4UUfUsRc8ZrzCgdz607J1CMNgrOtg8vchvzlQhqLHAw2CA2qYAnHNTQ58j5AIA%3D&X-Amz-Signature=e82e67e427caa8a6b15008c2a7b77872b3fd4aa484b6c0865019adb04f7b7413&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "summary": "Step 20 'Click 'Save Settings button'' passed."
+    },
+    {
+      "kind": "snapshot",
+      "stepIndex": 21,
+      "url": "https://frontend-test-recordings-production.s3.us-east-1.amazonaws.com/raw_html/326032c3-ec3f-4e1a-acb6-f4930df86563/045.html?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=ASIAZQ3DRZAIEUP5ERQF%2F20260705%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260705T135740Z&X-Amz-Expires=900&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEHMaCXVzLWVhc3QtMSJGMEQCICrpi%2FYVHDECTHJ5KfhIf2d4gomny3m1BVI%2FlU8Zc9fVAiAu8o703tX64ivlg1gvFk0BDeujVpzJrYOBbSxhGvjbDSr7Awg8EAAaDDY1NDY1NDQyNTEwNCIM%2Bfs7ikKhGU%2FmNd2pKtgDO0DTxB702b2Px5guFAWqiNWa6ggO09JhWDM%2BmOvWivWeunKW4uCbSy3Mbh9x2JZBhL6mKlz8QlId2i%2FPenoPk51MpEDo%2F9ESyjHaxu8frreauCYPu3QYzM5dEFcg7YXfLTdp%2B84XkOhluXsQXXVcIZxUtog9evq8h0cwpwF3fO8sVtgVqttL%2Fc8K6%2FG9rbvAFzX%2FDT0Zn3IbruFzyvZxLyPCjJ9XEnbTv2T%2BVdyAZ49sidRgL78CAhZr%2F8CTjJ5JnmaPilKzq%2FbpSnPWT%2BKeqHbBT51VvYqosiBXRQFv9rVub%2BxmTp0%2BaiJZOPTfMJSELCZetM4RC1p22dfx%2BEwTWie0GuO2jHhG08Juyy%2FwRJd1OIsdIbHB8PzE%2BXDi4agX5rTWFkyhOHDT%2BAjcqdkJVKWwwTtADfL8BfWA66WL%2BQAWxoPjAYBt%2Fe2u8zmTexGBMdqdPZMgIDPqI9yy8ctWgD8sCHozGn9WfgkQGHJJCWL2Avfed37FUcelpFMjoRKE52nXNn5%2BKRgLmjBRIGnP8Kmbx2TEkZFm62C0cotGE8PrJvZyV3sjNgXlL4KIMaaZNumogMavEGxC5gpouEEicmVh5K2IHfmEMhGUWwky%2FXoU01cJyTNGbjDB8qjSBjqmAYJMt0GqKIIR5sV9%2BMQHKfu3iLhS6Nb7crtxMYLSLPTRmUpwBsiywD7cwmdm1Gw7%2By73uVLFwIEKwSx54QQFePEPkcU5ERh1rAnMZZi3JL6gTcfMga1zlZe35K6L72kxTVpBvCn%2BAzQ54qftt2qisr9U1SBLr%2BnXy4UUfUsRc8ZrzCgdz607J1CMNgrOtg8vchvzlQhqLHAw2CA2qYAnHNTQ58j5AIA%3D&X-Amz-Signature=02fe62f83a3cdab26bfe08e2a94f68c3a2d7f073813e421ffec4b3ac7d532f24&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "summary": "Step 21 'The Trust Score threshold slider (range input) is visible on the Settings page.' failed. Error: TEST BLOCKED: No matches found for \"Saved!\" on page."
+    }
+  ]
+}

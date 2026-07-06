@@ -1,0 +1,18 @@
+{
+  "testId": "41b3c90c-43f6-4b46-bae4-51b78b0ee2cf",
+  "status": "blocked",
+  "startedAt": "2026-07-01T14:02:34.960Z",
+  "finishedAt": "2026-07-01T14:04:08.493Z",
+  "videoUrl": "https://testsprite-videos.s3.us-east-1.amazonaws.com/245844c8-60c1-706a-3b4b-cc8536dcf06a/1782914648194195//tmp/dc153306-81f7-4f0a-8305-2f9931216015/result.webm",
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_a1249a17da49831e",
+  "runIdIfAvailable": "8610be84-bb76-40ae-9ab0-f297fa979bc8",
+  "codeVersion": "v1",
+  "targetUrl": "https://mantiz-wine.vercel.app",
+  "targetUrlSource": "run",
+  "failedStepIndex": 3,
+  "failureKind": null,
+  "verdict": "blocked",
+  "executionStatus": "completed",
+  "summary": "Blocked before a verdict could be produced: TEST BLOCKED: Verification summary for https://mantiz-wine.vercel.app/login:\n\nRequirements and results:\n- Navigate to /login: The page loaded at the login route and the login UI is visible.\n- 'Continue with GitHub' button visible and centered: A prominent blue button labeled 'Continue with GitHub' is visible in the central login card and appears interactive.\n- Page shows GitHub-authentication text: The page displays the sentence 'Sign in with GitHub t…"
+}

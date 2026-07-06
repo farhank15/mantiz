@@ -1,0 +1,18 @@
+{
+  "testId": "37917aa6-d82c-4d53-a7f9-73df2c83f31e",
+  "status": "blocked",
+  "startedAt": "2026-07-01T10:07:24.421Z",
+  "finishedAt": "2026-07-01T10:09:59.900Z",
+  "videoUrl": "https://testsprite-videos.s3.us-east-1.amazonaws.com/245844c8-60c1-706a-3b4b-cc8536dcf06a/178290059966797//tmp/810eaf74-461a-4bd3-9951-e27b650e0145/result.webm",
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_a39a06bbf7fbc49a",
+  "runIdIfAvailable": "0ab61177-15cf-4d62-9662-9f843b0fd0a5",
+  "codeVersion": "v1",
+  "targetUrl": "https://mantiz-wine.vercel.app",
+  "targetUrlSource": "run",
+  "failedStepIndex": 5,
+  "failureKind": null,
+  "verdict": "blocked",
+  "executionStatus": "completed",
+  "summary": "Blocked before a verdict could be produced: TEST BLOCKED: Result summary (observed on https://mantiz-wine.vercel.app/scan):\n\n- The Scan feature is present and works without signing in.\n- The provided diff was pasted exactly and submitted.\n- Trust Score observed: 100 (on a 0-100 scale).\n- Result label observed: 'Clean'.\n- Findings message observed: 'No Cheating Detected' and 'This diff looks clean. Your AI agent passed the honesty check.' (indicating zero findings / explicitly clean).\n\nVerificat…"
+}

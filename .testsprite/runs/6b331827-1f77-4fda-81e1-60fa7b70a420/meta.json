@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "cli-v1",
+  "snapshotId": "snap_66d3b56fa1ff0ef9",
+  "testId": "ccc2bbc4-88f3-4347-a93e-a4b6e425472d",
+  "projectId": "173f90ce-a7ef-4dfa-8786-4ee3cc2951dc",
+  "codeVersion": "v1",
+  "runIdIfAvailable": "6b331827-1f77-4fda-81e1-60fa7b70a420",
+  "targetUrl": "https://mantiz-wine.vercel.app",
+  "failedStepIndex": 3,
+  "failureKind": "assertion",
+  "capturedAt": "2026-07-01T10:00:12.771Z",
+  "fetchedAt": "2026-07-01T10:00:18.305Z"
+}

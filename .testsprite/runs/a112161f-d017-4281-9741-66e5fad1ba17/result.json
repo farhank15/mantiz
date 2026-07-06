@@ -1,0 +1,18 @@
+{
+  "testId": "326032c3-ec3f-4e1a-acb6-f4930df86563",
+  "status": "failed",
+  "startedAt": "2026-07-05T13:18:41.726Z",
+  "finishedAt": "2026-07-05T13:26:17.291Z",
+  "videoUrl": "https://testsprite-videos.s3.us-east-1.amazonaws.com/245844c8-60c1-706a-3b4b-cc8536dcf06a/1783257974880091//tmp/b499a73c-ae30-4d08-82cd-a96c8d4f1ee3/result.webm",
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_15a58e9b499a36fd",
+  "runIdIfAvailable": "a112161f-d017-4281-9741-66e5fad1ba17",
+  "codeVersion": "v1",
+  "targetUrl": "https://mantiz-wine.vercel.app",
+  "targetUrlSource": "run",
+  "failedStepIndex": 12,
+  "failureKind": "unknown",
+  "verdict": "failed",
+  "executionStatus": "completed",
+  "summary": "Failed: TEST FAILURE\n\nThe 'AI Detection' toggle is not present on the Settings page — the required control appears to be missing.\n\nObservations:\n- The Trust Score Threshold slider (input id='threshold-slider') is visible in Settings and shows value 51; it accepted keyboard adjustments.\n- The 'Save Settings' button is visible on the page, but no 'Saved!' confirmation was observed after clicking in prior steps.\n- No element with id='ai-detection-toggle' or any interactive element/aria-label conta…"
+}

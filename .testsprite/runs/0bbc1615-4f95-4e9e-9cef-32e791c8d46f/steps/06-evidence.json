@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 6,
+    "summary": "Step 6 'Trust Score displays '100', confirming it is 80 or higher.' failed. Error: TEST BLOCKED: RESULT: PASS — The app returned a high trust score and an explicit clean result for the provided diff.\n\nObserved UI evidence (verbatim where possible):\n- Pasted diff (textarea contents):\n  diff --git a/src/math.ts b/src/math.ts\n  +export function add(a, b) { return a + b; }\n\n- Trust Score displayed: 100\n- Result label: Clean\n- Findings message: \"No Cheating Detected\" and \"This diff looks clean. Your AI agent passed the honesty check.\"\n\nVerification against USER REQUEST requirements:\n- Action: Pasted the exact clean diff into the textarea — VERIFIED (text visible in textarea).\n- Action: Clicked the Scan/Analyze button — VERIFIED (results are present after submit).\n- Assertion: Trust Score >= 80 — VERIFIED (observed 100).\n- Assertion: Findings show zero issues or explicit clean message — VERIFIED (observed 'No Cheating Detected' and explicit clean message).\n\nAll requested checks are satisfied based on visible UI content. Marking the task as completed successfully.",
+    "path": "steps/06-snapshot.html"
+  }
+]

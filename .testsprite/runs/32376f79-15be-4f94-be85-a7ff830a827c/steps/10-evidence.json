@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "snapshot",
+    "stepIndex": 10,
+    "summary": "Step 10 'Expected the Trust Score slider's numeric value to be '60'.' failed. Error: TEST FAILURE\n\nThe AI-Powered Detection toggle could not be turned off — clicking it had no visible effect and the UI remained in the ON state after multiple valid attempts.\n\nObservations:\n- The Settings page displays the \"AI-Powered Detection\" toggle in the ON position (blue) in the visible UI.\n- Multiple interactions were attempted (clicking the toggle button repeatedly, clicking the inner icon, and clicking \"Save Settings\") but the toggle's visual state did not change.\n- The Trust Score Threshold slider is present and set to 60, confirming the Settings page is reachable and some controls are functioning.",
+    "path": "steps/10-snapshot.html"
+  }
+]
