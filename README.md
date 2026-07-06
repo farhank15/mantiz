@@ -61,6 +61,14 @@ AI agents often cheat subtly: skipping tests, disabling assertions, swallowing e
 <br />
 
 <p align="center">
+  <img src="public/heal-fix.png" alt="Mantiz Self-Healing — PR Code Suggestions" width="720" style="border-radius: 12px; border: 1px solid #30363d;" />
+  <br />
+  <em>Self-Healing — Inline PR code suggestions for one-click fix commit directly on GitHub.</em>
+</p>
+
+<br />
+
+<p align="center">
   <img src="public/mantiz-report.png" alt="Mantiz Report — Trust Score + Detected Patterns" width="720" style="border-radius: 12px; border: 1px solid #30363d;" />
   <br />
   <em>Scan Report — Trust Score (0-100) with per-finding explanations.</em>
