@@ -37,7 +37,7 @@ AI agents often cheat subtly: skipping tests, disabling assertions, swallowing e
 ## Demo
 
 <p align="center">
-  <img src="public/pr-scan.png" alt="PR Scan — Analyze any GitHub PR" width="720" style="border-radius: 12px; border: 1px solid #30363d;" />
+  <img src="public/demo-mantiz.gif" alt="Mantiz Demo" width="720" style="border-radius: 12px; border: 1px solid #30363d;" />
   <br />
   <em>PR Scan — Paste a GitHub PR URL and get instant detection results.</em>
 </p>
