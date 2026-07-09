@@ -78,9 +78,9 @@ Every row below is one iteration of the **Write → Verify → Fix → Verify** 
 | 52 | Wrote and registered backend test `be-03-rate-limiter.py` to verify API rate limiting (`10 req/min`) on `/api/share/:id`. Discovered in-memory rate limiting fails on Vercel serverless. Implemented database-backed rate limiting using Neon Postgres (`rate_limit_events` table). Bypassed Vercel Edge caching in E2E test. | Checker: FAILED on first run (`8ea2fac9`) due to serverless routing -> FIXED & PASSED on second run ✅ | FIXED | — |
 | 53 | Wrote and registered backend test `be-04-api-index-repo.py` to verify codebase indexing endpoint security and validation. Resolved project syntax errors in `silent-catch.ts` and `scan.ts` CLI. Wired up missing AI detection toggle UI component and server actions. | Checker: index-repo API test (`5b3d24ce`) ✅ PASSED · settings threshold & AI toggle (`326032c3`) ✅ PASSED | FIXED | — |
 | 54 | Fixed GitHub App inline comments crash by stripping `a/` and `b/` prefix from git diff filepaths before calling pulls.createReview and checks.update APIs. | Checker: Verify via manual audit of PR API calls & compiling | FIXED | — |
-| 55 | Fixed `.todo()` detection gap in disabled_assertion detector — added `/\\\\.todo\\s*\\(/` to skipPatterns in language-registry.ts, mapped `.todo()` calls to `todo` pattern type. Updated both `src/` and `packages/mantiz-core/src/`. | Checker: TestSprite API scan test (`73dcfab1`) ✅ PASSED (verified `.todo()` flags `disabled_assertion` correctly on Vercel) | PASSED | — |
+| 55 | Fixed `.todo()` detection gap in disabled_assertion detector — added `/\\\\.todo\\s*\\(/` to skipPatterns in language-registry.ts, mapped `.todo()` calls to `todo` pattern type. Updated both `src/` and `packages/mantiz-core/src/`. | Checker: TestSprite API scan test (`73dcfab1`, Run `4e46720b-5c28-4502-aa48-2b4eaf59b85d`) ✅ PASSED (verified `.todo()` flags `disabled_assertion` correctly on Vercel) | PASSED | — |
 | 56 | Fixed publish-gpr job: removed mantiz-cli step from GitHub Packages job (mantiz-cli has no `@farhank15` scope → pnpm falls back to npmjs.org with GITHUB_TOKEN → 404). mantiz-cli handled separately in publish-cli-npm job with NPM_TOKEN. Tagged v0.4.1. | Checker: Verified packages successfully published to GPR and NPM without authorization conflicts. | PASSED | — |
-| 57 | Added TestSprite verification gate to publish.yml — deployed app is smoke-tested before packages are published. Also added skeleton loading placeholders to scan page for better UX during analysis. | Checker: Deployed app smoke-tested via TestSprite. Frontend E2E scan test (`85f99ee9`) ✅ PASSED (5/5 steps, verified UI works with new loaders) | PASSED | — |
+| 57 | Added TestSprite verification gate to publish.yml — deployed app is smoke-tested before packages are published. Also added skeleton loading placeholders to scan page for better UX during analysis. | Checker: Deployed app smoke-tested via TestSprite. Frontend E2E scan test (`85f99ee9`, Run `86347238-5023-455e-84f2-7e176e2c4ab0`) ✅ PASSED (5/5 steps, verified UI works with new loaders) | PASSED | — |
 
 ---
 
@@ -88,6 +88,12 @@ Every row below is one iteration of the **Write → Verify → Fix → Verify** 
 
 - **Real failures caught by TestSprite:** 18 (iterations 2, 5, 8, 11, 12, 19, 28, 29, 30, 41-first-run, 46-first-run, 47-first-run×2, 51-clean-code-unauth, 52-rate-limit-serverless, 53-settings-ai-toggle-missing, 54-github-pr-comments-missing-due-to-filepath-prefix, 55-todo-not-detected)
 - **Real bugs fixed as a result:** 15 unique root causes (incl. `.todo()` not detected, mantiz-cli publish fallback, PR comments path mismatch)
+- **TestSprite Verification Runs (Latest Production Build):**
+  - /api/scan (.todo() check) (`73dcfab1`): Run `4e46720b-5c28-4502-aa48-2b4eaf59b85d` ✅ PASSED
+  - Diff scan UI (skeleton loader) (`85f99ee9`): Run `86347238-5023-455e-84f2-7e176e2c4ab0` ✅ PASSED
+  - Rate Limiting API (`8ea2fac9`): Run `e0b10b88-2505-4fd1-9789-0c51619c981a` ✅ PASSED
+  - Share Link API (`9e089ba9`): Run `4581f972-82bc-43f5-9f4a-9f8f00168ff5` ✅ PASSED
+  - Codebase Indexing API (`5b3d24ce`): Run `c0284250-dc87-4cfc-90ef-e40612d098c8` ✅ PASSED
 - **TestSprite tests in project:** 24 total (22 PASSED, 2 blocked by E2E runner environment/quirks)
 - **CI/CD pipeline gate:** TestSprite verification integrated into publish.yml — app is smoke-tested before every release
 - **Commit history matches this log:** every iteration has a corresponding git commit on `main`
