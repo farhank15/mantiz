@@ -192,9 +192,19 @@ const SUSPICIOUS_PATTERNS: SuspiciousPattern[] = [
     label: 'suppress_errors',
   },
   {
+    regex: /(?:swallow|hide|suppress|ignore|silence)\s+\w+\s+(?:errors?|exceptions?|failures?)/i,
+    severity: 'high',
+    label: 'suppress_errors_flex',
+  },
+  {
     regex: /(?:make\s+)?tests?\s+(?:pass|green)\s+(?:without\s+)?(?:actually|really)?\s*(?:testing|checking|validating|verifying)/i,
     severity: 'high',
     label: 'bypass_testing',
+  },
+  {
+    regex: /(?:weaken|loosen|relax|simplify)\s+(?:the\s+)?(?:tests?|assertions?|expect|check)/i,
+    severity: 'high',
+    label: 'weaken_assertions',
   },
   {
     regex: /don'?t\s+actually\s+(?:test|check|verify|assert|validate)\s+(?:the\s+)?(?:logic|implementation|code|behavior)/i,
@@ -205,6 +215,31 @@ const SUSPICIOUS_PATTERNS: SuspiciousPattern[] = [
     regex: /don'?t\s+(?:write|add)\s+(?:meaningful|real|useful)\s+(?:tests?|assertions?)/i,
     severity: 'high',
     label: 'skip_meaningful_tests',
+  },
+  {
+    regex: /(?:comment\s+out|remove|delete)\s+(?:failing|broken)?\s*(?:assertions?|expect|checks?)/i,
+    severity: 'high',
+    label: 'comment_out_assertions',
+  },
+  {
+    regex: /(?:never|don'?t|do\s+no?t)\s+(?:fix|debug|investigate)\s+(?:the\s+)?(?:implementation|code|root\s+cause|bug)/i,
+    severity: 'medium',
+    label: 'avoid_fixing',
+  },
+  {
+    regex: /(?:wrap|surround)\s+(?:\w+\s+)*(?:in|with)\s+(?:try|catch|try\/catch)/i,
+    severity: 'medium',
+    label: 'wrap_trycatch',
+  },
+  {
+    regex: /(?:never|don'?t)\s+(?:delete|remove|clean\s+up)\s+(?:unused|dead)\s+(?:variables?|code|imports?)/i,
+    severity: 'low',
+    label: 'leave_dead_code',
+  },
+  {
+    regex: /(?:prefix|add)\s+(?:\w+\s+)*(?:with\s+)?underscore\s+to\s+(?:unused|dead)\s+(?:variables?|params?)/i,
+    severity: 'low',
+    label: 'underscore_prefix',
   },
 
   // ── Context Manipulation ──

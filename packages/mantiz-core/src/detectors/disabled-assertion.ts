@@ -46,10 +46,14 @@ function scanHunk(hunkContent: string, baseLine: number, lang: string | null): M
             break
           }
 
-          const hasReason = /\.skip\s*\(\s*['"`]/.test(line) ||
-            /@pytest\.mark\.skip\s*\(/.test(line) ||
-            /@pytest\.mark\.skipif\s*\(/.test(line) ||
-            /@unittest\.skip\(/.test(line)
+          // describe.skip always = HIGH (suite-level skip bypasses all tests)
+          const isDescribeSkip = /describe\s*\.\s*skip\s*\(/.test(line)
+          const hasReason = !isDescribeSkip && (
+            /\.skip\s*\(\s*['"`]/.test(line)
+            || /@pytest\.mark\.skip\s*\(/.test(line)
+            || /@pytest\.mark\.skipif\s*\(/.test(line)
+            || /@unittest\.skip\(/.test(line)
+          )
           matches.push({
             lineIndex: lineIdx,
             lineContent: content,

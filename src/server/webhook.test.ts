@@ -43,6 +43,7 @@ describe('Webhook System unit tests', () => {
       webhookUrl: 'https://example.com/webhook',
       scanId: 'scan-456',
       payload: {
+        scanId: 'scan-456',
         trustScore: 85,
         totalFindings: 1,
         highCount: 0,
@@ -89,6 +90,7 @@ describe('Webhook System unit tests', () => {
       webhookUrl: 'https://example.com/webhook',
       scanId: 'scan-456',
       payload: {
+        scanId: 'scan-456',
         trustScore: 40,
         totalFindings: 2,
         highCount: 1,

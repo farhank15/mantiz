@@ -47,6 +47,22 @@ const KNOWN_HALLUCINATED_MATCHERS = new Set([
   'toExist', 'toNotExist', 'toNotBe', 'toNotEqual', 'toNotMatch',
   'toHave', 'toNotHave', 'toHas', 'toNotHas', 'toBePresent',
   'toNotBePresent', 'toIncludeAll', 'toExclude', 'toExcludeAll',
+
+  // Additional to* hallucinated patterns (confirmed non-existent)
+  'toBeGreaterThanZero', 'toBeLessThanZero', 'toBeGreaterThanZero',
+  'toBeLessThanMs', 'toBePositiveInteger', 'toBeNegativeInteger',
+  'toBeSuccessResult', 'toBeBooleanValue', 'toBeTrueBoolean',
+  'toBeNullOrString', 'toBeValidEmail', 'toBeValidUrl',
+  'toBeNonEmptyString', 'toBeNonEmptyObject', 'toBeNonEmptyArray',
+  'toBeAlphanumeric', 'toBeNumeric', 'toBeUppercase', 'toBeLowercase',
+  'toBeValidDate', 'toBeFutureDate', 'toBePastDate',
+  'toBeColorHex', 'toBeUUID', 'toBeISODate', 'toBePhoneNumber',
+  'toBeWhitespace', 'toBeMultiline', 'toBeTrimmed',
+  'toHaveLengthAbove', 'toHaveLengthBelow', 'toHaveLengthBetween',
+  'toHaveKeys', 'toHaveValues', 'toHaveItems',
+  'toContainExactly', 'toContainOnce', 'toContainTimes',
+  'toMatchRegex', 'toMatchPattern',
+
   // must* patterns — RSpec-inspired (must not should)
   'mustBe', 'mustNotBe', 'mustEqual', 'mustNotEqual',
   'mustHave', 'mustNotHave', 'mustReturn', 'mustNotReturn',
