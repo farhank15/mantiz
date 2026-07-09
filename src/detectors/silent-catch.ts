@@ -151,7 +151,7 @@ function patternToExplanation(pattern: CatchMatch['pattern']): string {
 function getCatchOpenPattern(lang: string | null): RegExp {
   switch (lang) {
     case 'python':
-      return /except\s*\w*\s*:/i
+      return /except\s*[^:]*:/i
     case 'ruby':
       return /rescue\s*\w*/i
     case 'go':

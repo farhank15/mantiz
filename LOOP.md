@@ -11,7 +11,7 @@
 - **Stack:** TanStack Start · Neon Postgres · Drizzle ORM · TestSprite CLI
 - **Agent (Maker):** Antigravity Agent (Google DeepMind)
 - **Checker:** TestSprite CLI (`testsprite test run/result/artifact`)
-- **Total iterations:** 58
+- **Total iterations:** 59
 
 ---
 
@@ -82,13 +82,14 @@ Every row below is one iteration of the **Write → Verify → Fix → Verify** 
 | 56 | Fixed publish-gpr job: removed mantiz-cli step from GitHub Packages job (mantiz-cli has no `@farhank15` scope → pnpm falls back to npmjs.org with GITHUB_TOKEN → 404). mantiz-cli handled separately in publish-cli-npm job with NPM_TOKEN. Tagged v0.4.1. | Checker: Verified packages successfully published to GPR and NPM without authorization conflicts. | PASSED | — |
 | 57 | Added TestSprite verification gate to publish.yml — deployed app is smoke-tested before packages are published. Also added skeleton loading placeholders to scan page for better UX during analysis. | Checker: Deployed app smoke-tested via TestSprite. Frontend E2E scan test (`85f99ee9`, Run `86347238-5023-455e-84f2-7e176e2c4ab0`) ✅ PASSED (5/5 steps, verified UI works with new loaders) | PASSED | — |
 | 58 | Added interactive client-side Evasion Simulator playground to the landing page to provide immediate 'wow factor' demonstration. Expanded `engine.test.ts` to cover all 7 core static detectors with 8 comprehensive unit tests. | Checker: Local unit tests passed (8/8) · pnpm build compiled clean · Frontend E2E scan test (`85f99ee9`, Run `7fa5b20e-5d0b-492a-876c-a29e6c12526d`) ✅ PASSED (5/5 steps, verified landing page works with new live simulator) | PASSED | — |
+| 59 | Fixed a bug in the Python empty exception detector where blocks containing exception aliases or complex definitions (e.g. `except Exception as e:`) were skipped by the scanner due to single-word regex constraints. Updated `getCatchOpenPattern` and `emptyCatchPatterns` to match any non-colon characters before the colon. Added unit test to `silent-catch.test.ts`. | Checker: Local unit tests passed (8/8 in `silent-catch.test.ts`) | PASSED | — |
 
 ---
 
 ## Loop Summary
 
 - **Real failures caught by TestSprite:** 18 (iterations 2, 5, 8, 11, 12, 19, 28, 29, 30, 41-first-run, 46-first-run, 47-first-run×2, 51-clean-code-unauth, 52-rate-limit-serverless, 53-settings-ai-toggle-missing, 54-github-pr-comments-missing-due-to-filepath-prefix, 55-todo-not-detected)
-- **Real bugs fixed as a result:** 15 unique root causes (incl. `.todo()` not detected, mantiz-cli publish fallback, PR comments path mismatch)
+- **Real bugs fixed as a result:** 16 unique root causes (incl. Python empty catch alias bypass, `.todo()` not detected, mantiz-cli publish fallback, PR comments path mismatch)
 - **TestSprite Verification Runs (Latest Production Build):**
   - /api/scan (.todo() check) (`73dcfab1`): Run `4e46720b-5c28-4502-aa48-2b4eaf59b85d` ✅ PASSED
   - Diff scan UI & Home Playground (`85f99ee9`): Run `7fa5b20e-5d0b-492a-876c-a29e6c12526d` ✅ PASSED

@@ -81,6 +81,18 @@ describe('detectSilentCatch', () => {
     expect(result.some(f => f.patternType === 'silent_catch_and_pass')).toBe(true)
   })
 
+  it('detects Python except Exception as e: pass', () => {
+    const files = makeSourceDiff('src/api.py', [
+      ' def fetch_data():',
+      '   try:',
+      '     return requests.get("/api/data")',
+      '+  except Exception as e:',
+      '+    pass',
+    ])
+    const result = detectSilentCatch(files)
+    expect(result.some(f => f.patternType === 'silent_catch_and_pass')).toBe(true)
+  })
+
   it('detects empty finally block (single-line)', () => {
     const files = makeSourceDiff('src/api.ts', [
       ' export async function fetchData() {',

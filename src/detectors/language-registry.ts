@@ -189,14 +189,14 @@ export const LANGUAGE_CONFIG: Record<string, LanguageConfig> = {
       },
       silentCatch: {
         emptyCatchPatterns: [
-          /except\s*\w*\s*:\s*pass/,
-          /except\s*:\s*$/m,
+          /except\s*[^:]*:\s*pass/,
+          /except\s*[^:]*:\s*$/m,
         ],
         todoCatchPatterns: [
-          /except\s*\w*\s*:\s*#\s*(TODO|FIXME|HACK)/i,
+          /except\s*[^:]*:\s*#\s*(TODO|FIXME|HACK)/i,
         ],
         consoleOnlyCatchPatterns: [
-          /except\s*\w*\s*:\s*print\s*\(/,
+          /except\s*[^:]*:\s*print\s*\(/,
         ],
       },
       // All unittest.TestCase assert methods — ref: docs.python.org/3/library/unittest.html
