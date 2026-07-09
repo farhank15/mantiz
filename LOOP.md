@@ -81,7 +81,7 @@ Every row below is one iteration of the **Write → Verify → Fix → Verify** 
 | 55 | Fixed `.todo()` detection gap in disabled_assertion detector — added `/\\\\.todo\\s*\\(/` to skipPatterns in language-registry.ts, mapped `.todo()` calls to `todo` pattern type. Updated both `src/` and `packages/mantiz-core/src/`. | Checker: TestSprite API scan test (`73dcfab1`, Run `4e46720b-5c28-4502-aa48-2b4eaf59b85d`) ✅ PASSED (verified `.todo()` flags `disabled_assertion` correctly on Vercel) | PASSED | — |
 | 56 | Fixed publish-gpr job: removed mantiz-cli step from GitHub Packages job (mantiz-cli has no `@farhank15` scope → pnpm falls back to npmjs.org with GITHUB_TOKEN → 404). mantiz-cli handled separately in publish-cli-npm job with NPM_TOKEN. Tagged v0.4.1. | Checker: Verified packages successfully published to GPR and NPM without authorization conflicts. | PASSED | — |
 | 57 | Added TestSprite verification gate to publish.yml — deployed app is smoke-tested before packages are published. Also added skeleton loading placeholders to scan page for better UX during analysis. | Checker: Deployed app smoke-tested via TestSprite. Frontend E2E scan test (`85f99ee9`, Run `86347238-5023-455e-84f2-7e176e2c4ab0`) ✅ PASSED (5/5 steps, verified UI works with new loaders) | PASSED | — |
-| 58 | Added interactive client-side Evasion Simulator playground to the landing page to provide immediate 'wow factor' demonstration. Expanded `engine.test.ts` to cover all 7 core static detectors with 8 comprehensive unit tests. | Checker: Local unit tests passed (8/8) · pnpm build compiled clean (production SSR build verified) | PASSED | — |
+| 58 | Added interactive client-side Evasion Simulator playground to the landing page to provide immediate 'wow factor' demonstration. Expanded `engine.test.ts` to cover all 7 core static detectors with 8 comprehensive unit tests. | Checker: Local unit tests passed (8/8) · pnpm build compiled clean · Frontend E2E scan test (`85f99ee9`, Run `7fa5b20e-5d0b-492a-876c-a29e6c12526d`) ✅ PASSED (5/5 steps, verified landing page works with new live simulator) | PASSED | — |
 
 ---
 
@@ -91,7 +91,7 @@ Every row below is one iteration of the **Write → Verify → Fix → Verify** 
 - **Real bugs fixed as a result:** 15 unique root causes (incl. `.todo()` not detected, mantiz-cli publish fallback, PR comments path mismatch)
 - **TestSprite Verification Runs (Latest Production Build):**
   - /api/scan (.todo() check) (`73dcfab1`): Run `4e46720b-5c28-4502-aa48-2b4eaf59b85d` ✅ PASSED
-  - Diff scan UI (skeleton loader) (`85f99ee9`): Run `86347238-5023-455e-84f2-7e176e2c4ab0` ✅ PASSED
+  - Diff scan UI & Home Playground (`85f99ee9`): Run `7fa5b20e-5d0b-492a-876c-a29e6c12526d` ✅ PASSED
   - Rate Limiting API (`8ea2fac9`): Run `e0b10b88-2505-4fd1-9789-0c51619c981a` ✅ PASSED
   - Share Link API (`9e089ba9`): Run `4581f972-82bc-43f5-9f4a-9f8f00168ff5` ✅ PASSED
   - Codebase Indexing API (`5b3d24ce`): Run `c0284250-dc87-4cfc-90ef-e40612d098c8` ✅ PASSED
