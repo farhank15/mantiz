@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { db } from "../../../lib/db";
 import { webhookDeliveries } from "../../../schemas/index";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 // ─── Route Registration ─────────────────────────────────────────
 
@@ -351,60 +351,81 @@ export const Route = createFileRoute("/api/github/webhook")({
                 });
 
                 // ── Save scan to dashboard history ───────────────
-                // For User-type installs, look up the Mantiz dashboard user
-                // by matching github_installs.accountId → users.githubId.
-                // Organization installs are skipped (no single user owner).
                 try {
-                  const { githubInstalls, users, scans: scansTable, findings: findingsTable, repos: reposTable } = await import("../../../schemas/index");
+                  const { githubInstalls, users, scans: scansTable, findings: findingsTable, repos: reposTable, userOrgs } = await import("../../../schemas/index");
+                  // Helper: dry save logic reused by both user and org install paths
+                  const saveScanForUser = async (mantizUser: { id: string }) => {
+                    let repoRecord = await db.query.repos.findFirst({
+                      where: eq(reposTable.fullName, repoFullName),
+                    });
+                    if (!repoRecord) {
+                      const [inserted] = await db.insert(reposTable).values({
+                        fullName: repoFullName,
+                        githubRepoId: repo.id,
+                      }).returning();
+                      if (!inserted) return;
+                      repoRecord = inserted;
+                    }
+
+                    const [scanRecord] = await db.insert(scansTable).values({
+                      userId: mantizUser.id,
+                      repoId: repoRecord.id,
+                      sourceType: "github_app_bot",
+                      sourceRef: pr.html_url,
+                      rawDiff: diffText,
+                      trustScore: result.trustScore,
+                      status: "complete",
+                      completedAt: new Date(),
+                    }).returning();
+
+                    if (result.findings.length > 0 && scanRecord) {
+                      await db.insert(findingsTable).values(
+                        result.findings.map((f: any) => ({
+                          scanId: scanRecord.id,
+                          patternType: f.patternType,
+                          filePath: f.filePath,
+                          lineStart: f.lineStart,
+                          lineEnd: f.lineEnd,
+                          confidence: f.confidence,
+                          explanation: f.explanation,
+                          evidenceExcerpt: f.evidenceExcerpt,
+                        })),
+                      );
+                    }
+                  }
 
                   const installRecord = await db.query.githubInstalls.findFirst({
                     where: eq(githubInstalls.installationId, instId),
                   });
 
-                  if (installRecord && installRecord.accountType === "User" && installRecord.accountId) {
-                    const mantizUser = await db.query.users.findFirst({
-                      where: eq(users.githubId, String(installRecord.accountId)),
-                    });
-
-                    if (mantizUser) {
-                      // Find or create repo record
-                      let repoRecord = await db.query.repos.findFirst({
-                        where: eq(reposTable.fullName, repoFullName),
+                  if (installRecord) {
+                    // ── Case 1: User Install ────────────────────────
+                    if (installRecord.accountType === "User" && installRecord.accountId) {
+                      const mantizUser = await db.query.users.findFirst({
+                        where: eq(users.githubId, String(installRecord.accountId)),
                       });
-                      if (!repoRecord) {
-                        const [inserted] = await db.insert(reposTable).values({
-                          fullName: repoFullName,
-                          githubRepoId: repo.id,
-                        }).returning();
-                        repoRecord = inserted;
+                      if (mantizUser) {
+                        await saveScanForUser(mantizUser);
                       }
+                    }
 
-                      // Insert scan
-                      const [scanRecord] = await db.insert(scansTable).values({
-                        userId: mantizUser.id,
-                        repoId: repoRecord.id,
-                        sourceType: "github_app_bot",
-                        sourceRef: pr.html_url,
-                        rawDiff: diffText,
-                        trustScore: result.trustScore,
-                        status: "complete",
-                        completedAt: new Date(),
-                      }).returning();
+                    // ── Case 2: Organization Install ────────────────
+                    if (installRecord.accountType === "Organization" && installRecord.accountLogin) {
+                      const orgMembers = await db.query.userOrgs.findMany({
+                        where: eq(userOrgs.orgLogin, installRecord.accountLogin),
+                      });
 
-                      // Insert findings
-                      if (result.findings.length > 0) {
-                        await db.insert(findingsTable).values(
-                          result.findings.map((f: any) => ({
-                            scanId: scanRecord.id,
-                            patternType: f.patternType,
-                            filePath: f.filePath,
-                            lineStart: f.lineStart,
-                            lineEnd: f.lineEnd,
-                            confidence: f.confidence,
-                            explanation: f.explanation,
-                            evidenceExcerpt: f.evidenceExcerpt,
-                          })),
-                        );
+                      if (orgMembers.length > 0) {
+                        const memberUserIds = orgMembers.map(om => om.userId);
+                        const mantizUsers = await db.query.users.findMany({
+                          where: inArray(users.id, memberUserIds),
+                        });
+
+                        for (const mantizUser of mantizUsers) {
+                          await saveScanForUser(mantizUser);
+                        }
+                      } else {
+                        console.log(`[webhook] No Mantiz users found for org "${installRecord.accountLogin}" — scan not saved to dashboard`);
                       }
                     }
                   }

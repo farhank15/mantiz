@@ -448,7 +448,7 @@ function App() {
                   <textarea
                     value={simulatorDiff}
                     onChange={(e) => setSimulatorDiff(e.target.value)}
-                    className="w-full min-h-[220px] rounded-lg border border-border bg-canvas-dark p-4 font-mono text-xs text-ink leading-relaxed outline-hidden focus:border-interactive/50"
+                    className="w-full min-h-55 rounded-lg border border-border bg-canvas-dark p-4 font-mono text-xs text-ink leading-relaxed outline-hidden focus:border-interactive/50"
                     placeholder="Paste your git diff here..."
                   />
                   <div className="absolute right-3 top-3 rounded-md bg-canvas/60 px-2 py-1 text-[10px] font-mono text-ink-subdued border border-border">
@@ -479,12 +479,12 @@ function App() {
             </div>
 
             {/* Live Output */}
-            <div className="panel p-5 md:col-span-5 flex flex-col justify-between min-h-[350px]">
+            <div className="panel p-5 md:col-span-5 flex flex-col justify-between min-h-87.5">
               {!scanResult && !isScanningSim && (
                 <div className="flex flex-1 flex-col items-center justify-center text-center p-6 border border-dashed border-border rounded-lg bg-canvas/30">
                   <Terminal className="h-10 w-10 text-ink-subdued mb-3 animate-pulse" />
                   <h4 className="text-sm font-semibold text-ink">Scan Pending</h4>
-                  <p className="text-xs text-ink-muted mt-1 max-w-[240px]">
+                  <p className="text-xs text-ink-muted mt-1 max-w-60">
                     Select a template and click "Analyze Diff Live" to see the engine's verdict.
                   </p>
                 </div>
@@ -494,7 +494,7 @@ function App() {
                 <div className="flex flex-1 flex-col items-center justify-center text-center p-6">
                   <span className="relative flex h-12 w-12 items-center justify-center">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-interactive/20 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-8 w-8 bg-interactive/25 flex items-center justify-center">
+                    <span className="relative inline-flex rounded-full h-8 w-8 bg-interactive/25 items-center justify-center">
                       <Brain className="h-4 w-4 text-interactive animate-pulse" />
                     </span>
                   </span>
@@ -567,14 +567,14 @@ function App() {
                           <span>No suspicious cheating patterns found. Code is clean.</span>
                         </div>
                       ) : (
-                        <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
+                        <div className="space-y-2 max-h-35 overflow-y-auto pr-1">
                           {scanResult.findings.map((f: any, idx: number) => (
                             <div
                               key={idx}
                               className="rounded-lg border border-border bg-surface-2 p-2.5 flex items-start gap-2.5 transition hover:border-interactive/20"
                             >
                               <div
-                                className="h-5 w-5 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5"
+                                className="h-5 w-5 rounded-md flex items-center justify-center shrink-0 mt-0.5"
                                 style={{
                                   backgroundColor:
                                     f.confidence === "high"

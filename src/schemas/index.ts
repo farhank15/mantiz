@@ -185,6 +185,23 @@ export const webhookDeliveries = pgTable('webhook_deliveries', {
   completedAt: timestamp('completed_at'),
 })
 
+// ─── User Organization Memberships ──────────────────────────
+// Maps Mantiz users to GitHub organizations they belong to.
+// Synced on every login via GET /user/orgs.
+// Used to save scans to dashboard when GitHub App is installed on an org.
+
+export const userOrgs = pgTable('user_orgs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  orgGithubId: bigint('org_github_id', { mode: 'number' }).notNull(),
+  orgLogin: text('org_login').notNull(),
+  role: text('role', { enum: ['member', 'admin'] }).default('member').notNull(),
+  syncedAt: timestamp('synced_at').defaultNow().notNull(),
+}, (table) => ({
+  userOrgIdx: uniqueIndex('user_orgs_user_org_idx').on(table.userId, table.orgGithubId),
+  orgLoginIdx: index('user_orgs_org_login_idx').on(table.orgLogin),
+}))
+
 export const rateLimitEvents = pgTable('rate_limit_events', {
   id: uuid('id').primaryKey().defaultRandom(),
   key: text('key').notNull(),

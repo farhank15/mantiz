@@ -11,8 +11,8 @@ import { Octokit } from "@octokit/rest";
 import crypto from "node:crypto";
 
 import { db } from "../lib/db";
-import { users, repos, scans, findings } from "../schemas/index";
-import { eq, desc, sql } from "drizzle-orm";
+import { users, repos, scans, findings, userOrgs } from "../schemas/index";
+import { eq, desc, sql, and, notInArray } from "drizzle-orm";
 import { checkRateLimit } from "./rate-limiter";
 import { validatePRUrl } from "./middleware";
 
@@ -211,6 +211,48 @@ export const handleCallback = createServerFn({ method: "POST" })
           avatarUrl: user.avatar_url,
         })
         .where(eq(users.id, dbUser.id));
+    }
+
+    // ─── Sync GitHub Organization Memberships ──────────────────────
+    // Fetch user's orgs and store in user_orgs table.
+    // Used by the webhook handler to save scans to the dashboard
+    // when the GitHub App is installed on an organization.
+    try {
+      const orgOctokit = new Octokit({ auth: tokenData.access_token });
+      const { data: orgs } = await orgOctokit.request('GET /user/orgs', {
+        per_page: 100,
+      });
+
+      if (orgs.length > 0) {
+        for (const org of orgs) {
+          await db.insert(userOrgs).values({
+            userId: dbUser.id,
+            orgGithubId: org.id,
+            orgLogin: org.login,
+            role: 'member',
+            syncedAt: new Date(),
+          }).onConflictDoUpdate({
+            target: [userOrgs.userId, userOrgs.orgGithubId],
+            set: {
+              orgLogin: org.login,
+              syncedAt: new Date(),
+            },
+          });
+        }
+
+        // Remove orgs user is no longer a member of
+        const currentOrgIds = orgs.map(o => o.id);
+        await db.delete(userOrgs)
+          .where(
+            and(
+              eq(userOrgs.userId, dbUser.id),
+              notInArray(userOrgs.orgGithubId, currentOrgIds),
+            ),
+          );
+      }
+    } catch (orgErr) {
+      console.error('[auth] Failed to sync org memberships:', orgErr);
+      // Non-blocking: login tetap sukses meski sync org gagal
     }
 
     // ─── Seed Credits for new users ──────────────────────────────────
