@@ -31,6 +31,7 @@ import AnimatedGradientText from "#/components/magicui/animated-gradient-text";
 import Meteors from "#/components/magicui/meteors";
 import Particles from "#/components/magicui/particles";
 import BeamNetwork from "#/components/magicui/beam-network";
+import { scanDiff } from "#/detectors/engine";
 
 export const Route = createFileRoute("/")({ component: App });
 
@@ -166,7 +167,61 @@ const detectionPatterns = [
 const severityFilters = ["All", "Critical", "High", "Medium", "Info"] as const;
 
 function App() {
+  const templates = {
+    skip: `diff --git a/tests/math.test.ts b/tests/math.test.ts
+--- a/tests/math.test.ts
++++ b/tests/math.test.ts
+@@ -1,5 +1,5 @@
+ describe('math', () => {
+-  it('should add numbers', () => {
++  it.skip('should add numbers', () => {
+     expect(1 + 1).toBe(2)
+   })
+ })`,
+    catch: `diff --git a/src/index.ts b/src/index.ts
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -1,6 +1,6 @@
+ function process() {
++  try {
++    executeRisky()
++  } catch (e) {
++    // silent catch block
++  }
+ }`,
+    tampering: `diff --git a/tests/auth.test.ts b/tests/auth.test.ts
+--- a/tests/auth.test.ts
++++ b/tests/auth.test.ts
+@@ -1,4 +1,4 @@
+-  expect(auth.validate("valid")).toBe(true)
++  expect(auth.validate("invalid")).toBe(true)`,
+    clean: `diff --git a/src/math.ts b/src/math.ts
+--- a/src/math.ts
++++ b/src/math.ts
+@@ -1,3 +1,3 @@
+ export function add(a: number, b: number): number {
+-  return a - b;
++  return a + b;
+ }`
+  };
+
   const [activeFilter, setActiveFilter] = useState<string>("All");
+  const [simulatorDiff, setSimulatorDiff] = useState<string>(templates.skip);
+  const [scanResult, setScanResult] = useState<any>(null);
+  const [isScanningSim, setIsScanningSim] = useState(false);
+
+  const handleSimulateScan = () => {
+    setIsScanningSim(true);
+    setTimeout(() => {
+      try {
+        const result = scanDiff(simulatorDiff);
+        setScanResult(result);
+      } catch (err) {
+        console.error(err);
+      }
+      setIsScanningSim(false);
+    }, 800);
+  };
   const filteredPatterns =
     activeFilter === "All"
       ? detectionPatterns
@@ -310,6 +365,281 @@ function App() {
             </svg>
           </div>
         </motion.div>
+      </section>
+
+      {/* =============================================
+          1.5 INTERACTIVE SIMULATOR (WOW FACTOR)
+           ============================================= */}
+      <section className="page-wrap px-4 py-16 relative">
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-10 text-center">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-interactive/20 bg-interactive/8 px-4 py-1.5 text-xs font-semibold text-interactive">
+              <Terminal className="h-3.5 w-3.5" />
+              Live Playground
+            </div>
+            <h2 className="text-3xl font-bold text-ink sm:text-4xl">
+              Try the Evasion Playground
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-ink-muted">
+              Select a cheat template or paste a diff to see how the AST scoring engine rates the code in real-time.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-12">
+            {/* Input Editor */}
+            <div className="panel p-5 md:col-span-7 flex flex-col justify-between">
+              <div>
+                <div className="mb-4 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => {
+                      setSimulatorDiff(templates.skip);
+                      setScanResult(null);
+                    }}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium border transition-all ${
+                      simulatorDiff === templates.skip
+                        ? "bg-interactive/15 border-interactive text-interactive"
+                        : "bg-surface-2 border-border text-ink-muted hover:text-ink"
+                    }`}
+                  >
+                    Disabled Assertion (.skip)
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSimulatorDiff(templates.catch);
+                      setScanResult(null);
+                    }}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium border transition-all ${
+                      simulatorDiff === templates.catch
+                        ? "bg-interactive/15 border-interactive text-interactive"
+                        : "bg-surface-2 border-border text-ink-muted hover:text-ink"
+                    }`}
+                  >
+                    Silent Catch Block
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSimulatorDiff(templates.tampering);
+                      setScanResult(null);
+                    }}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium border transition-all ${
+                      simulatorDiff === templates.tampering
+                        ? "bg-interactive/15 border-interactive text-interactive"
+                        : "bg-surface-2 border-border text-ink-muted hover:text-ink"
+                    }`}
+                  >
+                    Assertion Tampering
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSimulatorDiff(templates.clean);
+                      setScanResult(null);
+                    }}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium border transition-all ${
+                      simulatorDiff === templates.clean
+                        ? "bg-success/15 border-success/45 text-success"
+                        : "bg-surface-2 border-border text-ink-muted hover:text-ink"
+                    }`}
+                  >
+                    Clean Honest Diff
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <textarea
+                    value={simulatorDiff}
+                    onChange={(e) => setSimulatorDiff(e.target.value)}
+                    className="w-full min-h-[220px] rounded-lg border border-border bg-canvas-dark p-4 font-mono text-xs text-ink leading-relaxed outline-hidden focus:border-interactive/50"
+                    placeholder="Paste your git diff here..."
+                  />
+                  <div className="absolute right-3 top-3 rounded-md bg-canvas/60 px-2 py-1 text-[10px] font-mono text-ink-subdued border border-border">
+                    diff-editor
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={handleSimulateScan}
+                  disabled={isScanningSim}
+                  className="btn btn-primary w-full md:w-auto px-6 flex items-center justify-center gap-2"
+                >
+                  {isScanningSim ? (
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Scanning AST...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4" />
+                      Analyze Diff Live
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Live Output */}
+            <div className="panel p-5 md:col-span-5 flex flex-col justify-between min-h-[350px]">
+              {!scanResult && !isScanningSim && (
+                <div className="flex flex-1 flex-col items-center justify-center text-center p-6 border border-dashed border-border rounded-lg bg-canvas/30">
+                  <Terminal className="h-10 w-10 text-ink-subdued mb-3 animate-pulse" />
+                  <h4 className="text-sm font-semibold text-ink">Scan Pending</h4>
+                  <p className="text-xs text-ink-muted mt-1 max-w-[240px]">
+                    Select a template and click "Analyze Diff Live" to see the engine's verdict.
+                  </p>
+                </div>
+              )}
+
+              {isScanningSim && (
+                <div className="flex flex-1 flex-col items-center justify-center text-center p-6">
+                  <span className="relative flex h-12 w-12 items-center justify-center">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-interactive/20 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-8 w-8 bg-interactive/25 flex items-center justify-center">
+                      <Brain className="h-4 w-4 text-interactive animate-pulse" />
+                    </span>
+                  </span>
+                  <h4 className="text-sm font-semibold text-ink mt-4">Parsing AST Node Trees</h4>
+                  <p className="text-xs text-ink-muted mt-1 animate-pulse">
+                    Evaluating Weak Signal Fusion rules...
+                  </p>
+                </div>
+              )}
+
+              {scanResult && !isScanningSim && (
+                <div className="flex-1 flex flex-col justify-between">
+                  <div>
+                    {/* Header Score Info */}
+                    <div className="flex items-center justify-between mb-4 border-b border-border pb-3">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-ink-subdued">
+                          Verdict
+                        </span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${
+                              scanResult.verdict?.label === "CLEAN"
+                                ? "bg-success/15 text-success"
+                                : scanResult.verdict?.label === "SUSPICIOUS"
+                                  ? "bg-severity-medium/15 text-severity-medium"
+                                  : "bg-severity-critical/15 text-severity-critical"
+                            }`}
+                          >
+                            <Shield className="h-3 w-3" />
+                            {scanResult.verdict?.label || "CLEAN"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-ink-subdued">
+                          Trust Score
+                        </span>
+                        <div className="text-3xl font-extrabold text-ink mt-0.5">
+                          <span
+                            style={{
+                              color:
+                                scanResult.trustScore >= 80
+                                  ? "var(--success)"
+                                  : scanResult.trustScore >= 50
+                                    ? "var(--severity-medium)"
+                                    : "var(--severity-critical)",
+                            }}
+                          >
+                            {scanResult.trustScore}
+                          </span>
+                          <span className="text-sm text-ink-subdued">/100</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Verdict description */}
+                    <p className="text-xs text-ink-muted bg-surface-2 p-3 rounded-lg border border-border mb-4 italic">
+                      "{scanResult.verdict?.reason}"
+                    </p>
+
+                    {/* Findings list */}
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-ink-subdued mb-2 block">
+                        Findings ({scanResult.findings.length})
+                      </span>
+                      {scanResult.findings.length === 0 ? (
+                        <div className="flex items-center gap-2 text-xs text-success bg-success/10 border border-success/20 p-3 rounded-lg">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span>No suspicious cheating patterns found. Code is clean.</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
+                          {scanResult.findings.map((f: any, idx: number) => (
+                            <div
+                              key={idx}
+                              className="rounded-lg border border-border bg-surface-2 p-2.5 flex items-start gap-2.5 transition hover:border-interactive/20"
+                            >
+                              <div
+                                className="h-5 w-5 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5"
+                                style={{
+                                  backgroundColor:
+                                    f.confidence === "high"
+                                      ? "var(--severity-critical)15"
+                                      : f.confidence === "medium"
+                                        ? "var(--severity-medium)15"
+                                        : "var(--severity-info)15",
+                                  color:
+                                    f.confidence === "high"
+                                      ? "var(--severity-critical)"
+                                      : f.confidence === "medium"
+                                        ? "var(--severity-medium)"
+                                        : "var(--severity-info)",
+                                }}
+                              >
+                                <Ban className="h-3 w-3" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-bold text-ink capitalize truncate">
+                                    {f.patternType.replace(/_/g, " ")}
+                                  </span>
+                                  <span
+                                    className="text-[9px] font-extrabold uppercase px-1 rounded border"
+                                    style={{
+                                      borderColor:
+                                        f.confidence === "high"
+                                          ? "var(--severity-critical)30"
+                                          : f.confidence === "medium"
+                                            ? "var(--severity-medium)30"
+                                            : "var(--severity-info)30",
+                                      color:
+                                        f.confidence === "high"
+                                          ? "var(--severity-critical)"
+                                          : f.confidence === "medium"
+                                            ? "var(--severity-medium)"
+                                            : "var(--severity-info)",
+                                    }}
+                                  >
+                                    {f.confidence}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-ink-muted mt-0.5 line-clamp-2">
+                                  {f.explanation}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="border-t border-border pt-3 mt-4 flex justify-between items-center text-xs">
+                    <span className="text-ink-subdued">Run complete in browser context</span>
+                    <Link to="/scan" className="text-interactive hover:underline flex items-center gap-1 font-semibold">
+                      Full Scanner Page <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* =============================================
