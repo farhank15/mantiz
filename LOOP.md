@@ -94,6 +94,8 @@ Every row below is one iteration of the **Write → Verify → Fix → Verify** 
   - Rate Limiting API (`8ea2fac9`): Run `e0b10b88-2505-4fd1-9789-0c51619c981a` ✅ PASSED
   - Share Link API (`9e089ba9`): Run `4581f972-82bc-43f5-9f4a-9f8f00168ff5` ✅ PASSED
   - Codebase Indexing API (`5b3d24ce`): Run `c0284250-dc87-4cfc-90ef-e40612d098c8` ✅ PASSED
+  - History Page (User Verdict tags) (`b0b249fe`): Run `05708071-6195-4181-81cc-e3b5a88d7a28` ✅ PASSED
+  - Settings Page (Generate API token) (`eccb65a6`): Run `4876f133-6f85-48b8-827e-0ed19803b863` ✅ PASSED
 - **TestSprite tests in project:** 24 total (22 PASSED, 2 blocked by E2E runner environment/quirks)
 - **CI/CD pipeline gate:** TestSprite verification integrated into publish.yml — app is smoke-tested before every release
 - **Commit history matches this log:** every iteration has a corresponding git commit on `main`
