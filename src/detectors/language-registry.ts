@@ -102,7 +102,7 @@ export const LANGUAGE_CONFIG: Record<string, LanguageConfig> = {
       },
       mockToAvoid: {
         mockPatterns: [
-          /(jest|vi)\.\s*mock\s*\(/,
+          /(jest|vi)\.\s*(?:doMock|mock)\s*\(/,
           /(jest|vi)\.\s*spyOn\s*\(/,
           /(jest|vi)\.\s*fn\s*\(/,
         ],

@@ -32,6 +32,21 @@ describe('detectMockToAvoid', () => {
     expect(result.some(f => f.patternType === 'mock_to_avoid_failure')).toBe(true)
   })
 
+  it('detects vi.doMock() in test file', () => {
+    const files = makeTestDiff('src/foo.test.ts', [
+      ' import { describe, it, expect, vi } from "vitest"',
+      '+ vi.doMock("./database")',
+      '',
+      ' describe("api", () => {',
+      '   it("works", () => {',
+      '     expect(true).toBe(true)',
+      '   })',
+      ' })',
+    ])
+    const result = detectMockToAvoid(files)
+    expect(result.some(f => f.patternType === 'mock_to_avoid_failure')).toBe(true)
+  })
+
   it('detects vi.fn() with lower confidence', () => {
     const files = makeTestDiff('src/foo.test.ts', [
       ' import { vi } from "vitest"',
