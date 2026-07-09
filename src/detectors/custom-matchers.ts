@@ -29,7 +29,15 @@ const CUSTOM_MATCHER_SET = new Set<string>()
  *   { toBeFoo, toBeBar }          → 'toBeFoo', 'toBeBar'
  *   { toBeFoo: fn, toBeBar: fn }  → 'toBeFoo', 'toBeBar'
  */
-import { createRequire as _createRequire } from 'node:module'
+let _createRequire: any = null
+if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+  try {
+    const req = typeof require !== 'undefined' ? require : (eval('require') as any)
+    _createRequire = req('module').createRequire
+  } catch {
+    // fallback if require/module is not available
+  }
+}
 
 const MATCHER_NAME_PATTERN = /[,\s{]*\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?::\s*\(|[:(,\s\]\}]|$)/g
 
