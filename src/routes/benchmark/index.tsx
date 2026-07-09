@@ -129,7 +129,7 @@ function BenchmarkPage() {
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-interactive/30 border-t-interactive" />
             </div>
             <p className="text-ink-muted">
-              Running benchmark across all 39 fixtures...
+              Running benchmark across all 42 fixtures...
             </p>
           </div>
         )}

@@ -1,3 +1,7 @@
+# Auto-injected credentials — redacted for security; set TESTSPRITE_AUTH_CREDENTIAL to run this locally
+__AUTH_CREDENTIAL__ = __import__("os").environ.get("TESTSPRITE_AUTH_CREDENTIAL", "")
+__AUTH_TYPE__ = "public"
+__AUTH_HEADERS__ = {}
 """
 Backend test: Advanced Detector Checks — Assertion Tampering, Hallucinated Assertions,
                 Share Link API, and Multi-Pattern Scanning
@@ -201,7 +205,7 @@ def test_describe_skip_always_high_severity():
     )
     assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text[:300]}"
     data = r.json()
-    assert data.get("trustScore") <= 60, f"Expected suite-level skip to be score <= 60, got {data.get('trustScore')}"
+    assert data.get("trustScore") == 60, f"Expected suite-level skip to be score 60, got {data.get('trustScore')}"
 
 def test_new_hallucinated_matchers_detected():
     """

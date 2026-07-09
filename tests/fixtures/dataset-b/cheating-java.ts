@@ -71,7 +71,7 @@ export const diff = `diff --git a/src/test/java/com/app/UserServiceTest.java b/s
 `
 
 export const expected = {
-  trustScore: 80,
+  trustScore: 40,
   label: 'Cheating Java',
   dataset: 'B',
 }

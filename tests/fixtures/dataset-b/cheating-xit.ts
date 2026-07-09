@@ -28,4 +28,4 @@ index 333333..444444 100644
    })
  })`
 
-export const expected = { trustScore: 88, label: 'Cheating AI', dataset: 'B' }
+export const expected = { trustScore: 60, label: 'Cheating AI', dataset: 'B' }

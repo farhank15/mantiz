@@ -1,0 +1,5 @@
+{
+  "rootCauseHypothesis": "Expected suite-level skip to be score 60, got 40",
+  "recommendedFixTarget": null,
+  "evidence": []
+}

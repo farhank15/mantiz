@@ -124,5 +124,6 @@ describe('Mantiz Scan Engine', () => {
     ].join('\n')
     const result = scanDiff(diff)
     expect(result.findings.length).toBeGreaterThan(0)
+    expect(result.findings[0].fix).toBeDefined()
   })
 })

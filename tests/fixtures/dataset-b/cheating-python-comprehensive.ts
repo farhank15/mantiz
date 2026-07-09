@@ -54,7 +54,7 @@ export const diff = `diff --git a/tests/test_user_service.py b/tests/test_user_s
 `
 
 export const expected = {
-  trustScore: 97,
+  trustScore: 40,
   label: 'Cheating Python Comprehensive',
   dataset: 'B',
 }

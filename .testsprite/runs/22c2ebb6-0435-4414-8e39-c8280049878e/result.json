@@ -1,0 +1,18 @@
+{
+  "testId": "d3b15df1-7735-4667-85f3-04643b4f1f62",
+  "status": "failed",
+  "startedAt": "2026-07-09T15:26:10.010949+00:00",
+  "finishedAt": "2026-07-09T15:26:49.556Z",
+  "videoUrl": null,
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_b8b6df07dc1a1686",
+  "runIdIfAvailable": "22c2ebb6-0435-4414-8e39-c8280049878e",
+  "codeVersion": "v3",
+  "targetUrl": null,
+  "targetUrlSource": "project-default",
+  "failedStepIndex": 1,
+  "failureKind": "assertion",
+  "verdict": "failed",
+  "executionStatus": "completed",
+  "summary": "Failed (assertion): Expected suite-level skip to be score 60, got 40"
+}
