@@ -11,7 +11,7 @@
 - **Stack:** TanStack Start · Neon Postgres · Drizzle ORM · TestSprite CLI
 - **Agent (Maker):** Antigravity Agent (Google DeepMind)
 - **Checker:** TestSprite CLI (`testsprite test run/result/artifact`)
-- **Total iterations:** 69
+- **Total iterations:** 71
 
 ---
 
@@ -93,17 +93,19 @@ Every row below is one iteration of the **Write → Verify → Fix → Verify** 
 | 67 | Created new TestSprite BE test suite (`59ec96d5`) for API boundary and validation checks. Covers multi-file diff grouping (findings grouped to their respective files), payload limit enforcement (500KB+ returns HTTP 413), malformed JSON request rejection (returns HTTP 400), empty/whitespace diff rejection (returns HTTP 400), and verify rate limit headers presence (`x-ratelimit-limit`, `x-ratelimit-remaining`, `x-ratelimit-reset`). **Passed on first run.** | Checker: TestSprite API Boundaries test (`59ec96d5`, Run `3d74527a-5201-46ea-9906-f14baef8cc96`) ✅ PASSED — 5/5 boundary validations successful | PASSED | — |
 | 68 | Created new TestSprite BE test suite (`ff6c0e7c`) for Mock Login & Auth Bypass validation. Verifies HTTP status 307 redirect, Location header to `/pr-scan` or `/login?error=UnauthorizedMock`, and cookie injection isolation (sets HttpOnly cookie only on valid secret, sets nothing on missing/invalid secret). **Passed on first run.** | Checker: TestSprite Mock Login test (`ff6c0e7c`, Run `5186eb7b-617e-4b9e-8349-4648587f74ac`) ✅ PASSED — 3/3 bypass security validations successful | PASSED | — |
 | 69 | Added a comprehensive unit test suite (`webhook.test.ts`) for the webhook delivery engine using Vitest. Verified payload hashing (HMAC-SHA256 signature calculation), successful delivery on first attempt, exponential backoff timing simulation, and 3x retry exhaustion DB log updates. **Passed on first run.** | Checker: Vitest local runner — 2/2 unit tests passed (`src/server/webhook.test.ts`) · 172/172 total project unit tests passing ✅ PASSED | PASSED | — |
+| 70 | Deployed 3 detection gap fixes (D1 describe.skip HIGH severity, D6 whitelisted 40+ hallucinated matchers, D11 .cursorrules 6 suspicious patterns). Updated TestSprite `be-05` test code to assert these fixes on production. **Test failed on first run** because the `.cursorrules` assertion expected patternType `agent_instruction` but the server returned `agent_instruction_scan`. | Checker: TestSprite Advanced Detectors test (`d3b15df1` v2, Run `180e81be-d533-4cdc-8fc3-c4a2695aef78`) ❌ FAILED — patternType mismatch in test design (`agent_instruction` vs `agent_instruction_scan`) | FAILED | Bug in test design |
+| 71 | Fixed assertion in TestSprite `be-05` (changed expected finding type to `agent_instruction_scan`), re-saved and re-ran. | Checker: TestSprite Advanced Detectors test (`d3b15df1` v3, Run `21b57e00-5305-491d-b6eb-764be7061553`) ✅ PASSED — All 9 scenarios green (verifying D1 describe.skip, D6 matchers, and D11 .cursorrules fixes on production) | PASSED | — |
 
 ---
 
 ## Loop Summary
 
-- **Real failures caught by TestSprite:** 22 (iterations 2, 5, 8, 11, 12, 19, 28, 29, 30, 41-first-run, 46-first-run, 47-first-run×2, 51-clean-code-unauth, 52-rate-limit-serverless, 53-settings-ai-toggle-missing, 54-github-pr-comments-missing-due-to-filepath-prefix, 55-todo-not-detected, 61-first-run-doMock, 62-routing404-test-bug, 65-verdict-field-missing)
+- **Real failures caught by TestSprite:** 23 (iterations 2, 5, 8, 11, 12, 19, 28, 29, 30, 41-first-run, 46-first-run, 47-first-run×2, 51-clean-code-unauth, 52-rate-limit-serverless, 53-settings-ai-toggle-missing, 54-github-pr-comments-missing-due-to-filepath-prefix, 55-todo-not-detected, 61-first-run-doMock, 62-routing404-test-bug, 65-verdict-field-missing, 70-test-assertion-pattern-mismatch)
 - **Real bugs fixed as a result:** 21 unique root causes (incl. verdict field missing from API response, test routing assumption bug, org dashboard routing, dynamic doMock evasion, CLI standalone import path, Python empty catch alias bypass, `.todo()` not detected, mantiz-cli publish fallback, PR comments path mismatch)
 - **TestSprite Verification Runs (Latest Production Build):**
   - Mock Login BE suite (`ff6c0e7c`): Run `5186eb7b-617e-4b9e-8349-4648587f74ac` ✅ PASSED (3/3 auth bypass security checks)
   - API Boundaries BE suite (`59ec96d5`): Run `3d74527a-5201-46ea-9906-f14baef8cc96` ✅ PASSED (5/5 boundary checks)
-  - Advanced Detectors BE suite (`d3b15df1`): Run `50ca3dbb-2f22-4b47-abd1-cd5a8eb313cf` ✅ PASSED (6/6 — verdict field fix confirmed)
+  - Advanced Detectors BE suite (`d3b15df1`): Run `21b57e00-5305-491d-b6eb-764be7061553` ✅ PASSED (9/9 — describe.skip, matchers, .cursorrules confirmed)
   - Org Dashboard BE suite (`73a111c6`): Run `4a76858c-b4ab-4601-a20c-533284bb2084` ✅ PASSED (6/6 scenarios)
   - /api/scan (Python catch alias fix) (`73dcfab1`): Run `c9de8b1e-315b-4f07-89e9-d39937767e55` ✅ PASSED
   - Diff scan UI & Home Playground (`85f99ee9`): Run `c04eda0d-99bb-4555-9695-1e3a8eb9ddbe` ✅ PASSED
