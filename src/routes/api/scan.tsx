@@ -222,6 +222,7 @@ export const Route = createFileRoute('/api/scan')({
               filesScanned: result.summary.filesScanned,
               findings: result.findings.slice(0, 50),
               fixInstructions: result.fixInstructions,
+              verdict: result.verdict ?? null,
               passed: result.trustScore >= threshold,
               threshold,
               scannedBy: userLogin,
