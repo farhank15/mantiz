@@ -106,6 +106,33 @@ def test_scan_x_mantiz_source_header_accepted():
     data = r.json()
     assert "trustScore" in data
 
+def test_scan_detects_todo():
+    """Scan containing .todo() should return a finding of type disabled_assertion and pattern todo."""
+    payload = {
+        "diff": """diff --git a/tests/auth.test.ts b/tests/auth.test.ts
+--- a/tests/auth.test.ts
++++ b/tests/auth.test.ts
+@@ -1,4 +1,4 @@
++test.todo('should validate token', () => {
++  expect(auth.validate('')).toBe(false)
++})"""
+    }
+    r = requests.post(
+        f"{TARGET_URL}/api/scan",
+        json=payload,
+        headers={"Content-Type": "application/json"},
+        timeout=30,
+    )
+    assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text[:200]}"
+    data = r.json()
+    findings = data.get("findings", [])
+    todo_findings = [
+        f for f in findings
+        if f.get("patternType") == "disabled_assertion"
+        and ("todo" in f.get("explanation", "").lower() or "todo" in f.get("patternType", "").lower())
+    ]
+    assert len(todo_findings) > 0, f"Expected to find a .todo() disabled_assertion, findings: {findings}"
+
 # Run all tests
 test_scan_anonymous_returns_json()
 test_scan_authorization_bearer_header()
@@ -113,3 +140,4 @@ test_scan_missing_diff_returns_400()
 test_scan_empty_diff_returns_400()
 test_scan_wrong_content_type_returns_415()
 test_scan_x_mantiz_source_header_accepted()
+test_scan_detects_todo()

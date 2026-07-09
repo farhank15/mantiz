@@ -307,17 +307,49 @@ index abc123..def456 100644
           </div>
         </div>
 
-        {/* Scan Animation */}
+        {/* Scan Animation + Skeleton Loading */}
         <AnimatePresence>
           {isScanning && (
-            <ScanAnimation
-              isScanning={isScanning}
-              scanPhase={scanPhase}
-              lineCount={diffInput.split("\n").length}
-              onComplete={handleScanComplete}
-              findings={scanResult?.findings || []}
-              trustScore={scanResult?.trustScore}
-            />
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+            >
+              <ScanAnimation
+                isScanning={isScanning}
+                scanPhase={scanPhase}
+                lineCount={diffInput.split("\n").length}
+                onComplete={handleScanComplete}
+                findings={scanResult?.findings || []}
+                trustScore={scanResult?.trustScore}
+              />
+
+              {/* Skeleton: show placeholder finding cards while scanning */}
+              {scanPhase !== "done" && (
+                <div className="mt-6 grid gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="h-4 w-24 animate-pulse rounded bg-surface-2" />
+                    <div className="h-3 w-16 animate-pulse rounded bg-surface-2" />
+                  </div>
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="rounded-xl border border-border bg-surface-1 p-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="h-5 w-14 animate-pulse rounded-md bg-surface-2" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 w-3/4 animate-pulse rounded bg-surface-2" />
+                          <div className="h-3 w-1/2 animate-pulse rounded bg-surface-2" />
+                        </div>
+                        <div className="h-4 w-4 animate-pulse rounded bg-surface-2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
           )}
         </AnimatePresence>
 
