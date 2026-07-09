@@ -16,8 +16,6 @@ import { execSync } from 'node:child_process'
 import { scanDiff } from './cli-engine'
 import type { ScanResult } from './cli-engine'
 
-const PASS_THRESHOLD = 70
-
 // ─── Threshold: env var > --flag > default 70 ─────────────────
 function resolveThreshold(args: string[]): number {
   const idx = args.indexOf('--threshold')

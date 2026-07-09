@@ -6,15 +6,15 @@
  * ⚠️ Must stay in sync with engine.ts when re-calibrating.
  */
 
-import type { Finding, ParsedDiff, Confidence, ScoringBreakdown, Verdict, VerdictResult } from '../../../src/detectors/types'
-import { parseRawDiff } from '../../../src/detectors/diff-parser'
-import { detectDisabledAssertions } from '../../../src/detectors/disabled-assertion'
-import { detectAssertionTampering } from '../../../src/detectors/assertion-tampering'
-import { detectMockToAvoid } from '../../../src/detectors/mock-to-avoid'
-import { detectClaimDiffMismatch, isNonFunctional, classifyImportance } from '../../../src/detectors/claim-mismatch'
-import { detectSilentCatch } from '../../../src/detectors/silent-catch'
-import { detectHallucinatedAssertions } from '../../../src/detectors/hallucination'
-import { detectMutationSusceptibility } from '../../../src/detectors/mutation-susceptibility'
+import type { Finding, ParsedDiff, Confidence, ScoringBreakdown, Verdict, VerdictResult } from './detectors/types'
+import { parseRawDiff } from './detectors/diff-parser'
+import { detectDisabledAssertions } from './detectors/disabled-assertion'
+import { detectAssertionTampering } from './detectors/assertion-tampering'
+import { detectMockToAvoid } from './detectors/mock-to-avoid'
+import { detectClaimDiffMismatch, isNonFunctional, classifyImportance } from './detectors/claim-mismatch'
+import { detectSilentCatch } from './detectors/silent-catch'
+import { detectHallucinatedAssertions } from './detectors/hallucination'
+import { detectMutationSusceptibility } from './detectors/mutation-susceptibility'
 
 export interface FixInstruction {
   patternType: string
